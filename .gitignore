@@ -23,8 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 
-cat >> .gitignore << 'EOF'
-
 # Beads database (JSONL is tracked, not the SQLite DB)
 .beads/beads.db
 .beads/beads.db-*
@@ -41,4 +39,4 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
-EOF
+
