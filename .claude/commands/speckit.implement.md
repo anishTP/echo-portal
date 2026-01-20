@@ -53,7 +53,25 @@ You **MUST** consider the user input before proceeding (if not empty).
    - **IF EXISTS**: Read research.md for technical decisions and constraints
    - **IF EXISTS**: Read quickstart.md for integration scenarios
 
-4. **Project Setup Verification**:
+4. **Beads Integration Check**:
+   - Check if `.beads/` directory exists in the repository root
+   - If beads exists, check if `bd` CLI is available by running: `which bd`
+   - **BEADS_ENABLED** = true if both `.beads/` exists AND `bd` command is available
+   
+   If BEADS_ENABLED:
+   - Extract the **Epic ID** from tasks.md (look for `**Epic ID**: \`{epic-id}\``)
+   - Extract **Phase IDs** from each phase section (look for `**Beads Phase ID**: \`{phase-X-id}\``)
+   - Build a **Task ID Mapping** by parsing task lines that include beads IDs:
+     - Task format with beads: `- [ ] T001 [bd:{beads-id}] [P] Description`
+     - Or infer from phase: Tasks under a phase inherit the phase's beads ID as parent
+   - Run `bd sync` to ensure local beads database is up to date
+   - Display: "Beads tracking enabled. Epic: {epic-id}"
+   
+   If NOT BEADS_ENABLED:
+   - Display: "Beads tracking disabled (no .beads/ directory or bd CLI not found)"
+   - Continue with markdown-only tracking
+
+5. **Project Setup Verification**:
    - **REQUIRED**: Create/verify ignore files based on actual project setup:
 
    **Detection & Creation Logic**:
@@ -97,39 +115,103 @@ You **MUST** consider the user input before proceeding (if not empty).
    - **Terraform**: `.terraform/`, `*.tfstate*`, `*.tfvars`, `.terraform.lock.hcl`
    - **Kubernetes/k8s**: `*.secret.yaml`, `secrets/`, `.kube/`, `kubeconfig*`, `*.key`, `*.crt`
 
-5. Parse tasks.md structure and extract:
+6. Parse tasks.md structure and extract:
    - **Task phases**: Setup, Tests, Core, Integration, Polish
    - **Task dependencies**: Sequential vs parallel execution rules
    - **Task details**: ID, description, file paths, parallel markers [P]
    - **Execution flow**: Order and dependency requirements
 
-6. Execute implementation following the task plan:
+7. Execute implementation following the task plan:
    - **Phase-by-phase execution**: Complete each phase before moving to the next
    - **Respect dependencies**: Run sequential tasks in order, parallel tasks [P] can run together  
    - **Follow TDD approach**: Execute test tasks before their corresponding implementation tasks
    - **File-based coordination**: Tasks affecting the same files must run sequentially
    - **Validation checkpoints**: Verify each phase completion before proceeding
+   
+   **Beads Tracking During Execution** (if BEADS_ENABLED):
+   
+   **Before starting each task:**
+   ```bash
+   # Mark task as in progress in beads
+   bd update {beads-task-id} --status in_progress
+   ```
+   
+   **After completing each task successfully:**
+   ```bash
+   # Close the task in beads with completion reason
+   bd close {beads-task-id} --reason "Implemented: {brief description}"
+   ```
+   
+   **If a task is blocked:**
+   ```bash
+   bd update {beads-task-id} --status blocked
+   bd comment {beads-task-id} "Blocked: {reason}"
+   ```
+   
+   **After completing a phase:**
+   ```bash
+   # Close the phase in beads
+   bd close {phase-id} --reason "All phase tasks complete"
+   ```
 
-7. Implementation execution rules:
+8. Implementation execution rules:
    - **Setup first**: Initialize project structure, dependencies, configuration
    - **Tests before code**: If you need to write tests for contracts, entities, and integration scenarios
    - **Core development**: Implement models, services, CLI commands, endpoints
    - **Integration work**: Database connections, middleware, logging, external services
    - **Polish and validation**: Unit tests, performance optimization, documentation
 
-8. Progress tracking and error handling:
+9. Progress tracking and error handling:
    - Report progress after each completed task
    - Halt execution if any non-parallel task fails
    - For parallel tasks [P], continue with successful tasks, report failed ones
    - Provide clear error messages with context for debugging
    - Suggest next steps if implementation cannot proceed
-   - **IMPORTANT** For completed tasks, make sure to mark the task off as [X] in the tasks file.
+   - **IMPORTANT** For completed tasks, make sure to mark the task off as [X] in the tasks file
+   - **BEADS**: If BEADS_ENABLED, ensure bd commands are run for each task state change
 
-9. Completion validation:
+10. Completion validation:
    - Verify all required tasks are completed
    - Check that implemented features match the original specification
    - Validate that tests pass and coverage meets requirements
    - Confirm the implementation follows the technical plan
    - Report final status with summary of completed work
+   
+   **Beads Sync** (if BEADS_ENABLED):
+   ```bash
+   # CRITICAL: Always sync beads at end of implementation session
+   bd sync
+   ```
+   - Display: "Beads synced. Run `bd dep tree {epic-id}` to see progress."
 
 Note: This command assumes a complete task breakdown exists in tasks.md. If tasks are incomplete or missing, suggest running `/speckit.tasks` first to regenerate the task list.
+
+---
+
+## Task Format for Beads Integration
+
+For automatic beads tracking to work, tasks in tasks.md should include beads IDs:
+
+**Option 1: Inline beads ID** (preferred for individual task tracking)
+```markdown
+- [ ] T001 [bd:proj-123] [P] Create project structure `src/`
+- [ ] T002 [bd:proj-124] Initialize dependencies `package.json`
+```
+
+**Option 2: Phase-level tracking** (tasks inherit phase ID)
+```markdown
+## Phase 1: Setup — ⬜ Pending
+
+**Beads Phase ID**: `proj-100`
+
+- [ ] T001 [P] Create project structure `src/`
+- [ ] T002 Initialize dependencies `package.json`
+```
+
+With phase-level tracking, task completion updates the phase issue comments rather than individual task issues.
+
+**Recommended Workflow:**
+1. Run `/speckit.tasks` to generate tasks.md with phase IDs
+2. Run the Beads Issue Creation Script (in tasks.md) to create epic/phases in beads
+3. Update tasks.md with the generated beads IDs
+4. Run `/speckit.implement` — beads will be tracked automatically
