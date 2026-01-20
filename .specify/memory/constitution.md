@@ -1,50 +1,268 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+SYNC IMPACT REPORT
+==================
+Version Change: Template → 1.0.0
+Bump Rationale: MAJOR - Initial constitution ratification with comprehensive governance framework
+
+Modified Principles:
+  - [NEW] Principle I: Explicit Change Control
+  - [NEW] Principle II: Single Source of Truth
+  - [NEW] Principle III: Branch-First Collaboration
+  - [NEW] Principle IV: Separation of Concerns
+  - [NEW] Principle V: Role-Driven Governance
+  - [NEW] Principle VI: Open by Default
+  - [NEW] Principle VII: Layered Architecture Stability
+  - [NEW] Principle VIII: Specification Completeness
+  - [NEW] Principle IX: Clarity Over Breadth
+  - [NEW] Principle X: Testing as Contract
+
+Added Sections:
+  - Core Principles (all 10 principles)
+  - Specification Requirements
+  - Governance
+
+Removed Sections:
+  - Template placeholders
+
+Templates Requiring Updates:
+  ✅ plan-template.md - Constitution Check section aligned
+  ✅ spec-template.md - Requirements structure aligns with principle VIII
+  ✅ tasks-template.md - Testing discipline reflects principle X
+  ⚠ commands/*.md - No command files found in templates/commands/
+
+Follow-up TODOs:
+  - TODO(RATIFICATION_DATE): Original adoption date not known - marked as 2026-01-20 (creation date)
+  - Future: Consider creating command template files if needed
+-->
+
+# Echo Portal Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Explicit Change Control
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+ALL meaningful changes MUST be explicit, attributable, and intentional. Implicit, silent, or automatic mutation of shared state is FORBIDDEN.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+**Rationale**: Change control prevents accidental data loss, enables audit trails, and ensures all modifications can be traced to a deliberate action by an identifiable actor.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+**Non-negotiable rules**:
+- No background processes may modify published content without user-initiated action
+- All state mutations MUST be tied to an authenticated user action or explicit system event
+- Silent updates, auto-saves to published state, or implicit cascades are prohibited
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### II. Single Source of Truth
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+Published content MUST be stable, trustworthy, and safe from accidental modification. The platform serves as the authoritative record.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+**Rationale**: Users must trust that what they published remains unchanged unless they explicitly modify it. Stability of published content is fundamental to collaboration and documentation workflows.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+**Non-negotiable rules**:
+- Published content is immutable until explicitly modified through governed workflows
+- No automatic or background processes may alter published content
+- All changes to published state MUST go through explicit review and approval
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### III. Branch-First Collaboration
+
+ALL changes MUST happen in isolated workspaces (branches) and progress through explicit lifecycle stages before affecting published truth.
+
+**Rationale**: Isolated workspaces prevent conflicts, enable parallel work, and ensure changes are reviewed before publication. This mirrors proven version control workflows.
+
+**Non-negotiable rules**:
+- Direct edits to published content are FORBIDDEN
+- All modifications MUST begin in a branch/workspace
+- Changes MUST progress through defined lifecycle stages: draft → review → approval → publish
+- Each stage transition MUST be explicit and recordable
+
+### IV. Separation of Concerns
+
+The platform MUST maintain clear separation between:
+- **Consumption**: Read-only browsing of published documentation
+- **Contribution**: Authenticated editing, preview, and review workflows
+
+**Rationale**: Separating read and write concerns simplifies security models, improves performance, and clarifies user intent.
+
+**Non-negotiable rules**:
+- Consumption flows MUST NOT require authentication (open by default)
+- Contribution flows MUST require authentication and authorization
+- UI/UX MUST clearly distinguish between consumption and contribution modes
+- API endpoints MUST be categorized as read-only or write-capable
+
+### V. Role-Driven Governance
+
+Review, approval, and publication MUST be deliberate and attributable, not implicit or informal.
+
+**Rationale**: Governance without clear roles and permissions leads to chaos, lost work, and untraceable changes. Role-based access control enables scalable collaboration.
+
+**Non-negotiable rules**:
+- Every action MUST be attributable to a specific user or system actor
+- Roles (viewer, editor, reviewer, publisher) MUST be explicitly assigned
+- Permission checks MUST occur at every state transition
+- Audit logs MUST record actor, action, timestamp, and affected resources
+
+### VI. Open by Default
+
+The platform MUST remain open by default for consumption and restricted by exception (sensitive assets, locked pages, or contribution actions).
+
+**Rationale**: Maximizing openness encourages knowledge sharing and discoverability while maintaining security where needed.
+
+**Non-negotiable rules**:
+- Published content is publicly readable unless explicitly marked private
+- Contribution actions require authentication
+- Restrictions (private, locked, embargoed) MUST be explicit and justified
+- Default permissions favor openness for read, restriction for write
+
+### VII. Layered Architecture Stability
+
+Core system rules MUST be fixed and stable. Outer modules MAY evolve without destabilizing collaboration and publishing workflows.
+
+**Rationale**: A stable core enables innovation at the edges without risking foundational workflows. This principle mirrors hexagonal/clean architecture patterns.
+
+**Non-negotiable rules**:
+- Core workflows (branching, preview, review, merge/publish) MUST remain stable
+- Breaking changes to core contracts require versioned migration paths
+- Plugins, integrations, and UI enhancements MUST NOT require core workflow changes
+- Core abstractions (Branch, Review, Publication) MUST have well-defined contracts
+
+### VIII. Specification Completeness
+
+Every spec MUST define:
+- **Actors and permissions**: Who can do what
+- **Lifecycle states and transitions**: How content moves from draft to published
+- **Visibility boundaries**: What is draft vs. published, public vs. private
+- **Auditability and traceability**: How changes are tracked and attributed
+- **Success outcomes and verification requirements**: How we know it works
+
+**Rationale**: Incomplete specs lead to implementation gaps, security holes, and untestable features. Completeness ensures all critical concerns are addressed.
+
+**Non-negotiable rules**:
+- Specs missing any required section MUST be marked incomplete and blocked from implementation
+- Functional requirements MUST be testable and measurable
+- Edge cases and error scenarios MUST be documented
+- Acceptance criteria MUST be verifiable
+
+### IX. Clarity Over Breadth
+
+Favor clarity and reliability over breadth. Prioritize predictable workflows, usability, and safe defaults over optional complexity.
+
+**Rationale**: Complexity is the enemy of reliability. Simple, clear workflows are easier to understand, test, and maintain.
+
+**Non-negotiable rules**:
+- New features MUST justify their complexity with clear value propositions
+- Safe defaults MUST be preferred over configuration knobs
+- Workflows MUST be predictable and consistent
+- Documentation MUST be clear and example-driven
+- When in doubt, choose the simpler implementation
+
+### X. Testing as Contract
+
+Testing and validation MUST be part of the product contract for core workflows (branching, preview, review, merge/publish). Testing MUST NOT be deferred as a purely engineering concern.
+
+**Rationale**: Untested features are broken features. Testing is not optional; it is the specification in executable form.
+
+**Non-negotiable rules**:
+- Core workflows MUST have automated integration tests
+- Acceptance criteria MUST be converted to automated tests
+- Test failures block deployment
+- Test coverage for core workflows MUST be maintained above 80%
+- Tests MUST be written before implementation (TDD) when feasible
+
+## Specification Requirements
+
+All feature specifications MUST adhere to the following requirements to ensure governance compliance:
+
+### Mandatory Sections
+
+Every spec MUST include:
+
+1. **Actors and Permissions**
+   - Define all user roles and system actors
+   - Specify permission matrix (who can perform which actions)
+   - Document authentication and authorization requirements
+
+2. **Lifecycle States and Transitions**
+   - Define all possible states (draft, review, approved, published, archived)
+   - Specify valid transitions between states
+   - Document who can trigger each transition
+   - Include state transition diagrams when helpful
+
+3. **Visibility Boundaries**
+   - Clearly separate draft from published content
+   - Define public vs. private visibility rules
+   - Specify when content becomes visible to different audiences
+
+4. **Auditability and Traceability**
+   - Define audit log requirements
+   - Specify what events MUST be logged (actor, action, timestamp, resource)
+   - Document retention and access policies for audit data
+
+5. **Success Outcomes and Verification**
+   - List measurable success criteria
+   - Define acceptance tests
+   - Specify validation procedures
+   - Include edge cases and error handling requirements
+
+### Quality Gates
+
+Before implementation begins, specs MUST pass these gates:
+
+- [ ] All mandatory sections present and complete
+- [ ] No NEEDS CLARIFICATION markers remaining
+- [ ] All functional requirements testable
+- [ ] All actors and permissions defined
+- [ ] All state transitions documented
+- [ ] Success criteria measurable
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution supersedes all other development practices, guidelines, and informal agreements. When conflicts arise, the constitution prevails.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+### Amendment Procedure
+
+1. **Proposal**: Amendments MUST be proposed via documented RFC (Request for Comments)
+2. **Review**: Proposed changes MUST be reviewed by project maintainers
+3. **Approval**: Amendments require unanimous approval from core team
+4. **Migration**: Breaking changes MUST include migration plan and transition period
+5. **Documentation**: All amendments MUST update this document with version bump
+
+### Versioning Policy
+
+Constitution version follows semantic versioning (MAJOR.MINOR.PATCH):
+
+- **MAJOR**: Backward-incompatible changes, principle removals, governance redefinition
+- **MINOR**: New principles added, sections expanded, material guidance added
+- **PATCH**: Clarifications, wording improvements, typo fixes, non-semantic changes
+
+### Compliance Review
+
+All pull requests and code reviews MUST verify compliance with this constitution:
+
+- [ ] Changes align with Explicit Change Control (Principle I)
+- [ ] Published content protection maintained (Principle II)
+- [ ] Branch-first workflow followed (Principle III)
+- [ ] Proper separation between read/write flows (Principle IV)
+- [ ] Actions are attributable and role-gated (Principle V)
+- [ ] Openness defaults respected (Principle VI)
+- [ ] Core contracts remain stable (Principle VII)
+- [ ] Specs are complete per Principle VIII requirements
+- [ ] Complexity is justified (Principle IX)
+- [ ] Tests written and passing (Principle X)
+
+### Complexity Justification
+
+Any feature that violates simplicity principles (Principle IX) MUST be justified:
+
+- Document the specific problem being solved
+- Explain why simpler alternatives are insufficient
+- Include complexity budget: what complexity is being added and why it's acceptable
+
+### Deviation Process
+
+In exceptional circumstances, temporary deviations MAY be permitted:
+
+1. Document the deviation and rationale
+2. Define the remediation plan and timeline
+3. Obtain approval from project lead
+4. Track deviation as technical debt
+5. Resolve before next major release
+
+**Version**: 1.0.0 | **Ratified**: 2026-01-20 | **Last Amended**: 2026-01-20

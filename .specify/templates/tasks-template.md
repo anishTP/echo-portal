@@ -34,6 +34,16 @@ globs: ["specs/**/tasks.md"]
 | **Priority** | P1 (MVP) → P2 → P3 |
 | **Est. Tasks** | {total count} |
 
+### Constitution Compliance
+
+All tasks MUST comply with Echo Portal Constitution v1.0.0:
+- ✅ **Testing as Contract (X)**: Tests written before implementation (TDD)
+- ✅ **Explicit Change Control (I)**: All changes attributable and intentional
+- ✅ **Specification Completeness (VIII)**: All mandatory sections verified in spec.md
+- ✅ **Clarity Over Breadth (IX)**: Complexity justified in plan.md
+
+Refer to `.specify/memory/constitution.md` for full principles.
+
 ---
 
 ## Status Reference
@@ -213,7 +223,7 @@ DO NOT keep sample tasks in the generated file.
 **Acceptance**: {How to verify this story works independently}  
 **Dependencies**: Phase 2 complete
 
-### Tests (if requested) ⚠️ Write FIRST, verify they FAIL
+### Tests ⚠️ MANDATORY - Write FIRST, verify they FAIL (Constitution X: Testing as Contract)
 
 - [ ] T012 [P] [US1] Component test `src/__tests__/components/{Component}.test.tsx`
 - [ ] T013 [P] [US1] Integration test `src/__tests__/integration/{feature}.test.tsx`
@@ -238,7 +248,7 @@ DO NOT keep sample tasks in the generated file.
 **Acceptance**: {How to verify this story works independently}  
 **Dependencies**: Phase 2 complete (can run parallel with US1)
 
-### Tests (if requested) ⚠️ Write FIRST, verify they FAIL
+### Tests ⚠️ MANDATORY - Write FIRST, verify they FAIL (Constitution X: Testing as Contract)
 
 - [ ] T020 [P] [US2] Component test `src/__tests__/components/{Component}.test.tsx`
 - [ ] T021 [P] [US2] Integration test `src/__tests__/integration/{feature}.test.tsx`
@@ -261,7 +271,7 @@ DO NOT keep sample tasks in the generated file.
 **Acceptance**: {How to verify this story works independently}  
 **Dependencies**: Phase 2 complete (can run parallel with US1, US2)
 
-### Tests (if requested) ⚠️ Write FIRST, verify they FAIL
+### Tests ⚠️ MANDATORY - Write FIRST, verify they FAIL (Constitution X: Testing as Contract)
 
 - [ ] T026 [P] [US3] Component test `src/__tests__/components/{Component}.test.tsx`
 - [ ] T027 [P] [US3] Integration test `src/__tests__/integration/{feature}.test.tsx`

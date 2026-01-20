@@ -31,7 +31,18 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+Verify compliance with Echo Portal Constitution (v1.0.0):
+
+- [ ] **Explicit Change Control (I)**: All state changes explicit, attributable, intentional
+- [ ] **Single Source of Truth (II)**: Published content protection mechanisms defined
+- [ ] **Branch-First Collaboration (III)**: Isolated workspaces and lifecycle stages defined
+- [ ] **Separation of Concerns (IV)**: Clear read/write boundary between consumption and contribution
+- [ ] **Role-Driven Governance (V)**: Actors, roles, and permissions explicitly defined
+- [ ] **Open by Default (VI)**: Public read access maintained unless justified restriction
+- [ ] **Layered Architecture (VII)**: Core workflows stable, changes don't break contracts
+- [ ] **Specification Completeness (VIII)**: All required sections present (see spec-template.md)
+- [ ] **Clarity Over Breadth (IX)**: Complexity justified in Complexity Tracking table
+- [ ] **Testing as Contract (X)**: Test strategy defined, TDD approach confirmed
 
 ## Project Structure
 
