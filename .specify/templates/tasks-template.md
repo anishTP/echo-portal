@@ -1,251 +1,526 @@
 ---
-
 description: "Task list template for feature implementation"
+globs: ["specs/**/tasks.md"]
 ---
 
-# Tasks: [FEATURE NAME]
+# Tasks: {Feature Name}
 
-**Input**: Design documents from `/specs/[###-feature-name]/`
-**Prerequisites**: plan.md (required), spec.md (required for user stories), research.md, data-model.md, contracts/
+**Feature**: `specs/{feature}/`  
+**Input Documents**: plan.md (required), spec.md (required), research.md, data-model.md, contracts/  
+**Validation**: quickstart.md
 
-**Tests**: The examples below include test tasks. Tests are OPTIONAL - only include them if explicitly requested in the feature specification.
+---
 
-**Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
+## Beads Tracking
 
-## Format: `[ID] [P?] [Story] Description`
+| Property | Value |
+|----------|-------|
+| **Epic ID** | `{epic-id}` |
+| **Spec Label** | `spec:{feature}` |
+| **User Stories Source** | `specs/{feature}/spec.md` |
+| **Planning Details** | `specs/{feature}/plan.md` |
+| **Data Model** | `specs/{feature}/data-model.md` |
 
-- **[P]**: Can run in parallel (different files, no dependencies)
-- **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
-- Include exact file paths in descriptions
+> **NOTE**: Run the Beads Issue Creation Script (at end of file) after generating this tasks.md to create the epic and phase issues in beads.
+
+---
+
+## Overview
+
+| Property | Value |
+|----------|-------|
+| **Epic** | {Feature Name} |
+| **User Stories** | {count} from spec.md |
+| **Priority** | P1 (MVP) → P2 → P3 |
+| **Est. Tasks** | {total count} |
+
+---
+
+## Status Reference
+
+| Icon | Status | Description |
+|------|--------|-------------|
+| ⬜ | Pending | Not started |
+| 🔄 | In Progress | Work underway |
+| ✅ | Completed | Done and verified |
+| ⚠️ | Blocked | Waiting on dependency |
+| 🎯 | MVP | Core deliverable |
+
+---
+
+## Task Format
+
+```
+- [ ] T001 [P] [US1] Description `path/to/file.ext`
+```
+
+| Element | Meaning |
+|---------|---------|
+| `T001` | Task ID (sequential) |
+| `[P]` | Parallelizable (different files, no blocking deps) |
+| `[US1]` | User Story reference |
+| `` `path` `` | Exact file path(s) affected |
+
+---
+
+## Query Hints
+
+### Markdown Queries (grep)
+
+```bash
+# Filter by phase
+grep -E "^- \[ \].*Phase 1" tasks.md
+
+# Filter by user story
+grep -E "\[US1\]" tasks.md
+
+# Find parallelizable tasks
+grep -E "\[P\]" tasks.md
+
+# Find blocked tasks
+grep -E "⚠️" tasks.md
+
+# Count remaining tasks
+grep -c "^- \[ \]" tasks.md
+```
+
+### Beads Queries (bd CLI)
+
+> **NOTE**: View comments when working on tasks - implementation details are documented there.
+
+```bash
+# All open tasks for this feature
+bd list --label 'spec:{feature}' --status open --limit 20
+
+# Task tree from epic
+bd dep tree --reverse {epic-id}
+
+# Ready tasks (no blockers)
+bd ready --limit 5
+
+# By phase
+bd list --label 'phase:setup' --label 'spec:{feature}'
+bd list --label 'phase:foundational' --label 'spec:{feature}'
+bd list --label 'phase:us1' --label 'spec:{feature}'
+bd list --label 'phase:us2' --label 'spec:{feature}'
+bd list --label 'phase:polish' --label 'spec:{feature}'
+
+# By component (if using component labels)
+bd list --label 'component:frontend' --label 'spec:{feature}'
+bd list --label 'component:api' --label 'spec:{feature}'
+
+# Task details and comments
+bd show {id}
+bd comments {id}
+```
+
+<!-- 
+  For issue tracker integration, map tasks using labels:
+  - spec:{feature}
+  - phase:{setup|foundational|us1|us2|polish}
+  - priority:{p1|p2|p3}
+  - parallel:true
+-->
+
+---
 
 ## Path Conventions
 
-- **Single project**: `src/`, `tests/` at repository root
-- **Web app**: `backend/src/`, `frontend/src/`
-- **Mobile**: `api/src/`, `ios/src/` or `android/src/`
-- Paths shown below assume single project - adjust based on plan.md structure
+Adjust paths based on `plan.md` project structure:
+
+| Project Type | Source | Components | Tests |
+|--------------|--------|------------|-------|
+| React/Vite SPA | `src/` | `src/components/` | `src/__tests__/` or `tests/` |
+| Next.js | `app/` or `src/` | `components/` | `__tests__/` |
+| Full-stack web | `backend/src/`, `frontend/src/` | `frontend/src/components/` | `*/tests/` |
+| Mobile (React Native) | `src/` | `src/components/` | `__tests__/` |
+| Monorepo | `packages/{name}/src/` | varies | `packages/{name}/__tests__/` |
+
+### React/Vite/TypeScript Conventions
+
+| Directory | Purpose |
+|-----------|---------|
+| `src/components/` | Reusable UI components |
+| `src/pages/` or `src/views/` | Page-level components |
+| `src/hooks/` | Custom React hooks |
+| `src/utils/` or `src/lib/` | Utility functions |
+| `src/services/` or `src/api/` | API client and data fetching |
+| `src/stores/` or `src/state/` | State management (Zustand, Redux, etc.) |
+| `src/types/` | TypeScript type definitions |
+| `src/assets/` | Static assets (images, fonts) |
+| `public/` | Public static files |
+
+---
 
 <!-- 
-  ============================================================================
-  IMPORTANT: The tasks below are SAMPLE TASKS for illustration purposes only.
-  
-  The /speckit.tasks command MUST replace these with actual tasks based on:
-  - User stories from spec.md (with their priorities P1, P2, P3...)
-  - Feature requirements from plan.md
-  - Entities from data-model.md
-  - Endpoints from contracts/
-  
-  Tasks MUST be organized by user story so each story can be:
-  - Implemented independently
-  - Tested independently
-  - Delivered as an MVP increment
-  
-  DO NOT keep these sample tasks in the generated tasks.md file.
-  ============================================================================
+============================================================================
+IMPORTANT: The phases below contain SAMPLE TASKS for illustration only.
+
+When generating tasks.md, REPLACE these samples with actual tasks based on:
+- User stories from spec.md (with priorities P1, P2, P3)
+- Architecture from plan.md
+- Entities from data-model.md  
+- Endpoints from contracts/
+
+Tasks MUST be organized so each user story can be:
+- Implemented independently
+- Tested independently
+- Delivered as an MVP increment
+
+DO NOT keep sample tasks in the generated file.
+============================================================================
 -->
 
-## Phase 1: Setup (Shared Infrastructure)
+## Phase 1: Setup — ⬜ Pending
 
-**Purpose**: Project initialization and basic structure
+**Beads Phase ID**: `{phase-1-id}`  
+**Purpose**: Project initialization, dependencies, tooling  
+**Blocks**: All subsequent phases  
+**Parallelism**: Most tasks can run in parallel
 
-- [ ] T001 Create project structure per implementation plan
-- [ ] T002 Initialize [language] project with [framework] dependencies
-- [ ] T003 [P] Configure linting and formatting tools
+- [ ] T001 [P] Create project structure per `plan.md` architecture
+- [ ] T002 [P] Initialize project with dependencies in `package.json`
+- [ ] T003 [P] Configure linting/formatting in `eslint.config.js` and `tsconfig.json`
+- [ ] T004 [P] Setup environment config in `.env.example` with Vite env vars (`VITE_*`)
+- [ ] T005 [P] Create test utilities in `src/__tests__/setup.ts` or `tests/testUtils.ts`
 
----
-
-## Phase 2: Foundational (Blocking Prerequisites)
-
-**Purpose**: Core infrastructure that MUST be complete before ANY user story can be implemented
-
-**⚠️ CRITICAL**: No user story work can begin until this phase is complete
-
-Examples of foundational tasks (adjust based on your project):
-
-- [ ] T004 Setup database schema and migrations framework
-- [ ] T005 [P] Implement authentication/authorization framework
-- [ ] T006 [P] Setup API routing and middleware structure
-- [ ] T007 Create base models/entities that all stories depend on
-- [ ] T008 Configure error handling and logging infrastructure
-- [ ] T009 Setup environment configuration management
-
-**Checkpoint**: Foundation ready - user story implementation can now begin in parallel
+**✓ Checkpoint**: `npm run dev` works, `npm run lint` passes, `npm run test` executes
 
 ---
 
-## Phase 3: User Story 1 - [Title] (Priority: P1) 🎯 MVP
+## Phase 2: Foundational — ⬜ Pending
 
-**Goal**: [Brief description of what this story delivers]
+**Beads Phase ID**: `{phase-2-id}`  
+**Purpose**: Core infrastructure ALL user stories depend on  
+**Blocks**: All user story implementation  
+**⚠️ CRITICAL**: No user story work until this phase completes
 
-**Independent Test**: [How to verify this story works on its own]
+- [ ] T006 Setup routing structure in `src/router/` or `src/App.tsx` (React Router, TanStack Router)
+- [ ] T007 [P] Implement auth context/hooks in `src/hooks/useAuth.ts` and `src/context/AuthContext.tsx`
+- [ ] T008 [P] Setup API client/services in `src/services/api.ts` or `src/lib/api.ts`
+- [ ] T009 [P] Create base types/interfaces in `src/types/index.ts`
+- [ ] T010 [P] Configure error boundary in `src/components/ErrorBoundary.tsx`
+- [ ] T011 [P] Setup state management in `src/stores/` (Zustand, Redux, Jotai, etc.)
 
-### Tests for User Story 1 (OPTIONAL - only if tests requested) ⚠️
-
-> **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
-
-- [ ] T010 [P] [US1] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T011 [P] [US1] Integration test for [user journey] in tests/integration/test_[name].py
-
-### Implementation for User Story 1
-
-- [ ] T012 [P] [US1] Create [Entity1] model in src/models/[entity1].py
-- [ ] T013 [P] [US1] Create [Entity2] model in src/models/[entity2].py
-- [ ] T014 [US1] Implement [Service] in src/services/[service].py (depends on T012, T013)
-- [ ] T015 [US1] Implement [endpoint/feature] in src/[location]/[file].py
-- [ ] T016 [US1] Add validation and error handling
-- [ ] T017 [US1] Add logging for user story 1 operations
-
-**Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
+**✓ Checkpoint**: Foundation ready — user stories can begin in parallel
 
 ---
 
-## Phase 4: User Story 2 - [Title] (Priority: P2)
+## Phase 3: User Story 1 — {Title} (P1) 🎯 MVP — ⬜ Pending
 
-**Goal**: [Brief description of what this story delivers]
+**Beads Phase ID**: `{phase-3-id}`  
+**Goal**: {Brief description of value delivered}  
+**Acceptance**: {How to verify this story works independently}  
+**Dependencies**: Phase 2 complete
 
-**Independent Test**: [How to verify this story works on its own]
+### Tests (if requested) ⚠️ Write FIRST, verify they FAIL
 
-### Tests for User Story 2 (OPTIONAL - only if tests requested) ⚠️
+- [ ] T012 [P] [US1] Component test `src/__tests__/components/{Component}.test.tsx`
+- [ ] T013 [P] [US1] Integration test `src/__tests__/integration/{feature}.test.tsx`
 
-- [ ] T018 [P] [US2] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T019 [P] [US2] Integration test for [user journey] in tests/integration/test_[name].py
+### Implementation
 
-### Implementation for User Story 2
+- [ ] T014 [P] [US1] Create `{Component1}` in `src/components/{Feature}/{Component1}.tsx`
+- [ ] T015 [P] [US1] Create `{Component2}` in `src/components/{Feature}/{Component2}.tsx`
+- [ ] T016 [US1] Implement `{hook}` in `src/hooks/use{Feature}.ts` *(depends: T014, T015)*
+- [ ] T017 [US1] Implement API service in `src/services/{feature}Service.ts`
+- [ ] T018 [US1] Add form validation with Zod/Yup in `src/schemas/{feature}Schema.ts`
+- [ ] T019 [US1] Wire routes in `src/router/` or update `App.tsx`
 
-- [ ] T020 [P] [US2] Create [Entity] model in src/models/[entity].py
-- [ ] T021 [US2] Implement [Service] in src/services/[service].py
-- [ ] T022 [US2] Implement [endpoint/feature] in src/[location]/[file].py
-- [ ] T023 [US2] Integrate with User Story 1 components (if needed)
-
-**Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
-
----
-
-## Phase 5: User Story 3 - [Title] (Priority: P3)
-
-**Goal**: [Brief description of what this story delivers]
-
-**Independent Test**: [How to verify this story works on its own]
-
-### Tests for User Story 3 (OPTIONAL - only if tests requested) ⚠️
-
-- [ ] T024 [P] [US3] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T025 [P] [US3] Integration test for [user journey] in tests/integration/test_[name].py
-
-### Implementation for User Story 3
-
-- [ ] T026 [P] [US3] Create [Entity] model in src/models/[entity].py
-- [ ] T027 [US3] Implement [Service] in src/services/[service].py
-- [ ] T028 [US3] Implement [endpoint/feature] in src/[location]/[file].py
-
-**Checkpoint**: All user stories should now be independently functional
+**✓ Checkpoint**: User Story 1 functional and independently testable
 
 ---
 
-[Add more user story phases as needed, following the same pattern]
+## Phase 4: User Story 2 — {Title} (P2) — ⬜ Pending
+
+**Beads Phase ID**: `{phase-4-id}`  
+**Goal**: {Brief description of value delivered}  
+**Acceptance**: {How to verify this story works independently}  
+**Dependencies**: Phase 2 complete (can run parallel with US1)
+
+### Tests (if requested) ⚠️ Write FIRST, verify they FAIL
+
+- [ ] T020 [P] [US2] Component test `src/__tests__/components/{Component}.test.tsx`
+- [ ] T021 [P] [US2] Integration test `src/__tests__/integration/{feature}.test.tsx`
+
+### Implementation
+
+- [ ] T022 [P] [US2] Create `{Component}` in `src/components/{Feature}/{Component}.tsx`
+- [ ] T023 [US2] Implement `{hook}` in `src/hooks/use{Feature}.ts`
+- [ ] T024 [US2] Implement page/view in `src/pages/{Feature}Page.tsx`
+- [ ] T025 [US2] Integrate with US1 components *(if needed)*
+
+**✓ Checkpoint**: User Stories 1 & 2 both work independently
 
 ---
 
-## Phase N: Polish & Cross-Cutting Concerns
+## Phase 5: User Story 3 — {Title} (P3) — ⬜ Pending
 
-**Purpose**: Improvements that affect multiple user stories
+**Beads Phase ID**: `{phase-5-id}`  
+**Goal**: {Brief description of value delivered}  
+**Acceptance**: {How to verify this story works independently}  
+**Dependencies**: Phase 2 complete (can run parallel with US1, US2)
 
-- [ ] TXXX [P] Documentation updates in docs/
-- [ ] TXXX Code cleanup and refactoring
-- [ ] TXXX Performance optimization across all stories
-- [ ] TXXX [P] Additional unit tests (if requested) in tests/unit/
-- [ ] TXXX Security hardening
-- [ ] TXXX Run quickstart.md validation
+### Tests (if requested) ⚠️ Write FIRST, verify they FAIL
 
----
+- [ ] T026 [P] [US3] Component test `src/__tests__/components/{Component}.test.tsx`
+- [ ] T027 [P] [US3] Integration test `src/__tests__/integration/{feature}.test.tsx`
 
-## Dependencies & Execution Order
+### Implementation
 
-### Phase Dependencies
+- [ ] T028 [P] [US3] Create `{Component}` in `src/components/{Feature}/{Component}.tsx`
+- [ ] T029 [US3] Implement `{hook}` in `src/hooks/use{Feature}.ts`
+- [ ] T030 [US3] Implement page/view in `src/pages/{Feature}Page.tsx`
 
-- **Setup (Phase 1)**: No dependencies - can start immediately
-- **Foundational (Phase 2)**: Depends on Setup completion - BLOCKS all user stories
-- **User Stories (Phase 3+)**: All depend on Foundational phase completion
-  - User stories can then proceed in parallel (if staffed)
-  - Or sequentially in priority order (P1 → P2 → P3)
-- **Polish (Final Phase)**: Depends on all desired user stories being complete
-
-### User Story Dependencies
-
-- **User Story 1 (P1)**: Can start after Foundational (Phase 2) - No dependencies on other stories
-- **User Story 2 (P2)**: Can start after Foundational (Phase 2) - May integrate with US1 but should be independently testable
-- **User Story 3 (P3)**: Can start after Foundational (Phase 2) - May integrate with US1/US2 but should be independently testable
-
-### Within Each User Story
-
-- Tests (if included) MUST be written and FAIL before implementation
-- Models before services
-- Services before endpoints
-- Core implementation before integration
-- Story complete before moving to next priority
-
-### Parallel Opportunities
-
-- All Setup tasks marked [P] can run in parallel
-- All Foundational tasks marked [P] can run in parallel (within Phase 2)
-- Once Foundational phase completes, all user stories can start in parallel (if team capacity allows)
-- All tests for a user story marked [P] can run in parallel
-- Models within a story marked [P] can run in parallel
-- Different user stories can be worked on in parallel by different team members
+**✓ Checkpoint**: All user stories independently functional
 
 ---
 
-## Parallel Example: User Story 1
+## Phase N: Polish & Cross-Cutting — ⬜ Pending
+
+**Beads Phase ID**: `{phase-n-id}`  
+**Purpose**: Quality improvements affecting multiple stories  
+**Dependencies**: All desired user stories complete
+
+- [ ] T031 [P] Update documentation in `docs/` or `README.md`
+- [ ] T032 [P] Add edge case tests in `src/__tests__/`
+- [ ] T033 [P] Performance optimization (React.memo, useMemo, lazy loading)
+- [ ] T034 [P] Accessibility (a11y) review and ARIA improvements
+- [ ] T035 Run `quickstart.md` validation end-to-end
+- [ ] T036 Code cleanup, refactoring, and bundle size optimization
+
+**✓ Checkpoint**: Feature complete, documented, production-ready
+
+---
+
+## Dependency Graph
+
+```
+Phase 1: Setup
+    │
+    ▼
+Phase 2: Foundational ──────────────────────────┐
+    │                                           │
+    ├───────────────┬───────────────┐           │
+    ▼               ▼               ▼           │
+Phase 3: US1    Phase 4: US2    Phase 5: US3   │ (parallel)
+(P1 MVP 🎯)      (P2)            (P3)           │
+    │               │               │           │
+    └───────────────┴───────────────┘           │
+                    │                           │
+                    ▼                           │
+            Phase N: Polish ◄───────────────────┘
+```
+
+### Key Rules
+
+1. **Setup** → No dependencies, start immediately
+2. **Foundational** → Blocks ALL user stories
+3. **User Stories** → Can run in parallel after Foundational
+4. **Within each story**: Tests → Models → Services → Handlers → Integration
+5. **Polish** → After all desired stories complete
+
+---
+
+## Execution Strategies
+
+### Strategy A: MVP First (Solo Developer)
+
+```
+Setup → Foundational → US1 (MVP) → STOP & VALIDATE → [US2 → US3 → Polish]
+```
+
+Ship after US1 if viable. Add stories incrementally.
+
+### Strategy B: Parallel Team
+
+```
+All: Setup → Foundational
+Then split:
+  Dev A: US1 (P1)
+  Dev B: US2 (P2)  
+  Dev C: US3 (P3)
+Sync: Polish
+```
+
+### Strategy C: Sequential Priority
+
+```
+Setup → Foundational → US1 → US2 → US3 → Polish
+```
+
+One story at a time, in priority order.
+
+---
+
+## Parallel Execution Examples
+
+### Within Setup Phase
 
 ```bash
-# Launch all tests for User Story 1 together (if tests requested):
-Task: "Contract test for [endpoint] in tests/contract/test_[name].py"
-Task: "Integration test for [user journey] in tests/integration/test_[name].py"
+# All [P] tasks in parallel
+T001 & T002 & T003 & T004 & T005
+wait
+```
 
-# Launch all models for User Story 1 together:
-Task: "Create [Entity1] model in src/models/[entity1].py"
-Task: "Create [Entity2] model in src/models/[entity2].py"
+### Within a User Story
+
+```bash
+# Tests first (parallel)
+T012 & T013
+wait
+
+# Models (parallel)
+T014 & T015
+wait
+
+# Services (sequential - depends on models)
+T016
+T017
+T018
+T019
+```
+
+### Across User Stories
+
+```bash
+# After Foundational complete, stories in parallel
+(Phase 3: US1) & (Phase 4: US2) & (Phase 5: US3)
+wait
+# Then Polish
 ```
 
 ---
 
-## Implementation Strategy
+## Completion Tracking
 
-### MVP First (User Story 1 Only)
+### Task Completion (Markdown + Beads)
 
-1. Complete Phase 1: Setup
-2. Complete Phase 2: Foundational (CRITICAL - blocks all stories)
-3. Complete Phase 3: User Story 1
-4. **STOP and VALIDATE**: Test User Story 1 independently
-5. Deploy/demo if ready
+```markdown
+- [x] T001 [P] Description `path/file.ext` — ✅ (2024-01-15)
+```
 
-### Incremental Delivery
+```bash
+# Update beads when completing a task
+bd update {task-id} --status in_progress  # Before starting
+bd close {task-id} --reason "Implemented {file}"  # After completion
+bd sync  # Sync changes
+```
 
-1. Complete Setup + Foundational → Foundation ready
-2. Add User Story 1 → Test independently → Deploy/Demo (MVP!)
-3. Add User Story 2 → Test independently → Deploy/Demo
-4. Add User Story 3 → Test independently → Deploy/Demo
-5. Each story adds value without breaking previous stories
+### Phase Completion
 
-### Parallel Team Strategy
+```markdown
+## Phase 1: Setup — ✅ COMPLETED (2024-01-15)
 
-With multiple developers:
+**Beads Phase ID**: `{phase-1-id}` — ✅ CLOSED
+**Completed Tasks**: T001, T002, T003, T004, T005
+```
 
-1. Team completes Setup + Foundational together
-2. Once Foundational is done:
-   - Developer A: User Story 1
-   - Developer B: User Story 2
-   - Developer C: User Story 3
-3. Stories complete and integrate independently
+```bash
+# Close phase in beads
+bd close {phase-1-id} --reason "All setup tasks complete"
+bd sync
+```
+
+### Story Completion
+
+```markdown
+## Phase 3: User Story 1 — {Title} (P1) 🎯 MVP — ✅ COMPLETED (2024-01-16)
+
+**Beads Phase ID**: `{phase-3-id}` — ✅ CLOSED
+**Acceptance Verified**: ✅ {validation notes}
+**Completed Tasks**: T012-T019
+```
 
 ---
 
 ## Notes
 
-- [P] tasks = different files, no dependencies
-- [Story] label maps task to specific user story for traceability
+- Tasks marked `[P]` touch different files with no dependencies — safe to parallelize
+- `[USn]` labels map tasks to user stories for traceability
 - Each user story should be independently completable and testable
-- Verify tests fail before implementing
+- Verify tests FAIL before implementing (TDD)
 - Commit after each task or logical group
-- Stop at any checkpoint to validate story independently
-- Avoid: vague tasks, same file conflicts, cross-story dependencies that break independence
+- Stop at any checkpoint to validate and potentially ship
+- **Avoid**: Vague tasks, same-file conflicts, cross-story dependencies that break independence
+- **Beads sync**: Always run `bd sync` at end of session to persist tracking state
+
+---
+
+## Beads Issue Creation Script
+
+Run this script after generating tasks.md to create the epic and phase structure in beads:
+
+```bash
+#!/bin/bash
+# Replace {feature} and {Feature Title} with actual values
+FEATURE="{feature}"
+FEATURE_TITLE="{Feature Title}"
+LABEL="spec:${FEATURE}"
+
+# Create epic
+EPIC=$(bd create "$FEATURE_TITLE" -t epic -p 1 -l "$LABEL" --json | jq -r '.id')
+echo "Created Epic: $EPIC"
+
+# Create phases
+P1=$(bd create "Phase 1: Setup" -t feature -p 1 -l "$LABEL,phase:setup" --parent $EPIC --json | jq -r '.id')
+P2=$(bd create "Phase 2: Foundational" -t feature -p 1 -l "$LABEL,phase:foundational" --parent $EPIC --json | jq -r '.id')
+P3=$(bd create "Phase 3: User Story 1 (MVP)" -t feature -p 1 -l "$LABEL,phase:us1" --parent $EPIC --json | jq -r '.id')
+P4=$(bd create "Phase 4: User Story 2" -t feature -p 2 -l "$LABEL,phase:us2" --parent $EPIC --json | jq -r '.id')
+P5=$(bd create "Phase 5: User Story 3" -t feature -p 3 -l "$LABEL,phase:us3" --parent $EPIC --json | jq -r '.id')
+PN=$(bd create "Phase N: Polish" -t feature -p 3 -l "$LABEL,phase:polish" --parent $EPIC --json | jq -r '.id')
+
+echo "Created Phases: P1=$P1, P2=$P2, P3=$P3, P4=$P4, P5=$P5, PN=$PN"
+
+# Set phase dependencies
+bd dep add $P2 $P1  # Foundational depends on Setup
+bd dep add $P3 $P2  # US1 depends on Foundational
+bd dep add $P4 $P2  # US2 depends on Foundational (parallel with US1)
+bd dep add $P5 $P2  # US3 depends on Foundational (parallel with US1, US2)
+bd dep add $PN $P3  # Polish depends on US1 (MVP)
+bd dep add $PN $P4  # Polish depends on US2
+bd dep add $PN $P5  # Polish depends on US3
+
+echo "Dependencies configured"
+
+# Sync and show tree
+bd sync
+bd dep tree $EPIC
+
+echo ""
+echo "Update tasks.md with these IDs:"
+echo "  Epic ID: $EPIC"
+echo "  Phase 1 (Setup): $P1"
+echo "  Phase 2 (Foundational): $P2"
+echo "  Phase 3 (US1 MVP): $P3"
+echo "  Phase 4 (US2): $P4"
+echo "  Phase 5 (US3): $P5"
+echo "  Phase N (Polish): $PN"
+```
+
+### Labels Reference
+
+| Label | Purpose |
+|-------|--------|
+| `spec:{feature}` | Links all issues to this feature |
+| `phase:setup` | Setup phase tasks |
+| `phase:foundational` | Foundational/blocking tasks |
+| `phase:us1`, `phase:us2`, etc. | User story phases |
+| `phase:polish` | Polish and cross-cutting |
+| `parallel:true` | Task is parallelizable |
+| `component:{name}` | Optional component grouping |
+
+### Session Management
+
+**Start of session:**
+```bash
+git pull && bd sync && bd prime
+bd list --label 'spec:{feature}' --status in_progress
+bd ready --limit 5
+```
+
+**End of session (CRITICAL):**
+```bash
+bd sync
+git add . && git commit -m "{message}" && git push
+```
