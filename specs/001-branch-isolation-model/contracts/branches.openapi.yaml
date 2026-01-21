@@ -1,0 +1,769 @@
+openapi: 3.1.0
+info:
+  title: Branch Isolation Model - Branches API
+  version: 1.0.0
+  description: API for managing branches in the Echo Portal governed contribution workflow
+
+servers:
+  - url: /api/v1
+    description: API v1
+
+tags:
+  - name: Branches
+    description: Branch management operations
+  - name: Transitions
+    description: Branch state transition operations
+  - name: Comparison
+    description: Branch comparison/diff operations
+
+paths:
+  /branches:
+    get:
+      operationId: listBranches
+      summary: List branches
+      description: Returns a paginated list of branches the user has access to view
+      tags: [Branches]
+      security:
+        - BearerAuth: []
+        - {}  # Anonymous for public branches
+      parameters:
+        - name: state
+          in: query
+          schema:
+            $ref: '#/components/schemas/BranchState'
+          description: Filter by lifecycle state
+        - name: visibility
+          in: query
+          schema:
+            $ref: '#/components/schemas/Visibility'
+          description: Filter by visibility level
+        - name: ownerId
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by owner user ID
+        - name: baseRef
+          in: query
+          schema:
+            type: string
+            enum: [main, dev]
+          description: Filter by source branch
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [createdAt, updatedAt, name]
+            default: createdAt
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: List of branches
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, pagination]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Branch'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      operationId: createBranch
+      summary: Create a new branch
+      description: Creates a new branch from the specified source (main or dev)
+      tags: [Branches]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBranchRequest'
+      responses:
+        '201':
+          description: Branch created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Branch'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Branch with this slug already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /branches/{branchId}:
+    parameters:
+      - name: branchId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      operationId: getBranch
+      summary: Get branch details
+      description: Returns detailed information about a specific branch
+      tags: [Branches]
+      security:
+        - BearerAuth: []
+        - {}
+      responses:
+        '200':
+          description: Branch details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BranchDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      operationId: updateBranch
+      summary: Update branch metadata
+      description: Updates branch metadata (name, description, visibility, reviewers). Only available for draft branches.
+      tags: [Branches]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBranchRequest'
+      responses:
+        '200':
+          description: Branch updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Branch'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Cannot update branch in current state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      operationId: deleteBranch
+      summary: Delete/archive a branch
+      description: Archives a branch. Only available for draft branches (by owner) or any branch (by admin).
+      tags: [Branches]
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: Branch archived successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Cannot archive branch in current state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /branches/{branchId}/transitions:
+    parameters:
+      - name: branchId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      operationId: getBranchTransitions
+      summary: Get branch transition history
+      description: Returns the state transition history for a branch
+      tags: [Transitions]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Transition history
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BranchStateTransition'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      operationId: transitionBranch
+      summary: Transition branch state
+      description: Triggers a state transition for the branch
+      tags: [Transitions]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransitionRequest'
+      responses:
+        '200':
+          description: Transition successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Branch'
+        '400':
+          description: Invalid transition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Transition not allowed from current state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransitionError'
+
+  /branches/{branchId}/diff:
+    parameters:
+      - name: branchId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      operationId: getBranchDiff
+      summary: Get branch diff against base
+      description: Returns the diff between the branch and its base (main or dev)
+      tags: [Comparison]
+      security:
+        - BearerAuth: []
+        - {}
+      parameters:
+        - name: context
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 20
+            default: 3
+          description: Number of context lines around changes
+      responses:
+        '200':
+          description: Branch diff
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BranchDiff'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /branches/{branchId}/diff/{targetBranchId}:
+    parameters:
+      - name: branchId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: targetBranchId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      operationId: compareBranches
+      summary: Compare two branches
+      description: Returns the diff between two branches
+      tags: [Comparison]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: context
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 20
+            default: 3
+      responses:
+        '200':
+          description: Branch comparison
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BranchDiff'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    BranchState:
+      type: string
+      enum: [draft, review, approved, published, archived]
+      description: Branch lifecycle state
+
+    Visibility:
+      type: string
+      enum: [private, team, public]
+      description: Branch visibility level
+
+    Branch:
+      type: object
+      required:
+        - id
+        - name
+        - slug
+        - gitRef
+        - baseRef
+        - state
+        - visibility
+        - ownerId
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 100
+          pattern: '^[a-z0-9-]+$'
+        gitRef:
+          type: string
+          description: Git branch reference
+        baseRef:
+          type: string
+          enum: [main, dev]
+        baseCommit:
+          type: string
+          description: SHA of base commit
+        headCommit:
+          type: string
+          description: SHA of current HEAD
+        state:
+          $ref: '#/components/schemas/BranchState'
+        visibility:
+          $ref: '#/components/schemas/Visibility'
+        ownerId:
+          type: string
+          format: uuid
+        reviewers:
+          type: array
+          items:
+            type: string
+            format: uuid
+        description:
+          type: string
+          maxLength: 2000
+        labels:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        submittedAt:
+          type: string
+          format: date-time
+        approvedAt:
+          type: string
+          format: date-time
+        publishedAt:
+          type: string
+          format: date-time
+        archivedAt:
+          type: string
+          format: date-time
+
+    BranchDetail:
+      allOf:
+        - $ref: '#/components/schemas/Branch'
+        - type: object
+          properties:
+            owner:
+              $ref: '#/components/schemas/UserSummary'
+            reviewerUsers:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserSummary'
+            stats:
+              type: object
+              properties:
+                additions:
+                  type: integer
+                deletions:
+                  type: integer
+                filesChanged:
+                  type: integer
+                commits:
+                  type: integer
+
+    UserSummary:
+      type: object
+      required: [id, displayName]
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        avatarUrl:
+          type: string
+          format: uri
+
+    CreateBranchRequest:
+      type: object
+      required: [name, baseRef]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        baseRef:
+          type: string
+          enum: [main, dev]
+          description: Source branch to create from
+        visibility:
+          $ref: '#/components/schemas/Visibility'
+        description:
+          type: string
+          maxLength: 2000
+        reviewers:
+          type: array
+          items:
+            type: string
+            format: uuid
+        labels:
+          type: array
+          items:
+            type: string
+
+    UpdateBranchRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 2000
+        visibility:
+          $ref: '#/components/schemas/Visibility'
+        reviewers:
+          type: array
+          items:
+            type: string
+            format: uuid
+        labels:
+          type: array
+          items:
+            type: string
+
+    TransitionRequest:
+      type: object
+      required: [event]
+      properties:
+        event:
+          type: string
+          enum:
+            - SUBMIT_FOR_REVIEW
+            - REQUEST_CHANGES
+            - APPROVE
+            - ARCHIVE
+          description: State transition event
+        reason:
+          type: string
+          maxLength: 2000
+          description: Required for REQUEST_CHANGES
+
+    BranchStateTransition:
+      type: object
+      required:
+        - id
+        - branchId
+        - fromState
+        - toState
+        - actorId
+        - actorType
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        branchId:
+          type: string
+          format: uuid
+        fromState:
+          $ref: '#/components/schemas/BranchState'
+        toState:
+          $ref: '#/components/schemas/BranchState'
+        actorId:
+          type: string
+        actorType:
+          type: string
+          enum: [user, system]
+        reason:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+
+    TransitionError:
+      type: object
+      required: [type, title, status, detail]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        currentState:
+          $ref: '#/components/schemas/BranchState'
+        attemptedEvent:
+          type: string
+        allowedEvents:
+          type: array
+          items:
+            type: string
+
+    BranchDiff:
+      type: object
+      required:
+        - branchId
+        - baseRef
+        - baseCommit
+        - headCommit
+        - files
+        - stats
+      properties:
+        branchId:
+          type: string
+          format: uuid
+        baseRef:
+          type: string
+        baseCommit:
+          type: string
+        headCommit:
+          type: string
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileDiff'
+        stats:
+          type: object
+          required: [additions, deletions, filesChanged]
+          properties:
+            additions:
+              type: integer
+            deletions:
+              type: integer
+            filesChanged:
+              type: integer
+
+    FileDiff:
+      type: object
+      required: [path, status, hunks]
+      properties:
+        path:
+          type: string
+        oldPath:
+          type: string
+          description: Previous path if renamed
+        status:
+          type: string
+          enum: [added, modified, deleted, renamed]
+        additions:
+          type: integer
+        deletions:
+          type: integer
+        hunks:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiffHunk'
+
+    DiffHunk:
+      type: object
+      required: [oldStart, oldLines, newStart, newLines, lines]
+      properties:
+        oldStart:
+          type: integer
+        oldLines:
+          type: integer
+        newStart:
+          type: integer
+        newLines:
+          type: integer
+        lines:
+          type: array
+          items:
+            type: object
+            required: [type, content]
+            properties:
+              type:
+                type: string
+                enum: [context, addition, deletion]
+              content:
+                type: string
+              oldLineNumber:
+                type: integer
+              newLineNumber:
+                type: integer
+
+    Pagination:
+      type: object
+      required: [page, limit, total, totalPages]
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+
+    Error:
+      type: object
+      required: [type, title, status, detail]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
