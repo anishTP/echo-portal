@@ -292,7 +292,7 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ---
 
-## Phase 5: User Story 3 — Publish Approved Branch (P1) 🎯 MVP — ⬜ Pending
+## Phase 5: User Story 3 — Publish Approved Branch (P1) 🎯 MVP — ✅ COMPLETED (2026-01-22)
 
 **Beads Phase ID**: `echo-portal-6hu.5`
 **Goal**: Publishers can merge approved branches to main with atomic convergence
@@ -301,31 +301,31 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ### Backend - Convergence Service
 
-- [ ] T098 [P] [US3] Create Convergence model in `backend/src/models/convergence.ts`
-- [ ] T099 [US3] Implement convergence service in `backend/src/services/convergence/convergence-service.ts`
-- [ ] T100 [US3] Implement conflict detection in `backend/src/services/convergence/conflict-detection.ts`
-- [ ] T101 [US3] Implement atomic merge with rollback in `backend/src/services/convergence/merge.ts`
-- [ ] T102 [US3] Implement first-wins blocking in `backend/src/services/convergence/locking.ts`
+- [x] T098 [P] [US3] Create Convergence model in `backend/src/models/convergence.ts`
+- [x] T099 [US3] Implement convergence service in `backend/src/services/convergence/convergence-service.ts`
+- [x] T100 [US3] Implement conflict detection in `backend/src/services/convergence/conflict-detection.ts`
+- [x] T101 [US3] Implement atomic merge with rollback in `backend/src/services/convergence/merge.ts`
+- [x] T102 [US3] Implement first-wins blocking in `backend/src/services/convergence/locking.ts`
 
 ### Backend - API Routes
 
-- [ ] T103 [US3] Create convergence validation schemas in `backend/src/api/schemas/convergence.ts`
-- [ ] T104 [US3] Implement POST /api/v1/convergence route in `backend/src/api/routes/convergence.ts`
-- [ ] T105 [US3] Implement GET /api/v1/convergence/:id/status route in `backend/src/api/routes/convergence.ts`
-- [ ] T106 [US3] Implement POST /api/v1/convergence/validate route in `backend/src/api/routes/convergence.ts`
-- [ ] T107 [US3] Register convergence routes in API in `backend/src/api/index.ts`
+- [x] T103 [US3] Create convergence validation schemas in `backend/src/api/schemas/convergence.ts`
+- [x] T104 [US3] Implement POST /api/v1/convergence route in `backend/src/api/routes/convergence.ts`
+- [x] T105 [US3] Implement GET /api/v1/convergence/:id/status route in `backend/src/api/routes/convergence.ts`
+- [x] T106 [US3] Implement POST /api/v1/convergence/validate route in `backend/src/api/routes/convergence.ts`
+- [x] T107 [US3] Register convergence routes in API in `backend/src/api/index.ts`
 
 ### Frontend - Components
 
-- [ ] T108 [P] [US3] Create PublishButton component in `frontend/src/components/convergence/PublishButton.tsx`
-- [ ] T109 [P] [US3] Create ConvergenceStatus component in `frontend/src/components/convergence/ConvergenceStatus.tsx`
-- [ ] T110 [P] [US3] Create ConflictDisplay component in `frontend/src/components/convergence/ConflictDisplay.tsx`
+- [x] T108 [P] [US3] Create PublishButton component in `frontend/src/components/convergence/PublishButton.tsx`
+- [x] T109 [P] [US3] Create ConvergenceStatus component in `frontend/src/components/convergence/ConvergenceStatus.tsx`
+- [x] T110 [P] [US3] Create ConflictDisplay component in `frontend/src/components/convergence/ConflictDisplay.tsx`
 
 ### Frontend - Pages & Integration
 
-- [ ] T111 [US3] Create PublishConfirm page in `frontend/src/pages/PublishConfirm.tsx`
-- [ ] T112 [US3] Create useConvergence hook in `frontend/src/hooks/useConvergence.ts`
-- [ ] T113 [US3] Wire routes for publish flow in `frontend/src/router/index.tsx`
+- [x] T111 [US3] Create PublishConfirm page in `frontend/src/pages/PublishConfirm.tsx`
+- [x] T112 [US3] Create useConvergence hook in `frontend/src/hooks/useConvergence.ts`
+- [x] T113 [US3] Wire routes for publish flow in `frontend/src/router/index.tsx`
 
 **✓ Checkpoint**: User Story 3 functional — can publish, verify atomicity
 

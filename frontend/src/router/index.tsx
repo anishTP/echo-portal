@@ -6,6 +6,7 @@ import ErrorBoundary from '../components/common/ErrorBoundary';
 const Dashboard = lazy(() => import('../pages/Dashboard'));
 const BranchWorkspace = lazy(() => import('../pages/BranchWorkspace'));
 const ReviewQueue = lazy(() => import('../pages/ReviewQueue'));
+const PublishConfirm = lazy(() => import('../pages/PublishConfirm'));
 
 // Loading fallback
 function LoadingFallback() {
@@ -57,7 +58,11 @@ const router = createBrowserRouter([
         path: 'reviews',
         element: <ReviewQueue />,
       },
-      // Publish routes will be added in Phase 5 (US3)
+      // Publish routes (Phase 5 - US3)
+      {
+        path: 'branches/:id/publish',
+        element: <PublishConfirm />,
+      },
     ],
   },
 ]);

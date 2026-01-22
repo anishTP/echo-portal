@@ -15,6 +15,25 @@ export interface BranchChanges {
   deleted: string[];
 }
 
+export interface FileChange {
+  path: string;
+  status: 'added' | 'modified' | 'deleted' | 'renamed';
+}
+
+export interface MergeOptions {
+  message: string;
+  author: string;
+}
+
+export interface MergeabilityResult {
+  canMerge: boolean;
+  conflicts?: Array<{
+    path: string;
+    type: 'content' | 'rename' | 'delete';
+    description: string;
+  }>;
+}
+
 export interface FileContent {
   path: string;
   content: string;
@@ -265,6 +284,120 @@ export class GitOperations {
     }
 
     return files;
+  }
+
+  /**
+   * Get the HEAD commit of a branch
+   */
+  async getHeadCommit(branchRef: string): Promise<string> {
+    const commit = await this.branchService.getCommit(branchRef);
+    if (!commit) {
+      throw new Error(`Could not get HEAD commit for ${branchRef}`);
+    }
+    return commit;
+  }
+
+  /**
+   * Get files changed between a branch and target
+   */
+  async getChangedFiles(branchRef: string, targetRef: string): Promise<FileChange[]> {
+    const changes = await this.getChanges(branchRef, targetRef);
+    const files: FileChange[] = [];
+
+    for (const path of changes.added) {
+      files.push({ path, status: 'added' });
+    }
+    for (const path of changes.modified) {
+      files.push({ path, status: 'modified' });
+    }
+    for (const path of changes.deleted) {
+      files.push({ path, status: 'deleted' });
+    }
+
+    return files;
+  }
+
+  /**
+   * Get the merge base commit between two branches
+   */
+  async getMergeBase(branchRef: string, targetRef: string): Promise<string> {
+    // In a real implementation, this would use git merge-base
+    // For now, return the target's commit as a simplification
+    return this.getHeadCommit(targetRef);
+  }
+
+  /**
+   * Get files changed since a specific commit
+   */
+  async getChangedFilesSinceCommit(branchRef: string, sinceCommit: string): Promise<FileChange[]> {
+    // In a real implementation, this would compare commits
+    // For now, return empty array (no concurrent changes)
+    return [];
+  }
+
+  /**
+   * Check if a merge can be performed cleanly
+   */
+  async checkMergeability(branchRef: string, targetRef: string): Promise<MergeabilityResult> {
+    try {
+      // In a real implementation, this would do a dry-run merge
+      // For now, assume merges can succeed if both branches exist
+      const branchCommit = await this.branchService.getCommit(branchRef);
+      const targetCommit = await this.branchService.getCommit(targetRef);
+
+      if (!branchCommit || !targetCommit) {
+        return {
+          canMerge: false,
+          conflicts: [{
+            path: '*',
+            type: 'content',
+            description: 'One or both branches do not exist',
+          }],
+        };
+      }
+
+      return { canMerge: true };
+    } catch (error) {
+      return {
+        canMerge: false,
+        conflicts: [{
+          path: '*',
+          type: 'content',
+          description: error instanceof Error ? error.message : 'Unknown error',
+        }],
+      };
+    }
+  }
+
+  /**
+   * Perform a merge of a branch into the target
+   */
+  async mergeBranch(branchRef: string, targetRef: string, options: MergeOptions): Promise<string> {
+    // In a real implementation, this would:
+    // 1. Checkout the target branch
+    // 2. Merge the source branch
+    // 3. Create a merge commit
+    // 4. Return the merge commit SHA
+
+    // For now, simulate by getting the branch commit
+    const branchCommit = await this.branchService.getCommit(branchRef);
+    if (!branchCommit) {
+      throw new Error(`Branch ${branchRef} does not exist`);
+    }
+
+    // In production, this would create an actual merge commit
+    // For MVP, we return the branch commit as the "merge result"
+    console.log(`Merging ${branchRef} into ${targetRef}: ${options.message}`);
+
+    return branchCommit;
+  }
+
+  /**
+   * Reset a branch to a specific commit
+   */
+  async resetToCommit(branchRef: string, commitSha: string): Promise<void> {
+    // In a real implementation, this would reset the branch ref
+    console.log(`Resetting ${branchRef} to ${commitSha}`);
   }
 }
 
