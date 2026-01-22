@@ -1,73 +1,167 @@
-# React + TypeScript + Vite
+# Echo Portal
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A branch isolation model for governed contribution workflows. Enables contributors to create isolated branches, submit for review, and publish approved changes to main.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Branch Isolation**: Create isolated workspaces that don't affect published content
+- **Review Workflow**: Submit branches for review, approve or request changes
+- **Atomic Publishing**: Merge approved branches with conflict detection and rollback support
+- **Role-Based Access**: Contributors, reviewers, publishers, and administrators
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Frontend**: React 19, Vite 7, TanStack Query, Zustand
+- **Backend**: Hono, Drizzle ORM, XState v5
+- **Database**: PostgreSQL 16
+- **Auth**: OAuth (GitHub, Google)
 
-## Expanding the ESLint configuration
+## Prerequisites
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- Node.js 20+
+- pnpm 9+
+- Docker (for PostgreSQL)
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Getting Started
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### 1. Clone and Install
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+git clone <repository-url>
+cd echo-portal
+pnpm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 2. Start the Database
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+# Start PostgreSQL with Docker
+docker-compose up -d
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# If you have docker-compose v1 (with hyphen)
+docker-compose up -d
+
+# Verify it's running
+docker ps
 ```
+
+> **Note**: If you have a local PostgreSQL running on port 5432, stop it first:
+> ```bash
+> brew services stop postgresql
+> ```
+
+### 3. Configure Environment
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+The defaults work for local development. OAuth credentials are optional.
+
+### 4. Build Shared Types
+
+```bash
+pnpm --filter @echo-portal/shared build
+```
+
+### 5. Push Database Schema
+
+```bash
+pnpm db:push
+```
+
+Select "Yes, I want to execute all statements" when prompted.
+
+### 6. Start Development Servers
+
+```bash
+pnpm dev
+```
+
+This starts:
+- **Frontend**: http://localhost:5173
+- **Backend API**: http://localhost:3001
+
+## Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `pnpm dev` | Start all development servers |
+| `pnpm dev:frontend` | Start frontend only |
+| `pnpm dev:backend` | Start backend only |
+| `pnpm build` | Build all packages |
+| `pnpm test` | Run tests |
+| `pnpm lint` | Run linting |
+| `pnpm db:push` | Push schema to database |
+| `pnpm db:studio` | Open Drizzle Studio |
+
+## Project Structure
+
+```
+echo-portal/
+├── backend/           # Hono API server
+│   ├── src/
+│   │   ├── api/       # Routes, middleware, schemas
+│   │   ├── db/        # Drizzle schema
+│   │   ├── models/    # Domain models
+│   │   └── services/  # Business logic
+│   └── drizzle/       # Migrations
+├── frontend/          # React application
+│   ├── src/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   └── stores/
+└── shared/            # Shared types and constants
+```
+
+## API Endpoints
+
+### Branches
+- `POST /api/v1/branches` - Create branch
+- `GET /api/v1/branches` - List branches
+- `GET /api/v1/branches/:id` - Get branch
+- `PATCH /api/v1/branches/:id` - Update branch
+- `POST /api/v1/branches/:id/transitions` - State transition
+
+### Reviews
+- `POST /api/v1/reviews` - Request review
+- `GET /api/v1/reviews` - List reviews
+- `POST /api/v1/reviews/:id/approve` - Approve
+- `POST /api/v1/reviews/:id/request-changes` - Request changes
+
+### Convergence (Publishing)
+- `POST /api/v1/convergence` - Initiate publish
+- `POST /api/v1/convergence/validate` - Pre-publish validation
+- `POST /api/v1/convergence/:id/execute` - Execute publish
+
+## Troubleshooting
+
+### Port 5432 already in use
+```bash
+# Check what's using the port
+lsof -i :5432
+
+# Stop local PostgreSQL
+brew services stop postgresql
+
+# Restart Docker
+docker-compose down && docker-compose up -d
+```
+
+### Database connection issues
+```bash
+# Test Docker PostgreSQL directly
+docker exec -it echo-portal-db psql -U postgres -d echo_portal -c "SELECT 1"
+```
+
+### Module not found errors
+```bash
+# Rebuild shared types
+pnpm --filter @echo-portal/shared build
+```
+
+## License
+
+MIT

@@ -5,7 +5,7 @@ import { useMyBranches, useReviewBranches } from '../hooks/useBranch';
 import { BranchList, BranchCreate } from '../components/branch';
 
 export default function Dashboard() {
-  const { user, isAuthenticated, login, logout } = useAuth();
+  const { user, isAuthenticated, login, loginDev, logout } = useAuth();
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const { data: myBranches = [], isLoading: loadingMyBranches } = useMyBranches();
@@ -33,6 +33,12 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="flex gap-2">
+                <button
+                  onClick={() => loginDev()}
+                  className="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-500"
+                >
+                  Dev Login
+                </button>
                 <button
                   onClick={() => login('github')}
                   className="rounded-md bg-gray-900 px-4 py-2 text-white hover:bg-gray-800"

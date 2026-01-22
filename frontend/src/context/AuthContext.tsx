@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import type { User, RoleType } from '@echo-portal/shared';
+import type { RoleType } from '@echo-portal/shared';
 
 interface AuthUser {
   id: string;
@@ -14,10 +14,19 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (provider: 'github' | 'google') => void;
+  loginDev: () => void;
   logout: () => void;
   hasRole: (role: RoleType) => boolean;
   hasAnyRole: (...roles: RoleType[]) => boolean;
 }
+
+// Mock user for development
+const DEV_USER: AuthUser = {
+  id: '00000000-0000-0000-0000-000000000001',
+  email: 'dev@example.com',
+  displayName: 'Dev User',
+  roles: ['contributor', 'reviewer', 'publisher', 'administrator'],
+};
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -31,6 +40,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function checkAuth() {
+    // Check for dev auth first
+    if (localStorage.getItem('dev_auth') === 'true') {
+      setUser(DEV_USER);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch('/api/v1/auth/me', {
         credentials: 'include',
@@ -54,14 +70,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.location.href = `/api/v1/auth/login/${provider}`;
   }
 
+  function loginDev() {
+    // Mock login for development
+    setUser(DEV_USER);
+    localStorage.setItem('dev_auth', 'true');
+  }
+
   async function logout() {
     try {
       await fetch('/api/v1/auth/logout', {
         method: 'POST',
         credentials: 'include',
       });
+    } catch {
+      // Ignore errors
     } finally {
       setUser(null);
+      localStorage.removeItem('dev_auth');
     }
   }
 
@@ -78,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     isAuthenticated: !!user,
     login,
+    loginDev,
     logout,
     hasRole,
     hasAnyRole,

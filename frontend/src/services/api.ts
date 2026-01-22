@@ -3,6 +3,16 @@ import { QueryClient } from '@tanstack/react-query';
 // API base URL
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
+// Dev auth token for local development
+function getDevAuthHeader(): Record<string, string> {
+  if (localStorage.getItem('dev_auth') === 'true') {
+    // Format: userId:email:roles (as expected by backend)
+    const token = '00000000-0000-0000-0000-000000000001:dev@example.com:contributor,reviewer,publisher,administrator';
+    return { Authorization: `Bearer ${token}` };
+  }
+  return {};
+}
+
 // Create query client with defaults
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -38,6 +48,7 @@ export async function apiFetch<T>(
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...getDevAuthHeader(),
       ...options.headers,
     },
     credentials: 'include',

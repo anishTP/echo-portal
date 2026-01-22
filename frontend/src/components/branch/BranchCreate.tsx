@@ -81,10 +81,9 @@ export function BranchCreate({ onSuccess, onCancel }: BranchCreateProps) {
           className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
           <option value="main">main (Production)</option>
-          <option value="dev">dev (Development)</option>
         </select>
         <p className="mt-1 text-sm text-gray-500">
-          Your branch will start from the current state of this branch.
+          Your branch will start from the current state of main.
         </p>
       </div>
 
