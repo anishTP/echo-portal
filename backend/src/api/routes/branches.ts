@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { branchService } from '../../services/branch/branch-service.js';
 import { visibilityService, type AccessContext } from '../../services/branch/visibility.js';
+import { transitionService } from '../../services/workflow/transitions.js';
 import { requireAuth, type AuthEnv } from '../middleware/auth.js';
 import { success, created, paginated, noContent } from '../utils/responses.js';
 import { NotFoundError, ForbiddenError, ValidationError } from '../utils/errors.js';
@@ -15,6 +16,8 @@ import {
   validateStateFilter,
   validateVisibilityFilter,
 } from '../schemas/branches.js';
+import { transitionBranchBodySchema } from '../schemas/reviews.js';
+import type { TransitionEventType } from '@echo-portal/shared';
 
 const branchRoutes = new Hono<AuthEnv>();
 
@@ -196,5 +199,97 @@ branchRoutes.get('/reviews', requireAuth, async (c) => {
     branches.map((b) => b.toResponse())
   );
 });
+
+/**
+ * POST /api/v1/branches/:id/transitions - Trigger a state transition
+ */
+branchRoutes.post(
+  '/:id/transitions',
+  requireAuth,
+  zValidator('param', branchIdParamSchema),
+  zValidator('json', transitionBranchBodySchema),
+  async (c) => {
+    const user = c.get('user')!;
+    const { id } = c.req.valid('param');
+    const { event, reason, metadata } = c.req.valid('json');
+
+    // Check branch exists and user has access
+    const branch = await branchService.getById(id);
+    if (!branch) {
+      throw new NotFoundError('Branch', id);
+    }
+
+    const context = getAccessContext(c);
+    visibilityService.assertAccess(branch.toJSON(), context);
+
+    // Execute the transition
+    const result = await transitionService.executeTransition({
+      branchId: id,
+      event: event as TransitionEventType,
+      actorId: user.id,
+      actorRoles: user.roles || [],
+      reason,
+      metadata,
+    });
+
+    return success(c, result);
+  }
+);
+
+/**
+ * GET /api/v1/branches/:id/transitions - Get transition history for a branch
+ */
+branchRoutes.get(
+  '/:id/transitions',
+  zValidator('param', branchIdParamSchema),
+  async (c) => {
+    const { id } = c.req.valid('param');
+    const context = getAccessContext(c);
+
+    // Check branch exists and user has access
+    const branch = await branchService.getById(id);
+    if (!branch) {
+      throw new NotFoundError('Branch', id);
+    }
+
+    visibilityService.assertAccess(branch.toJSON(), context);
+
+    const history = await transitionService.getTransitionHistory(id);
+    return success(c, history);
+  }
+);
+
+/**
+ * GET /api/v1/branches/:id/can-transition - Check if a transition is allowed (dry run)
+ */
+branchRoutes.get(
+  '/:id/can-transition',
+  requireAuth,
+  zValidator('param', branchIdParamSchema),
+  async (c) => {
+    const user = c.get('user')!;
+    const { id } = c.req.valid('param');
+    const event = c.req.query('event') as TransitionEventType | undefined;
+
+    if (!event) {
+      throw new ValidationError('Event query parameter is required');
+    }
+
+    // Check branch exists
+    const branch = await branchService.getById(id);
+    if (!branch) {
+      throw new NotFoundError('Branch', id);
+    }
+
+    const result = await transitionService.canTransition({
+      branchId: id,
+      event,
+      actorId: user.id,
+      actorRoles: user.roles || [],
+    });
+
+    return success(c, result);
+  }
+);
 
 export { branchRoutes };

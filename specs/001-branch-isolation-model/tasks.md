@@ -242,7 +242,7 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ---
 
-## Phase 4: User Story 2 — Submit Branch for Review (P1) 🎯 MVP — ⬜ Pending
+## Phase 4: User Story 2 — Submit Branch for Review (P1) 🎯 MVP — ✅ COMPLETED (2026-01-22)
 
 **Beads Phase ID**: `echo-portal-6hu.4`
 **Goal**: Contributors can submit branches for review, reviewers can approve or request changes
@@ -251,42 +251,42 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ### Backend - State Machine
 
-- [ ] T077 [US2] Implement XState branch state machine in `backend/src/services/workflow/state-machine.ts`
-- [ ] T078 [US2] Create transition validators in `backend/src/services/workflow/transitions.ts`
-- [ ] T079 [US2] Implement validation guards in `backend/src/services/workflow/validation.ts`
+- [x] T077 [US2] Implement XState branch state machine in `backend/src/services/workflow/state-machine.ts`
+- [x] T078 [US2] Create transition validators in `backend/src/services/workflow/transitions.ts`
+- [x] T079 [US2] Implement validation guards in `backend/src/services/workflow/validation.ts`
 
 ### Backend - Review Service
 
-- [ ] T080 [P] [US2] Create Review model in `backend/src/models/review.ts`
-- [ ] T081 [US2] Implement review service in `backend/src/services/review/review-service.ts`
-- [ ] T082 [US2] Add review comment support in `backend/src/services/review/comments.ts`
+- [x] T080 [P] [US2] Create Review model in `backend/src/models/review.ts`
+- [x] T081 [US2] Implement review service in `backend/src/services/review/review-service.ts`
+- [x] T082 [US2] Add review comment support in `backend/src/services/review/comments.ts`
 
 ### Backend - API Routes
 
-- [ ] T083 [US2] Create review validation schemas in `backend/src/api/schemas/reviews.ts`
-- [ ] T084 [US2] Implement POST /api/v1/branches/:id/transitions route in `backend/src/api/routes/branches.ts`
-- [ ] T085 [US2] Implement POST /api/v1/reviews route in `backend/src/api/routes/reviews.ts`
-- [ ] T086 [US2] Implement GET /api/v1/reviews route in `backend/src/api/routes/reviews.ts`
-- [ ] T087 [US2] Implement POST /api/v1/reviews/:id/approve route in `backend/src/api/routes/reviews.ts`
-- [ ] T088 [US2] Implement POST /api/v1/reviews/:id/request-changes route in `backend/src/api/routes/reviews.ts`
-- [ ] T089 [US2] Register review routes in API in `backend/src/api/index.ts`
+- [x] T083 [US2] Create review validation schemas in `backend/src/api/schemas/reviews.ts`
+- [x] T084 [US2] Implement POST /api/v1/branches/:id/transitions route in `backend/src/api/routes/branches.ts`
+- [x] T085 [US2] Implement POST /api/v1/reviews route in `backend/src/api/routes/reviews.ts`
+- [x] T086 [US2] Implement GET /api/v1/reviews route in `backend/src/api/routes/reviews.ts`
+- [x] T087 [US2] Implement POST /api/v1/reviews/:id/approve route in `backend/src/api/routes/reviews.ts`
+- [x] T088 [US2] Implement POST /api/v1/reviews/:id/request-changes route in `backend/src/api/routes/reviews.ts`
+- [x] T089 [US2] Register review routes in API in `backend/src/api/index.ts`
 
 ### Frontend - Components
 
-- [ ] T090 [P] [US2] Create ReviewPanel component in `frontend/src/components/review/ReviewPanel.tsx`
-- [ ] T091 [P] [US2] Create ApprovalActions component in `frontend/src/components/review/ApprovalActions.tsx`
-- [ ] T092 [P] [US2] Create ReviewComments component in `frontend/src/components/review/ReviewComments.tsx`
+- [x] T090 [P] [US2] Create ReviewPanel component in `frontend/src/components/review/ReviewPanel.tsx`
+- [x] T091 [P] [US2] Create ApprovalActions component in `frontend/src/components/review/ApprovalActions.tsx`
+- [x] T092 [P] [US2] Create ReviewComments component in `frontend/src/components/review/ReviewComments.tsx`
 
 ### Frontend - Hooks & Services
 
-- [ ] T093 [US2] Create useWorkflow hook in `frontend/src/hooks/useWorkflow.ts`
-- [ ] T094 [US2] Create review API service in `frontend/src/services/reviewService.ts`
-- [ ] T095 [US2] Create workflow store in `frontend/src/stores/workflowStore.ts`
+- [x] T093 [US2] Create useWorkflow hook in `frontend/src/hooks/useWorkflow.ts`
+- [x] T094 [US2] Create review API service in `frontend/src/services/reviewService.ts`
+- [x] T095 [US2] Create workflow store in `frontend/src/stores/workflowStore.ts`
 
 ### Frontend - Pages
 
-- [ ] T096 [US2] Create ReviewQueue page in `frontend/src/pages/ReviewQueue.tsx`
-- [ ] T097 [US2] Wire routes for review management in `frontend/src/router/index.tsx`
+- [x] T096 [US2] Create ReviewQueue page in `frontend/src/pages/ReviewQueue.tsx`
+- [x] T097 [US2] Wire routes for review management in `frontend/src/router/index.tsx`
 
 **✓ Checkpoint**: User Story 2 functional — can submit for review, approve/reject
 

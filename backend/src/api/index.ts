@@ -6,6 +6,7 @@ import { authMiddleware } from './middleware/auth.js';
 import { auditContextMiddleware } from './middleware/audit.js';
 import { handleError } from './utils/errors.js';
 import { branchRoutes } from './routes/branches.js';
+import { reviewRoutes } from './routes/reviews.js';
 
 // Create Hono app
 const app = new Hono();
@@ -55,7 +56,7 @@ api.get('/', (c) =>
 
 // Mount API routes
 api.route('/branches', branchRoutes);
-// TODO: Mount review routes
+api.route('/reviews', reviewRoutes);
 // TODO: Mount convergence routes
 // TODO: Mount audit routes
 
