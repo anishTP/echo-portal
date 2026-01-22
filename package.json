@@ -4,27 +4,29 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "dev": "pnpm --parallel -r dev",
+    "dev:backend": "pnpm --filter @echo-portal/backend dev",
+    "dev:frontend": "pnpm --filter @echo-portal/frontend dev",
+    "build": "pnpm --filter @echo-portal/shared build && pnpm --parallel --filter !@echo-portal/shared -r build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "db:generate": "pnpm --filter @echo-portal/backend db:generate",
+    "db:migrate": "pnpm --filter @echo-portal/backend db:migrate",
+    "db:push": "pnpm --filter @echo-portal/backend db:push",
+    "clean": "rm -rf node_modules backend/node_modules frontend/node_modules shared/node_modules"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
-    "@types/node": "^24.10.1",
-    "@types/react": "^19.2.5",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.1",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.46.4",
-    "vite": "^7.2.4"
+    "typescript-eslint": "^8.46.4"
+  },
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
   }
 }

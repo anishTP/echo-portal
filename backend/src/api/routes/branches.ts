@@ -1,0 +1,200 @@
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { branchService } from '../../services/branch/branch-service.js';
+import { visibilityService, type AccessContext } from '../../services/branch/visibility.js';
+import { requireAuth, type AuthEnv } from '../middleware/auth.js';
+import { success, created, paginated, noContent } from '../utils/responses.js';
+import { NotFoundError, ForbiddenError, ValidationError } from '../utils/errors.js';
+import {
+  createBranchBodySchema,
+  updateBranchBodySchema,
+  branchIdParamSchema,
+  listBranchesQuerySchema,
+  addReviewersBodySchema,
+  removeReviewerParamsSchema,
+  validateStateFilter,
+  validateVisibilityFilter,
+} from '../schemas/branches.js';
+
+const branchRoutes = new Hono<AuthEnv>();
+
+/**
+ * Helper to build access context from the request
+ */
+function getAccessContext(c: any): AccessContext {
+  const user = c.get('user');
+  return {
+    userId: user?.id || null,
+    isAuthenticated: !!user,
+    roles: user?.roles || [],
+    teamIds: [], // Would be populated from user's team memberships
+  };
+}
+
+/**
+ * POST /api/v1/branches - Create a new branch
+ */
+branchRoutes.post(
+  '/',
+  requireAuth,
+  zValidator('json', createBranchBodySchema),
+  async (c) => {
+    const user = c.get('user')!;
+    const body = c.req.valid('json');
+
+    const branch = await branchService.create(body, user.id);
+    return created(c, branch.toResponse());
+  }
+);
+
+/**
+ * GET /api/v1/branches - List branches
+ */
+branchRoutes.get('/', zValidator('query', listBranchesQuerySchema), async (c) => {
+  const query = c.req.valid('query');
+  const context = getAccessContext(c);
+
+  // Validate and clean filter values
+  const stateFilter = validateStateFilter(query.state);
+  const visibilityFilter = validateVisibilityFilter(query.visibility);
+
+  const result = await branchService.list({
+    ownerId: query.ownerId,
+    state: stateFilter,
+    visibility: visibilityFilter,
+    search: query.search,
+    page: query.page,
+    limit: query.limit,
+  });
+
+  // Filter branches by visibility
+  const accessibleBranches = result.branches.filter((branch) =>
+    visibilityService.checkAccess(branch.toJSON(), context).canAccess
+  );
+
+  return paginated(
+    c,
+    accessibleBranches.map((b) => b.toResponse()),
+    {
+      page: result.page,
+      limit: result.limit,
+      total: result.total,
+      hasMore: result.hasMore,
+    }
+  );
+});
+
+/**
+ * GET /api/v1/branches/:id - Get a branch by ID
+ */
+branchRoutes.get('/:id', zValidator('param', branchIdParamSchema), async (c) => {
+  const { id } = c.req.valid('param');
+  const context = getAccessContext(c);
+
+  const branch = await branchService.getById(id);
+  if (!branch) {
+    throw new NotFoundError('Branch', id);
+  }
+
+  // Check access
+  visibilityService.assertAccess(branch.toJSON(), context);
+
+  return success(c, branch.toResponse());
+});
+
+/**
+ * PATCH /api/v1/branches/:id - Update a branch
+ */
+branchRoutes.patch(
+  '/:id',
+  requireAuth,
+  zValidator('param', branchIdParamSchema),
+  zValidator('json', updateBranchBodySchema),
+  async (c) => {
+    const user = c.get('user')!;
+    const { id } = c.req.valid('param');
+    const body = c.req.valid('json');
+
+    const branch = await branchService.update(id, body, user.id);
+    return success(c, branch.toResponse());
+  }
+);
+
+/**
+ * DELETE /api/v1/branches/:id - Delete a branch
+ */
+branchRoutes.delete(
+  '/:id',
+  requireAuth,
+  zValidator('param', branchIdParamSchema),
+  async (c) => {
+    const user = c.get('user')!;
+    const { id } = c.req.valid('param');
+
+    await branchService.delete(id, user.id);
+    return noContent(c);
+  }
+);
+
+/**
+ * POST /api/v1/branches/:id/reviewers - Add reviewers to a branch
+ */
+branchRoutes.post(
+  '/:id/reviewers',
+  requireAuth,
+  zValidator('param', branchIdParamSchema),
+  zValidator('json', addReviewersBodySchema),
+  async (c) => {
+    const user = c.get('user')!;
+    const { id } = c.req.valid('param');
+    const { reviewerIds } = c.req.valid('json');
+
+    const branch = await branchService.addReviewers(id, reviewerIds, user.id);
+    return success(c, branch.toResponse());
+  }
+);
+
+/**
+ * DELETE /api/v1/branches/:id/reviewers/:reviewerId - Remove a reviewer
+ */
+branchRoutes.delete(
+  '/:id/reviewers/:reviewerId',
+  requireAuth,
+  zValidator('param', removeReviewerParamsSchema),
+  async (c) => {
+    const user = c.get('user')!;
+    const { id, reviewerId } = c.req.valid('param');
+
+    const branch = await branchService.removeReviewer(id, reviewerId, user.id);
+    return success(c, branch.toResponse());
+  }
+);
+
+/**
+ * GET /api/v1/branches/me - Get branches owned by current user
+ */
+branchRoutes.get('/me', requireAuth, async (c) => {
+  const user = c.get('user')!;
+  const includeArchived = c.req.query('includeArchived') === 'true';
+
+  const branches = await branchService.getByOwner(user.id, includeArchived);
+  return success(
+    c,
+    branches.map((b) => b.toResponse())
+  );
+});
+
+/**
+ * GET /api/v1/branches/reviews - Get branches where user is a reviewer
+ */
+branchRoutes.get('/reviews', requireAuth, async (c) => {
+  const user = c.get('user')!;
+
+  const branches = await branchService.getByReviewer(user.id);
+  return success(
+    c,
+    branches.map((b) => b.toResponse())
+  );
+});
+
+export { branchRoutes };

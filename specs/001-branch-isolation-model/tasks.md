@@ -10,7 +10,7 @@
 
 | Property | Value |
 |----------|-------|
-| **Epic ID** | `{epic-id}` |
+| **Epic ID** | `echo-portal-6hu` |
 | **Spec Label** | `spec:branch-isolation-model` |
 | **User Stories Source** | `specs/001-branch-isolation-model/spec.md` |
 | **Planning Details** | `specs/001-branch-isolation-model/plan.md` |
@@ -79,164 +79,164 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ---
 
-## Phase 1: Setup — ⬜ Pending
+## Phase 1: Setup — ✅ COMPLETED (2026-01-21)
 
-**Beads Phase ID**: `{phase-1-id}`
+**Beads Phase ID**: `echo-portal-6hu.1`
 **Purpose**: Project initialization, dependencies, tooling
 **Blocks**: All subsequent phases
 **Parallelism**: Most tasks can run in parallel
 
 ### Project Structure
 
-- [ ] T001 [P] Create monorepo structure with backend, frontend, shared directories per `plan.md`
-- [ ] T002 [P] Initialize backend package with TypeScript in `backend/package.json`
-- [ ] T003 [P] Initialize frontend package with Vite/React in `frontend/package.json`
-- [ ] T004 [P] Initialize shared types package in `shared/package.json`
-- [ ] T005 [P] Configure root workspace in `package.json` with pnpm workspaces
+- [x] T001 [P] Create monorepo structure with backend, frontend, shared directories per `plan.md`
+- [x] T002 [P] Initialize backend package with TypeScript in `backend/package.json`
+- [x] T003 [P] Initialize frontend package with Vite/React in `frontend/package.json`
+- [x] T004 [P] Initialize shared types package in `shared/package.json`
+- [x] T005 [P] Configure root workspace in `package.json` with pnpm workspaces
 
 ### Backend Setup
 
-- [ ] T006 [P] Configure TypeScript for backend in `backend/tsconfig.json`
-- [ ] T007 [P] Install backend dependencies: Hono, Drizzle ORM, isomorphic-git, XState v5 in `backend/package.json`
-- [ ] T008 [P] Setup Vitest for backend testing in `backend/vitest.config.ts`
-- [ ] T009 [P] Create environment configuration in `backend/.env.example`
+- [x] T006 [P] Configure TypeScript for backend in `backend/tsconfig.json`
+- [x] T007 [P] Install backend dependencies: Hono, Drizzle ORM, isomorphic-git, XState v5 in `backend/package.json`
+- [x] T008 [P] Setup Vitest for backend testing in `backend/vitest.config.ts`
+- [x] T009 [P] Create environment configuration in `backend/.env.example`
 
 ### Frontend Setup
 
-- [ ] T010 [P] Configure Vite for React 19 in `frontend/vite.config.ts`
-- [ ] T011 [P] Install frontend dependencies: TanStack Query, Zustand, Monaco Editor in `frontend/package.json`
-- [ ] T012 [P] Setup Vitest for frontend testing in `frontend/vitest.config.ts`
-- [ ] T013 [P] Configure Playwright for E2E in `frontend/playwright.config.ts`
+- [x] T010 [P] Configure Vite for React 19 in `frontend/vite.config.ts`
+- [x] T011 [P] Install frontend dependencies: TanStack Query, Zustand, Monaco Editor in `frontend/package.json`
+- [x] T012 [P] Setup Vitest for frontend testing in `frontend/vitest.config.ts`
+- [x] T013 [P] Configure Playwright for E2E in `frontend/playwright.config.ts`
 
 ### Shared Setup
 
-- [ ] T014 [P] Configure TypeScript for shared types in `shared/tsconfig.json`
-- [ ] T015 [P] Create shared constants in `shared/constants/states.ts`
+- [x] T014 [P] Configure TypeScript for shared types in `shared/tsconfig.json`
+- [x] T015 [P] Create shared constants in `shared/constants/states.ts`
 
 ### Tooling
 
-- [ ] T016 [P] Configure ESLint for monorepo in `eslint.config.js`
-- [ ] T017 [P] Configure Prettier in `.prettierrc`
-- [ ] T018 [P] Setup Docker Compose for PostgreSQL in `docker-compose.yml`
+- [x] T016 [P] Configure ESLint for monorepo in `eslint.config.js`
+- [x] T017 [P] Configure Prettier in `.prettierrc`
+- [x] T018 [P] Setup Docker Compose for PostgreSQL in `docker-compose.yml`
 
 **✓ Checkpoint**: `pnpm install` works, `pnpm dev` starts both frontend and backend, `pnpm test` executes
 
 ---
 
-## Phase 2: Foundational — ⬜ Pending
+## Phase 2: Foundational — ✅ COMPLETED (2026-01-21)
 
-**Beads Phase ID**: `{phase-2-id}`
+**Beads Phase ID**: `echo-portal-6hu.2`
 **Purpose**: Core infrastructure ALL user stories depend on
 **Blocks**: All user story implementation
 **⚠️ CRITICAL**: No user story work until this phase completes
 
 ### Database & Schema
 
-- [ ] T019 Setup Drizzle configuration in `backend/src/db/index.ts`
-- [ ] T020 [P] Create database schema enums in `backend/src/db/schema/enums.ts`
-- [ ] T021 [P] Create User table schema in `backend/src/db/schema/users.ts`
-- [ ] T022 [P] Create Branch table schema in `backend/src/db/schema/branches.ts`
-- [ ] T023 [P] Create BranchStateTransition table schema in `backend/src/db/schema/branch-transitions.ts`
-- [ ] T024 [P] Create Review table schema in `backend/src/db/schema/reviews.ts`
-- [ ] T025 [P] Create Convergence table schema in `backend/src/db/schema/convergence.ts`
-- [ ] T026 [P] Create AuditLog table schema in `backend/src/db/schema/audit-logs.ts`
-- [ ] T027 Create schema index and migrations in `backend/src/db/schema/index.ts`
+- [x] T019 Setup Drizzle configuration in `backend/src/db/index.ts`
+- [x] T020 [P] Create database schema enums in `backend/src/db/schema/enums.ts`
+- [x] T021 [P] Create User table schema in `backend/src/db/schema/users.ts`
+- [x] T022 [P] Create Branch table schema in `backend/src/db/schema/branches.ts`
+- [x] T023 [P] Create BranchStateTransition table schema in `backend/src/db/schema/branch-transitions.ts`
+- [x] T024 [P] Create Review table schema in `backend/src/db/schema/reviews.ts`
+- [x] T025 [P] Create Convergence table schema in `backend/src/db/schema/convergence.ts`
+- [x] T026 [P] Create AuditLog table schema in `backend/src/db/schema/audit-logs.ts`
+- [x] T027 Create schema index and migrations in `backend/src/db/schema/index.ts`
 - [ ] T028 Generate initial migration in `backend/drizzle/0001_initial_schema.sql`
 
 ### Shared Types
 
-- [ ] T029 [P] Create User types in `shared/types/user.ts`
-- [ ] T030 [P] Create Branch types in `shared/types/branch.ts`
-- [ ] T031 [P] Create Review types in `shared/types/review.ts`
-- [ ] T032 [P] Create Convergence types in `shared/types/convergence.ts`
-- [ ] T033 [P] Create Workflow types in `shared/types/workflow.ts`
-- [ ] T034 Create types index in `shared/types/index.ts`
+- [x] T029 [P] Create User types in `shared/types/user.ts`
+- [x] T030 [P] Create Branch types in `shared/types/branch.ts`
+- [x] T031 [P] Create Review types in `shared/types/review.ts`
+- [x] T032 [P] Create Convergence types in `shared/types/convergence.ts`
+- [x] T033 [P] Create Workflow types in `shared/types/workflow.ts`
+- [x] T034 Create types index in `shared/types/index.ts`
 
 ### Authentication
 
-- [ ] T035 Setup arctic OAuth library configuration for Hono in `backend/src/services/auth/config.ts`
-- [ ] T036 [P] Implement GitHub OAuth provider in `backend/src/services/auth/providers/github.ts`
-- [ ] T037 [P] Implement Google OAuth provider in `backend/src/services/auth/providers/google.ts`
-- [ ] T038 Implement permissions service in `backend/src/services/auth/permissions.ts`
-- [ ] T039 Create auth middleware for Hono in `backend/src/api/middleware/auth.ts`
-- [ ] T040 Create permissions middleware in `backend/src/api/middleware/permissions.ts`
+- [x] T035 Setup arctic OAuth library configuration for Hono in `backend/src/services/auth/config.ts`
+- [x] T036 [P] Implement GitHub OAuth provider in `backend/src/services/auth/providers/github.ts`
+- [x] T037 [P] Implement Google OAuth provider in `backend/src/services/auth/providers/google.ts`
+- [x] T038 Implement permissions service in `backend/src/services/auth/permissions.ts`
+- [x] T039 Create auth middleware for Hono in `backend/src/api/middleware/auth.ts`
+- [x] T040 Create permissions middleware in `backend/src/api/middleware/permissions.ts`
 
 ### Audit Logging
 
-- [ ] T041 Implement audit logger service in `backend/src/services/audit/logger.ts`
-- [ ] T042 Create audit middleware in `backend/src/api/middleware/audit.ts`
+- [x] T041 Implement audit logger service in `backend/src/services/audit/logger.ts`
+- [x] T042 Create audit middleware in `backend/src/api/middleware/audit.ts`
 
 ### API Foundation
 
-- [ ] T043 Setup Hono app with OpenAPI in `backend/src/api/index.ts`
-- [ ] T044 [P] Create error handling utilities in `backend/src/api/utils/errors.ts`
-- [ ] T045 [P] Create response helpers in `backend/src/api/utils/responses.ts`
-- [ ] T046 [P] Create validation schemas with Zod in `backend/src/api/schemas/common.ts`
+- [x] T043 Setup Hono app with OpenAPI in `backend/src/api/index.ts`
+- [x] T044 [P] Create error handling utilities in `backend/src/api/utils/errors.ts`
+- [x] T045 [P] Create response helpers in `backend/src/api/utils/responses.ts`
+- [x] T046 [P] Create validation schemas with Zod in `backend/src/api/schemas/common.ts`
 
 ### Frontend Foundation
 
-- [ ] T047 Setup React Router in `frontend/src/router/index.tsx`
-- [ ] T048 [P] Create API client with TanStack Query in `frontend/src/services/api.ts`
-- [ ] T049 [P] Setup auth context in `frontend/src/context/AuthContext.tsx`
-- [ ] T050 [P] Create Zustand stores foundation in `frontend/src/stores/index.ts`
-- [ ] T051 [P] Create error boundary in `frontend/src/components/common/ErrorBoundary.tsx`
+- [x] T047 Setup React Router in `frontend/src/router/index.tsx`
+- [x] T048 [P] Create API client with TanStack Query in `frontend/src/services/api.ts`
+- [x] T049 [P] Setup auth context in `frontend/src/context/AuthContext.tsx`
+- [x] T050 [P] Create Zustand stores foundation in `frontend/src/stores/index.ts`
+- [x] T051 [P] Create error boundary in `frontend/src/components/common/ErrorBoundary.tsx`
 
 ### Branch Integrity (FR-020)
 
-- [ ] T052 Implement orphan detection service to prevent dangling branches in `backend/src/services/branch/orphan-detection.ts`
-- [ ] T053 [P] Add lineage validation utility to verify branch traces to known published state in `backend/src/services/branch/lineage-validation.ts`
+- [x] T052 Implement orphan detection service to prevent dangling branches in `backend/src/services/branch/orphan-detection.ts`
+- [x] T053 [P] Add lineage validation utility to verify branch traces to known published state in `backend/src/services/branch/lineage-validation.ts`
 
 **✓ Checkpoint**: Foundation ready — database connected, auth working, API skeleton running, orphan prevention in place
 
 ---
 
-## Phase 3: User Story 1 — Create and Work in Isolated Branch (P1) 🎯 MVP — ⬜ Pending
+## Phase 3: User Story 1 — Create and Work in Isolated Branch (P1) 🎯 MVP — ✅ COMPLETED (2026-01-22)
 
-**Beads Phase ID**: `{phase-3-id}`
+**Beads Phase ID**: `echo-portal-6hu.3`
 **Goal**: Contributors can create branches, make edits, save work without affecting published content
 **Acceptance**: Create branch, make changes, verify published content unchanged, verify owner can see edits
 **Dependencies**: Phase 2 complete
 
 ### Backend - Git Service
 
-- [ ] T054 [P] [US1] Implement Git repository service in `backend/src/services/git/repository.ts`
-- [ ] T055 [P] [US1] Implement Git branch operations in `backend/src/services/git/branch.ts`
-- [ ] T056 [US1] Integrate isomorphic-git for branch creation in `backend/src/services/git/operations.ts`
+- [x] T054 [P] [US1] Implement Git repository service in `backend/src/services/git/repository.ts`
+- [x] T055 [P] [US1] Implement Git branch operations in `backend/src/services/git/branch.ts`
+- [x] T056 [US1] Integrate isomorphic-git for branch creation in `backend/src/services/git/operations.ts`
 
 ### Backend - Branch Model & Service
 
-- [ ] T057 [P] [US1] Create Branch model with validation in `backend/src/models/branch.ts`
-- [ ] T058 [US1] Implement branch service (create, read, update) in `backend/src/services/branch/branch-service.ts`
-- [ ] T059 [US1] Add visibility enforcement in `backend/src/services/branch/visibility.ts`
+- [x] T057 [P] [US1] Create Branch model with validation in `backend/src/models/branch.ts`
+- [x] T058 [US1] Implement branch service (create, read, update) in `backend/src/services/branch/branch-service.ts`
+- [x] T059 [US1] Add visibility enforcement in `backend/src/services/branch/visibility.ts`
 
 ### Backend - API Routes
 
-- [ ] T060 [US1] Create branch validation schemas in `backend/src/api/schemas/branches.ts`
-- [ ] T061 [US1] Implement POST /api/v1/branches route in `backend/src/api/routes/branches.ts`
-- [ ] T062 [US1] Implement GET /api/v1/branches route in `backend/src/api/routes/branches.ts`
-- [ ] T063 [US1] Implement GET /api/v1/branches/:id route in `backend/src/api/routes/branches.ts`
-- [ ] T064 [US1] Implement PATCH /api/v1/branches/:id route in `backend/src/api/routes/branches.ts`
-- [ ] T065 [US1] Register branch routes in API in `backend/src/api/index.ts`
+- [x] T060 [US1] Create branch validation schemas in `backend/src/api/schemas/branches.ts`
+- [x] T061 [US1] Implement POST /api/v1/branches route in `backend/src/api/routes/branches.ts`
+- [x] T062 [US1] Implement GET /api/v1/branches route in `backend/src/api/routes/branches.ts`
+- [x] T063 [US1] Implement GET /api/v1/branches/:id route in `backend/src/api/routes/branches.ts`
+- [x] T064 [US1] Implement PATCH /api/v1/branches/:id route in `backend/src/api/routes/branches.ts`
+- [x] T065 [US1] Register branch routes in API in `backend/src/api/index.ts`
 
 ### Frontend - Components
 
-- [ ] T066 [P] [US1] Create BranchCreate component in `frontend/src/components/branch/BranchCreate.tsx`
-- [ ] T067 [P] [US1] Create BranchList component in `frontend/src/components/branch/BranchList.tsx`
-- [ ] T068 [P] [US1] Create BranchDetail component in `frontend/src/components/branch/BranchDetail.tsx`
-- [ ] T069 [P] [US1] Create LifecycleStatus badge in `frontend/src/components/branch/LifecycleStatus.tsx`
-- [ ] T070 [P] [US1] Create EnvironmentIndicator in `frontend/src/components/common/EnvironmentIndicator.tsx`
+- [x] T066 [P] [US1] Create BranchCreate component in `frontend/src/components/branch/BranchCreate.tsx`
+- [x] T067 [P] [US1] Create BranchList component in `frontend/src/components/branch/BranchList.tsx`
+- [x] T068 [P] [US1] Create BranchDetail component in `frontend/src/components/branch/BranchDetail.tsx`
+- [x] T069 [P] [US1] Create LifecycleStatus badge in `frontend/src/components/branch/LifecycleStatus.tsx`
+- [x] T070 [P] [US1] Create EnvironmentIndicator in `frontend/src/components/common/EnvironmentIndicator.tsx`
 
 ### Frontend - Hooks & Services
 
-- [ ] T071 [US1] Create useBranch hook in `frontend/src/hooks/useBranch.ts`
-- [ ] T072 [US1] Create branch API service in `frontend/src/services/branchService.ts`
-- [ ] T073 [US1] Create branch store in `frontend/src/stores/branchStore.ts`
+- [x] T071 [US1] Create useBranch hook in `frontend/src/hooks/useBranch.ts`
+- [x] T072 [US1] Create branch API service in `frontend/src/services/branchService.ts`
+- [x] T073 [US1] Create branch store in `frontend/src/stores/branchStore.ts`
 
 ### Frontend - Pages
 
-- [ ] T074 [US1] Create Dashboard page in `frontend/src/pages/Dashboard.tsx`
-- [ ] T075 [US1] Create BranchWorkspace page in `frontend/src/pages/BranchWorkspace.tsx`
-- [ ] T076 [US1] Wire routes for branch management in `frontend/src/router/index.tsx`
+- [x] T074 [US1] Create Dashboard page in `frontend/src/pages/Dashboard.tsx`
+- [x] T075 [US1] Create BranchWorkspace page in `frontend/src/pages/BranchWorkspace.tsx`
+- [x] T076 [US1] Wire routes for branch management in `frontend/src/router/index.tsx`
 
 **✓ Checkpoint**: User Story 1 functional — can create branch, edit, save, verify isolation
 
@@ -244,7 +244,7 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ## Phase 4: User Story 2 — Submit Branch for Review (P1) 🎯 MVP — ⬜ Pending
 
-**Beads Phase ID**: `{phase-4-id}`
+**Beads Phase ID**: `echo-portal-6hu.4`
 **Goal**: Contributors can submit branches for review, reviewers can approve or request changes
 **Acceptance**: Submit for review, reviewers see changes, approve/reject works
 **Dependencies**: Phase 2 complete, Phase 3 (US1) for branch creation
@@ -294,7 +294,7 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ## Phase 5: User Story 3 — Publish Approved Branch (P1) 🎯 MVP — ⬜ Pending
 
-**Beads Phase ID**: `{phase-5-id}`
+**Beads Phase ID**: `echo-portal-6hu.5`
 **Goal**: Publishers can merge approved branches to main with atomic convergence
 **Acceptance**: Converge to main, verify changes visible, verify immutability, verify rollback on failure
 **Dependencies**: Phase 2 complete, Phase 4 (US2) for approval
@@ -333,7 +333,7 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ## Phase 6: User Story 4 — Compare Branch to Published State (P2) — ⬜ Pending
 
-**Beads Phase ID**: `{phase-6-id}`
+**Beads Phase ID**: `echo-portal-6hu.6`
 **Goal**: Users can see all changes between branch and published state
 **Acceptance**: View diff, verify all additions/deletions/modifications shown accurately
 **Dependencies**: Phase 2 complete
@@ -360,7 +360,7 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ## Phase 7: User Story 5 — Manage Branch Visibility (P2) — ⬜ Pending
 
-**Beads Phase ID**: `{phase-7-id}`
+**Beads Phase ID**: `echo-portal-6hu.7`
 **Goal**: Branch owners can control who sees their work
 **Acceptance**: Set visibility levels, verify access control works for different user types
 **Dependencies**: Phase 2 complete
@@ -382,7 +382,7 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ## Phase 8: User Story 6 — Trace Branch Lineage and History (P3) — ⬜ Pending
 
-**Beads Phase ID**: `{phase-8-id}`
+**Beads Phase ID**: `echo-portal-6hu.8`
 **Goal**: Users can view complete audit trail and lineage
 **Acceptance**: View all events with timestamps, actors, and reasons
 **Dependencies**: Phase 2 complete
@@ -411,7 +411,7 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ## Phase 9: Polish & Cross-Cutting — ⬜ Pending
 
-**Beads Phase ID**: `{phase-9-id}`
+**Beads Phase ID**: `echo-portal-6hu.9`
 **Purpose**: Quality improvements affecting multiple stories
 **Dependencies**: All desired user stories complete
 
