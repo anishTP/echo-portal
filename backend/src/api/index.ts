@@ -8,6 +8,7 @@ import { handleError } from './utils/errors.js';
 import { branchRoutes } from './routes/branches.js';
 import { reviewRoutes } from './routes/reviews.js';
 import { convergenceRoutes } from './routes/convergence.js';
+import { auditRoutes } from './routes/audit.js';
 
 // Create Hono app
 const app = new Hono();
@@ -59,7 +60,7 @@ api.get('/', (c) =>
 api.route('/branches', branchRoutes);
 api.route('/reviews', reviewRoutes);
 api.route('/convergence', convergenceRoutes);
-// TODO: Mount audit routes
+api.route('/audit', auditRoutes);
 
 app.route('/api/v1', api);
 

@@ -358,7 +358,7 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ---
 
-## Phase 7: User Story 5 — Manage Branch Visibility (P2) — ⬜ Pending
+## Phase 7: User Story 5 — Manage Branch Visibility (P2) — ✅ COMPLETED (2026-01-23)
 
 **Beads Phase ID**: `echo-portal-6hu.7`
 **Goal**: Branch owners can control who sees their work
@@ -367,20 +367,20 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ### Backend - Visibility Service
 
-- [ ] T121 [US5] Enhance visibility enforcement in `backend/src/services/branch/visibility.ts`
-- [ ] T122 [US5] Add team member management in `backend/src/services/branch/team.ts`
+- [x] T121 [US5] Enhance visibility enforcement in `backend/src/services/branch/visibility.ts` — ✅ (2026-01-23)
+- [x] T122 [US5] Add team member management in `backend/src/services/branch/team.ts` — ✅ (2026-01-23)
 
 ### Frontend - Components
 
-- [ ] T123 [P] [US5] Create VisibilitySelector component in `frontend/src/components/branch/VisibilitySelector.tsx`
-- [ ] T124 [P] [US5] Create TeamMemberPicker component in `frontend/src/components/branch/TeamMemberPicker.tsx`
-- [ ] T125 [US5] Integrate visibility into BranchDetail in `frontend/src/components/branch/BranchDetail.tsx`
+- [x] T123 [P] [US5] Create VisibilitySelector component in `frontend/src/components/branch/VisibilitySelector.tsx` — ✅ (2026-01-23)
+- [x] T124 [P] [US5] Create TeamMemberPicker component in `frontend/src/components/branch/TeamMemberPicker.tsx` — ✅ (2026-01-23)
+- [x] T125 [US5] Integrate visibility into BranchDetail in `frontend/src/components/branch/BranchDetail.tsx` — ✅ (2026-01-23)
 
 **✓ Checkpoint**: User Story 5 functional — visibility controls work
 
 ---
 
-## Phase 8: User Story 6 — Trace Branch Lineage and History (P3) — ⬜ Pending
+## Phase 8: User Story 6 — Trace Branch Lineage and History (P3) — ✅ COMPLETED (2026-01-23)
 
 **Beads Phase ID**: `echo-portal-6hu.8`
 **Goal**: Users can view complete audit trail and lineage
@@ -389,21 +389,21 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ### Backend - Audit Service Enhancement
 
-- [ ] T126 [US6] Implement audit query service in `backend/src/services/audit/query.ts`
-- [ ] T127 [US6] Add lineage tracing in `backend/src/services/audit/lineage.ts`
+- [x] T126 [US6] Implement audit query service in `backend/src/services/audit/query.ts` — ✅ (2026-01-23)
+- [x] T127 [US6] Add lineage tracing in `backend/src/services/audit/lineage.ts` — ✅ (2026-01-23)
 
 ### Backend - API Routes
 
-- [ ] T128 [US6] Create audit validation schemas in `backend/src/api/schemas/audit.ts`
-- [ ] T129 [US6] Implement GET /api/v1/audit route in `backend/src/api/routes/audit.ts`
-- [ ] T130 [US6] Implement GET /api/v1/branches/:id/history route in `backend/src/api/routes/audit.ts`
-- [ ] T131 [US6] Register audit routes in API in `backend/src/api/index.ts`
+- [x] T128 [US6] Create audit validation schemas in `backend/src/api/schemas/audit.ts` — ✅ (2026-01-23)
+- [x] T129 [US6] Implement GET /api/v1/audit route in `backend/src/api/routes/audit.ts` — ✅ (2026-01-23)
+- [x] T130 [US6] Implement GET /api/v1/branches/:id/history route in `backend/src/api/routes/audit.ts` — ✅ (2026-01-23)
+- [x] T131 [US6] Register audit routes in API in `backend/src/api/index.ts` — ✅ (2026-01-23)
 
 ### Frontend - Components
 
-- [ ] T132 [P] [US6] Create AuditTrail component in `frontend/src/components/common/AuditTrail.tsx`
-- [ ] T133 [P] [US6] Create LineageViewer component in `frontend/src/components/common/LineageViewer.tsx`
-- [ ] T134 [US6] Create useAudit hook in `frontend/src/hooks/useAudit.ts`
+- [x] T132 [P] [US6] Create AuditTrail component in `frontend/src/components/common/AuditTrail.tsx` — ✅ (2026-01-23)
+- [x] T133 [P] [US6] Create LineageViewer component in `frontend/src/components/common/LineageViewer.tsx` — ✅ (2026-01-23)
+- [x] T134 [US6] Create useAudit hook in `frontend/src/hooks/useAudit.ts` — ✅ (2026-01-23)
 
 **✓ Checkpoint**: User Story 6 functional — complete audit trail visible
 

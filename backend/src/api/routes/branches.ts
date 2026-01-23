@@ -2,7 +2,9 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { branchService } from '../../services/branch/branch-service.js';
 import { visibilityService, type AccessContext } from '../../services/branch/visibility.js';
+import { teamService } from '../../services/branch/team.js';
 import { transitionService } from '../../services/workflow/transitions.js';
+import { diffService } from '../../services/git/diff.js';
 import { requireAuth, type AuthEnv } from '../middleware/auth.js';
 import { success, created, paginated, noContent } from '../utils/responses.js';
 import { NotFoundError, ForbiddenError, ValidationError } from '../utils/errors.js';
@@ -140,7 +142,54 @@ branchRoutes.delete(
 );
 
 /**
+ * GET /api/v1/branches/:id/reviewers - Get reviewers for a branch with full details
+ */
+branchRoutes.get(
+  '/:id/reviewers',
+  zValidator('param', branchIdParamSchema),
+  async (c) => {
+    const { id } = c.req.valid('param');
+    const context = getAccessContext(c);
+
+    // Check branch exists and user has access
+    const branch = await branchService.getById(id);
+    if (!branch) {
+      throw new NotFoundError('Branch', id);
+    }
+
+    visibilityService.assertAccess(branch.toJSON(), context);
+
+    const reviewers = await teamService.getBranchReviewers(id);
+    return success(c, reviewers);
+  }
+);
+
+/**
+ * GET /api/v1/branches/:id/reviewers/search - Search for potential reviewers
+ */
+branchRoutes.get(
+  '/:id/reviewers/search',
+  requireAuth,
+  zValidator('param', branchIdParamSchema),
+  async (c) => {
+    const { id } = c.req.valid('param');
+    const query = c.req.query('q') || '';
+    const limit = parseInt(c.req.query('limit') || '10', 10);
+
+    // Check branch exists
+    const branch = await branchService.getById(id);
+    if (!branch) {
+      throw new NotFoundError('Branch', id);
+    }
+
+    const potentialReviewers = await teamService.searchPotentialReviewers(id, query, limit);
+    return success(c, potentialReviewers);
+  }
+);
+
+/**
  * POST /api/v1/branches/:id/reviewers - Add reviewers to a branch
+ * Returns the updated list of reviewers with full details
  */
 branchRoutes.post(
   '/:id/reviewers',
@@ -152,13 +201,15 @@ branchRoutes.post(
     const { id } = c.req.valid('param');
     const { reviewerIds } = c.req.valid('json');
 
-    const branch = await branchService.addReviewers(id, reviewerIds, user.id);
-    return success(c, branch.toResponse());
+    await branchService.addReviewers(id, reviewerIds, user.id);
+    const reviewers = await teamService.getBranchReviewers(id);
+    return success(c, reviewers);
   }
 );
 
 /**
  * DELETE /api/v1/branches/:id/reviewers/:reviewerId - Remove a reviewer
+ * Returns the updated list of reviewers with full details
  */
 branchRoutes.delete(
   '/:id/reviewers/:reviewerId',
@@ -168,8 +219,9 @@ branchRoutes.delete(
     const user = c.get('user')!;
     const { id, reviewerId } = c.req.valid('param');
 
-    const branch = await branchService.removeReviewer(id, reviewerId, user.id);
-    return success(c, branch.toResponse());
+    await branchService.removeReviewer(id, reviewerId, user.id);
+    const reviewers = await teamService.getBranchReviewers(id);
+    return success(c, reviewers);
   }
 );
 
@@ -289,6 +341,61 @@ branchRoutes.get(
     });
 
     return success(c, result);
+  }
+);
+
+/**
+ * GET /api/v1/branches/:id/diff - Get diff between branch and its base
+ */
+branchRoutes.get(
+  '/:id/diff',
+  zValidator('param', branchIdParamSchema),
+  async (c) => {
+    const { id } = c.req.valid('param');
+    const context = getAccessContext(c);
+
+    // Check branch exists and user has access
+    const branch = await branchService.getById(id);
+    if (!branch) {
+      throw new NotFoundError('Branch', id);
+    }
+
+    visibilityService.assertAccess(branch.toJSON(), context);
+
+    // Get the diff
+    const diff = await diffService.getBranchDiff(
+      branch.gitRef,
+      branch.baseRef,
+      branch.baseCommit,
+      branch.headCommit
+    );
+
+    return success(c, diff);
+  }
+);
+
+/**
+ * GET /api/v1/branches/:id/diff/summary - Get summary of changes (file list only)
+ */
+branchRoutes.get(
+  '/:id/diff/summary',
+  zValidator('param', branchIdParamSchema),
+  async (c) => {
+    const { id } = c.req.valid('param');
+    const context = getAccessContext(c);
+
+    // Check branch exists and user has access
+    const branch = await branchService.getById(id);
+    if (!branch) {
+      throw new NotFoundError('Branch', id);
+    }
+
+    visibilityService.assertAccess(branch.toJSON(), context);
+
+    // Get the summary
+    const summary = await diffService.getChangeSummary(branch.gitRef, branch.baseRef);
+
+    return success(c, summary);
   }
 );
 

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LifecycleStatus } from './LifecycleStatus';
+import { VisibilitySelector } from './VisibilitySelector';
+import { TeamMemberPicker } from './TeamMemberPicker';
 import { EnvironmentIndicator } from '../common/EnvironmentIndicator';
 import { useUpdateBranch, useDeleteBranch } from '../../hooks/useBranch';
 import { useAuth } from '../../context/AuthContext';
@@ -25,9 +27,23 @@ export function BranchDetail({ branch, onEdit }: BranchDetailProps) {
   const deleteBranch = useDeleteBranch();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showVisibilityPanel, setShowVisibilityPanel] = useState(false);
 
   const isOwner = user?.id === branch.ownerId;
+  const isDraft = branch.state === 'draft';
+  const canChangeVisibility = isOwner && isDraft;
   const { permissions } = branch;
+
+  const handleVisibilityChange = async (newVisibility: VisibilityType) => {
+    try {
+      await updateBranch.mutateAsync({
+        id: branch.id,
+        input: { visibility: newVisibility },
+      });
+    } catch {
+      // Error handled by mutation hook
+    }
+  };
 
   const handleDelete = async () => {
     try {
@@ -60,9 +76,18 @@ export function BranchDetail({ branch, onEdit }: BranchDetailProps) {
           </div>
           <div className="mt-2 flex items-center gap-4">
             <EnvironmentIndicator environment="branch" branchName={branch.slug} size="sm" />
-            <span className="text-sm text-gray-500">
-              Visibility: {visibilityLabels[branch.visibility as VisibilityType]}
-            </span>
+            {canChangeVisibility ? (
+              <VisibilitySelector
+                value={branch.visibility as VisibilityType}
+                onChange={handleVisibilityChange}
+                disabled={updateBranch.isPending}
+                compact
+              />
+            ) : (
+              <span className="text-sm text-gray-500">
+                Visibility: {visibilityLabels[branch.visibility as VisibilityType]}
+              </span>
+            )}
           </div>
         </div>
 
@@ -196,8 +221,53 @@ export function BranchDetail({ branch, onEdit }: BranchDetailProps) {
         </div>
       </div>
 
-      {/* Reviewers */}
-      {branch.reviewers && branch.reviewers.length > 0 && (
+      {/* Visibility & Reviewers (Owner controls) */}
+      {isOwner && (
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <h3 className="font-medium text-gray-900">Access Control</h3>
+          <div className="mt-4 space-y-6">
+            {/* Visibility Settings (expandable for draft branches) */}
+            {isDraft && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setShowVisibilityPanel(!showVisibilityPanel)}
+                  className="flex w-full items-center justify-between text-left"
+                >
+                  <span className="text-sm font-medium text-gray-700">Visibility Settings</span>
+                  <svg
+                    className={`h-5 w-5 text-gray-400 transition-transform ${showVisibilityPanel ? 'rotate-180' : ''}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {showVisibilityPanel && (
+                  <div className="mt-3">
+                    <VisibilitySelector
+                      value={branch.visibility as VisibilityType}
+                      onChange={handleVisibilityChange}
+                      disabled={updateBranch.isPending}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Team Member Picker */}
+            <TeamMemberPicker
+              branchId={branch.id}
+              currentReviewers={branch.reviewers || []}
+              disabled={!isDraft}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Read-only Reviewers for non-owners */}
+      {!isOwner && branch.reviewers && branch.reviewers.length > 0 && (
         <div className="rounded-lg border border-gray-200 bg-white p-4">
           <h3 className="font-medium text-gray-900">Reviewers</h3>
           <ul className="mt-3 space-y-2">
