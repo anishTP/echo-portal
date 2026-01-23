@@ -1,7 +1,7 @@
 import { db } from '../../db/index.js';
 import { branches } from '../../db/schema/branches.js';
-import { branchTransitions } from '../../db/schema/branch-transitions.js';
-import { convergence } from '../../db/schema/convergence.js';
+import { branchStateTransitions } from '../../db/schema/branch-transitions.js';
+import { convergenceOperations } from '../../db/schema/convergence.js';
 import { users } from '../../db/schema/users.js';
 import { eq, desc, and, inArray } from 'drizzle-orm';
 
@@ -51,8 +51,8 @@ export interface BranchLineage {
   convergence?: {
     id: string;
     status: string;
-    mergedAt?: Date;
-    targetBranch: string;
+    completedAt?: Date;
+    targetRef: string;
     mergeCommit?: string;
   };
   relatedBranches: {
@@ -89,9 +89,9 @@ export class LineageService {
     });
 
     // Fetch state transitions
-    const transitions = await db.query.branchTransitions.findMany({
-      where: eq(branchTransitions.branchId, branchId),
-      orderBy: [desc(branchTransitions.createdAt)],
+    const transitions = await db.query.branchStateTransitions.findMany({
+      where: eq(branchStateTransitions.branchId, branchId),
+      orderBy: [desc(branchStateTransitions.createdAt)],
     });
 
     // Fetch actors for transitions
@@ -130,9 +130,9 @@ export class LineageService {
     events.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
     // Fetch convergence if exists
-    const convergenceRecord = await db.query.convergence.findFirst({
-      where: eq(convergence.branchId, branchId),
-      orderBy: [desc(convergence.createdAt)],
+    const convergenceRecord = await db.query.convergenceOperations.findFirst({
+      where: eq(convergenceOperations.branchId, branchId),
+      orderBy: [desc(convergenceOperations.createdAt)],
     });
 
     // Find related branches (same base)
@@ -167,10 +167,10 @@ export class LineageService {
         ? {
             id: convergenceRecord.id,
             status: convergenceRecord.status,
-            mergedAt: convergenceRecord.mergedAt
-              ? new Date(convergenceRecord.mergedAt)
+            completedAt: convergenceRecord.completedAt
+              ? new Date(convergenceRecord.completedAt)
               : undefined,
-            targetBranch: convergenceRecord.targetBranch,
+            targetRef: convergenceRecord.targetRef,
             mergeCommit: convergenceRecord.mergeCommit || undefined,
           }
         : undefined,
@@ -196,9 +196,9 @@ export class LineageService {
       return [];
     }
 
-    const transitions = await db.query.branchTransitions.findMany({
-      where: eq(branchTransitions.branchId, branchId),
-      orderBy: [desc(branchTransitions.createdAt)],
+    const transitions = await db.query.branchStateTransitions.findMany({
+      where: eq(branchStateTransitions.branchId, branchId),
+      orderBy: [desc(branchStateTransitions.createdAt)],
     });
 
     // Fetch actors
@@ -243,12 +243,12 @@ export class LineageService {
     const chain: { branchId: string; name: string; publishedAt: Date; mergeCommit: string }[] = [];
 
     // Find all convergence records that published this branch or its ancestors
-    const convergences = await db.query.convergence.findMany({
+    const convergences = await db.query.convergenceOperations.findMany({
       where: and(
-        eq(convergence.branchId, branchId),
-        eq(convergence.status, 'succeeded')
+        eq(convergenceOperations.branchId, branchId),
+        eq(convergenceOperations.status, 'succeeded')
       ),
-      orderBy: [desc(convergence.mergedAt)],
+      orderBy: [desc(convergenceOperations.completedAt)],
     });
 
     for (const c of convergences) {
@@ -256,11 +256,11 @@ export class LineageService {
         where: eq(branches.id, c.branchId),
       });
 
-      if (branch && c.mergedAt && c.mergeCommit) {
+      if (branch && c.completedAt && c.mergeCommit) {
         chain.push({
           branchId: c.branchId,
           name: branch.name,
-          publishedAt: new Date(c.mergedAt),
+          publishedAt: new Date(c.completedAt),
           mergeCommit: c.mergeCommit,
         });
       }
