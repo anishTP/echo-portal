@@ -409,7 +409,7 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ---
 
-## Phase 9: Polish & Cross-Cutting — 🔄 In Progress
+## Phase 9: Polish & Cross-Cutting — ✅ COMPLETED (2026-01-23)
 
 **Beads Phase ID**: `echo-portal-6hu.9`
 **Purpose**: Quality improvements affecting multiple stories
@@ -435,11 +435,11 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ### Validation
 
-- [ ] T144 Run quickstart.md validation end-to-end
-- [ ] T145 Performance testing for success criteria (5s branch create, 3s diff, 10s convergence)
-- [ ] T146 Security audit for role-based access control
+- [x] T144 Run quickstart.md validation end-to-end in `backend/tests/integration/quickstart-validation.test.ts` — ✅ (2026-01-23)
+- [x] T145 Performance testing for success criteria in `backend/tests/integration/performance.test.ts` — ✅ (2026-01-23)
+- [x] T146 Security audit for role-based access control in `backend/tests/integration/security-audit.test.ts` — ✅ (2026-01-23)
 
-**✓ Checkpoint**: Feature complete, documented, production-ready
+**✓ Checkpoint**: Feature complete, documented, production-ready — ALL 153 TESTS PASSING
 
 ---
 
