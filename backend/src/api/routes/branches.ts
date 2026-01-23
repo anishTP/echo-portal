@@ -90,6 +90,33 @@ branchRoutes.get('/', zValidator('query', listBranchesQuerySchema), async (c) =>
 });
 
 /**
+ * GET /api/v1/branches/me - Get branches owned by current user
+ */
+branchRoutes.get('/me', requireAuth, async (c) => {
+  const user = c.get('user')!;
+  const includeArchived = c.req.query('includeArchived') === 'true';
+
+  const branches = await branchService.getByOwner(user.id, includeArchived);
+  return success(
+    c,
+    branches.map((b) => b.toResponse())
+  );
+});
+
+/**
+ * GET /api/v1/branches/reviews - Get branches where user is a reviewer
+ */
+branchRoutes.get('/reviews', requireAuth, async (c) => {
+  const user = c.get('user')!;
+
+  const branches = await branchService.getByReviewer(user.id);
+  return success(
+    c,
+    branches.map((b) => b.toResponse())
+  );
+});
+
+/**
  * GET /api/v1/branches/:id - Get a branch by ID
  */
 branchRoutes.get('/:id', zValidator('param', branchIdParamSchema), async (c) => {
@@ -224,33 +251,6 @@ branchRoutes.delete(
     return success(c, reviewers);
   }
 );
-
-/**
- * GET /api/v1/branches/me - Get branches owned by current user
- */
-branchRoutes.get('/me', requireAuth, async (c) => {
-  const user = c.get('user')!;
-  const includeArchived = c.req.query('includeArchived') === 'true';
-
-  const branches = await branchService.getByOwner(user.id, includeArchived);
-  return success(
-    c,
-    branches.map((b) => b.toResponse())
-  );
-});
-
-/**
- * GET /api/v1/branches/reviews - Get branches where user is a reviewer
- */
-branchRoutes.get('/reviews', requireAuth, async (c) => {
-  const user = c.get('user')!;
-
-  const branches = await branchService.getByReviewer(user.id);
-  return success(
-    c,
-    branches.map((b) => b.toResponse())
-  );
-});
 
 /**
  * POST /api/v1/branches/:id/transitions - Trigger a state transition
