@@ -8,6 +8,14 @@ A branch isolation model for governed contribution workflows. Enables contributo
 - **Review Workflow**: Submit branches for review, approve or request changes
 - **Atomic Publishing**: Merge approved branches with conflict detection and rollback support
 - **Role-Based Access**: Contributors, reviewers, publishers, and administrators
+- **Visibility Control**: Private, team, or public branch visibility
+- **Diff Viewer**: Compare branch changes against published state
+- **Audit Trail**: Complete history and lineage tracking
+
+## Documentation
+
+- [API Documentation](docs/api.md) - Complete API reference
+- [User Guide](docs/user-guide.md) - Workflow and feature guide
 
 ## Tech Stack
 
@@ -118,12 +126,18 @@ echo-portal/
 
 ## API Endpoints
 
+See [API Documentation](docs/api.md) for full details.
+
 ### Branches
 - `POST /api/v1/branches` - Create branch
 - `GET /api/v1/branches` - List branches
 - `GET /api/v1/branches/:id` - Get branch
 - `PATCH /api/v1/branches/:id` - Update branch
+- `DELETE /api/v1/branches/:id` - Delete branch
 - `POST /api/v1/branches/:id/transitions` - State transition
+- `GET /api/v1/branches/:id/diff` - Get diff against base
+- `GET /api/v1/branches/:id/reviewers` - Get reviewers
+- `POST /api/v1/branches/:id/reviewers` - Add reviewers
 
 ### Reviews
 - `POST /api/v1/reviews` - Request review
@@ -134,7 +148,13 @@ echo-portal/
 ### Convergence (Publishing)
 - `POST /api/v1/convergence` - Initiate publish
 - `POST /api/v1/convergence/validate` - Pre-publish validation
-- `POST /api/v1/convergence/:id/execute` - Execute publish
+- `GET /api/v1/convergence/:id/status` - Get status
+
+### Audit
+- `GET /api/v1/audit` - Query audit logs
+- `GET /api/v1/audit/stats` - Get statistics
+- `GET /api/v1/audit/branches/:id/history` - Branch history
+- `GET /api/v1/audit/branches/:id/lineage` - Branch lineage
 
 ## Troubleshooting
 
