@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, memo } from 'react';
 
 export interface AuditEntry {
   id: string;
@@ -87,7 +87,7 @@ const actionColors: Record<string, string> = {
   convergence_rolled_back: 'bg-orange-100 text-orange-600',
 };
 
-export function AuditTrail({
+export const AuditTrail = memo(function AuditTrail({
   entries,
   isLoading = false,
   emptyMessage = 'No activity recorded yet.',
@@ -271,6 +271,6 @@ export function AuditTrail({
       ))}
     </div>
   );
-}
+});
 
 export default AuditTrail;

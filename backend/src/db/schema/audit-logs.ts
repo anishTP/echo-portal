@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, jsonb, index } from 'drizzle-orm/pg-core';
 import { actorTypeEnum } from './enums.js';
 
 export const auditLogs = pgTable('audit_logs', {
@@ -14,7 +14,12 @@ export const auditLogs = pgTable('audit_logs', {
   metadata: jsonb('metadata').default({}).notNull(),
   requestId: text('request_id'),
   sessionId: text('session_id'),
-});
+}, (table) => [
+  index('audit_logs_resource_idx').on(table.resourceType, table.resourceId),
+  index('audit_logs_actor_id_idx').on(table.actorId),
+  index('audit_logs_timestamp_idx').on(table.timestamp),
+  index('audit_logs_action_idx').on(table.action),
+]);
 
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type NewAuditLog = typeof auditLogs.$inferInsert;

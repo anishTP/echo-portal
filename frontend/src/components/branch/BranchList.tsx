@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { LifecycleStatus } from './LifecycleStatus';
 import type { BranchResponse } from '../../services/branchService';
@@ -60,7 +61,7 @@ interface BranchListItemProps {
   showOwner?: boolean;
 }
 
-function BranchListItem({ branch, showOwner }: BranchListItemProps) {
+const BranchListItem = memo(function BranchListItem({ branch, showOwner }: BranchListItemProps) {
   const formattedDate = new Date(branch.updatedAt).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -120,6 +121,6 @@ function BranchListItem({ branch, showOwner }: BranchListItemProps) {
       </div>
     </Link>
   );
-}
+});
 
 export default BranchList;

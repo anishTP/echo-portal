@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, index } from 'drizzle-orm/pg-core';
 import { branchStateEnum, visibilityEnum } from './enums.js';
 import { users } from './users.js';
 
@@ -24,7 +24,14 @@ export const branches = pgTable('branches', {
   approvedAt: timestamp('approved_at', { withTimezone: true }),
   publishedAt: timestamp('published_at', { withTimezone: true }),
   archivedAt: timestamp('archived_at', { withTimezone: true }),
-});
+}, (table) => [
+  index('branches_owner_id_idx').on(table.ownerId),
+  index('branches_state_idx').on(table.state),
+  index('branches_visibility_idx').on(table.visibility),
+  index('branches_updated_at_idx').on(table.updatedAt),
+  index('branches_state_visibility_idx').on(table.state, table.visibility),
+  index('branches_base_ref_idx').on(table.baseRef),
+]);
 
 export type Branch = typeof branches.$inferSelect;
 export type NewBranch = typeof branches.$inferInsert;

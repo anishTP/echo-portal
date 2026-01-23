@@ -167,4 +167,136 @@ export function checkTransition(fromState: string, toState: string) {
   });
 }
 
+/**
+ * Enhanced permission check that handles permission loss gracefully
+ * Returns detailed error information for client-side handling
+ */
+export function requirePermissionWithGracefulHandling(permission: Permission) {
+  return createMiddleware<PermissionEnv>(async (c: Context, next: Next) => {
+    const user = c.get('user');
+
+    // Handle missing or expired session
+    if (!user) {
+      return c.json(
+        {
+          error: 'Unauthorized',
+          code: 'SESSION_EXPIRED',
+          message: 'Your session has expired. Please log in again.',
+          action: 'redirect_to_login',
+        },
+        401
+      );
+    }
+
+    // Handle deactivated user
+    if (user.isActive === false) {
+      return c.json(
+        {
+          error: 'Forbidden',
+          code: 'ACCOUNT_DEACTIVATED',
+          message: 'Your account has been deactivated. Please contact an administrator.',
+          action: 'show_deactivation_notice',
+        },
+        403
+      );
+    }
+
+    const context: PermissionContext = {
+      userId: user.id,
+      roles: user.roles,
+    };
+
+    if (!hasPermission(context, permission)) {
+      return c.json(
+        {
+          error: 'Forbidden',
+          code: 'PERMISSION_DENIED',
+          message: `Permission denied: ${permission}`,
+          requiredPermission: permission,
+          currentRoles: user.roles,
+          action: 'show_permission_error',
+        },
+        403
+      );
+    }
+
+    c.set('permissionContext', context);
+    return next();
+  });
+}
+
+/**
+ * Check branch access with graceful error handling for access changes
+ */
+export function checkBranchAccessWithGracefulHandling(
+  getBranchInfo: (
+    c: Context
+  ) => Promise<{ ownerId: string; visibility: string; reviewers: string[] } | null>
+) {
+  return createMiddleware<PermissionEnv>(async (c: Context, next: Next) => {
+    const user = c.get('user');
+
+    if (!user) {
+      return c.json(
+        {
+          error: 'Unauthorized',
+          code: 'SESSION_EXPIRED',
+          message: 'Your session has expired. Please log in again.',
+          action: 'redirect_to_login',
+        },
+        401
+      );
+    }
+
+    const branchInfo = await getBranchInfo(c);
+
+    if (!branchInfo) {
+      return c.json(
+        {
+          error: 'Not Found',
+          code: 'BRANCH_NOT_FOUND',
+          message: 'This branch no longer exists or has been deleted.',
+          action: 'redirect_to_dashboard',
+        },
+        404
+      );
+    }
+
+    const context: PermissionContext = {
+      userId: user.id,
+      roles: user.roles,
+      resourceOwnerId: branchInfo.ownerId,
+      branchVisibility: branchInfo.visibility as 'private' | 'team' | 'public',
+      branchReviewers: branchInfo.reviewers,
+    };
+
+    if (!canAccessBranch(context)) {
+      // Provide detailed error for access loss scenarios
+      let message = 'You no longer have access to this branch.';
+      let code = 'ACCESS_REVOKED';
+
+      if (branchInfo.visibility === 'private') {
+        message = 'This branch has been made private and is only accessible to its owner.';
+        code = 'BRANCH_VISIBILITY_CHANGED';
+      } else if (branchInfo.visibility === 'team' && !branchInfo.reviewers.includes(user.id)) {
+        message = 'You have been removed from this branch\'s team.';
+        code = 'TEAM_ACCESS_REVOKED';
+      }
+
+      return c.json(
+        {
+          error: 'Forbidden',
+          code,
+          message,
+          action: 'redirect_to_dashboard',
+        },
+        403
+      );
+    }
+
+    c.set('permissionContext', context);
+    return next();
+  });
+}
+
 export { hasPermission, canAccessBranch, canEditBranch, canTransitionBranch };

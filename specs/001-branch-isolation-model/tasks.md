@@ -409,7 +409,7 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ---
 
-## Phase 9: Polish & Cross-Cutting — ⬜ Pending
+## Phase 9: Polish & Cross-Cutting — 🔄 In Progress
 
 **Beads Phase ID**: `echo-portal-6hu.9`
 **Purpose**: Quality improvements affecting multiple stories
@@ -417,21 +417,21 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ### Documentation
 
-- [ ] T135 [P] Update API documentation in `docs/api.md`
-- [ ] T136 [P] Create user guide in `docs/user-guide.md`
-- [ ] T137 [P] Update README with setup instructions in `README.md`
+- [x] T135 [P] Update API documentation in `docs/api.md` — ✅ (2026-01-23)
+- [x] T136 [P] Create user guide in `docs/user-guide.md` — ✅ (2026-01-23)
+- [x] T137 [P] Update README with setup instructions in `README.md` — ✅ (2026-01-23)
 
 ### Performance & Optimization
 
-- [ ] T138 [P] Add React.memo to list components in `frontend/src/components/`
-- [ ] T139 [P] Implement lazy loading for routes in `frontend/src/router/index.tsx`
-- [ ] T140 [P] Add database query optimization indexes in `backend/drizzle/`
+- [x] T138 [P] Add React.memo to list components in `frontend/src/components/` — ✅ (2026-01-23)
+- [x] T139 [P] Implement lazy loading for routes in `frontend/src/router/index.tsx` — ✅ (pre-existing)
+- [x] T140 [P] Add database query optimization indexes in `backend/src/db/schema/` — ✅ (2026-01-23)
 
 ### Edge Cases & Hardening
 
-- [ ] T141 [P] Add forbidden transition tests in `backend/tests/integration/transitions.test.ts`
-- [ ] T142 [P] Add concurrent convergence tests in `backend/tests/integration/convergence.test.ts`
-- [ ] T143 [P] Add permission loss handling in `backend/src/api/middleware/permissions.ts`
+- [x] T141 [P] Add forbidden transition tests in `backend/tests/integration/transitions.test.ts` — ✅ (2026-01-23)
+- [x] T142 [P] Add concurrent convergence tests in `backend/tests/integration/convergence.test.ts` — ✅ (2026-01-23)
+- [x] T143 [P] Add permission loss handling in `backend/src/api/middleware/permissions.ts` — ✅ (2026-01-23)
 
 ### Validation
 

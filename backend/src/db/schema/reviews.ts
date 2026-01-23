@@ -1,4 +1,4 @@
-import { pgTable, uuid, timestamp, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, timestamp, jsonb, index } from 'drizzle-orm/pg-core';
 import { reviewStatusEnum, reviewDecisionEnum } from './enums.js';
 import { branches } from './branches.js';
 import { users } from './users.js';
@@ -20,7 +20,12 @@ export const reviews = pgTable('reviews', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   completedAt: timestamp('completed_at', { withTimezone: true }),
-});
+}, (table) => [
+  index('reviews_branch_id_idx').on(table.branchId),
+  index('reviews_reviewer_id_idx').on(table.reviewerId),
+  index('reviews_status_idx').on(table.status),
+  index('reviews_reviewer_status_idx').on(table.reviewerId, table.status),
+]);
 
 export type Review = typeof reviews.$inferSelect;
 export type NewReview = typeof reviews.$inferInsert;

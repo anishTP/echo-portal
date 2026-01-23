@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, memo } from 'react';
 
 export interface LineageEvent {
   id: string;
@@ -64,7 +64,7 @@ const relationshipLabels: Record<string, string> = {
   parent: 'Parent of',
 };
 
-export function LineageViewer({
+export const LineageViewer = memo(function LineageViewer({
   lineage,
   isLoading = false,
   onBranchClick,
@@ -283,6 +283,6 @@ export function LineageViewer({
       )}
     </div>
   );
-}
+});
 
 export default LineageViewer;
