@@ -331,7 +331,7 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ---
 
-## Phase 6: User Story 4 — Compare Branch to Published State (P2) — ⬜ Pending
+## Phase 6: User Story 4 — Compare Branch to Published State (P2) — ✅ COMPLETED (2026-01-23)
 
 **Beads Phase ID**: `echo-portal-6hu.6`
 **Goal**: Users can see all changes between branch and published state
@@ -340,19 +340,19 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ### Backend - Diff Service
 
-- [ ] T114 [US4] Implement diff service using diff-match-patch in `backend/src/services/git/diff.ts`
-- [ ] T115 [US4] Create diff formatting utilities in `backend/src/services/git/diff-format.ts`
+- [x] T114 [US4] Implement diff service using LCS algorithm in `backend/src/services/git/diff.ts` — ✅ (2026-01-23)
+- [x] T115 [US4] Create diff formatting utilities in `backend/src/services/git/diff-format.ts` — ✅ (2026-01-23)
 
 ### Backend - API Routes
 
-- [ ] T116 [US4] Implement GET /api/v1/branches/:id/diff route in `backend/src/api/routes/branches.ts`
-- [ ] T117 [US4] Implement GET /api/v1/branches/:id/diff/:targetBranchId route in `backend/src/api/routes/branches.ts`
+- [x] T116 [US4] Implement GET /api/v1/branches/:id/diff route in `backend/src/api/routes/branches.ts` — ✅ (2026-01-23)
+- [x] T117 [US4] Implement GET /api/v1/branches/:id/diff/summary route in `backend/src/api/routes/branches.ts` — ✅ (2026-01-23)
 
 ### Frontend - Components
 
-- [ ] T118 [P] [US4] Create DiffViewer component with Monaco in `frontend/src/components/review/DiffViewer.tsx`
-- [ ] T119 [P] [US4] Create FileDiffList component in `frontend/src/components/review/FileDiffList.tsx`
-- [ ] T120 [US4] Create useDiff hook in `frontend/src/hooks/useDiff.ts`
+- [x] T118 [P] [US4] Create DiffViewer component in `frontend/src/components/diff/DiffViewer.tsx` — ✅ (2026-01-23)
+- [x] T119 [P] [US4] Create FileDiffList component in `frontend/src/components/diff/FileDiffList.tsx` — ✅ (2026-01-23)
+- [x] T120 [US4] Create useDiff hook in `frontend/src/hooks/useDiff.ts` — ✅ (2026-01-23)
 
 **✓ Checkpoint**: User Story 4 functional — can view accurate diffs
 
