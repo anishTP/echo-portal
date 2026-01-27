@@ -34,6 +34,14 @@ export const authMiddleware = createMiddleware<AuthEnv>(async (c: Context, next:
   // Try cookie-based session first (primary method)
   const sessionToken = getCookie(c, SESSION_COOKIE_NAME);
 
+  console.log('[AUTH] Middleware check', {
+    path: c.req.path,
+    method: c.req.method,
+    hasCookie: !!sessionToken,
+    cookieName: SESSION_COOKIE_NAME,
+    tokenPrefix: sessionToken ? sessionToken.substring(0, 8) + '...' : 'none',
+  });
+
   if (sessionToken) {
     try {
       const session = await validateSession(sessionToken);

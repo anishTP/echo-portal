@@ -40,10 +40,21 @@ setInterval(() => {
 
 // Session configuration
 const SESSION_COOKIE_NAME = getSessionCookieName();
+
+// Detect if running on localhost for development
+const isLocalhost =
+  process.env.FRONTEND_URL?.includes('localhost') ||
+  process.env.FRONTEND_URL?.includes('127.0.0.1') ||
+  process.env.NODE_ENV !== 'production';
+
 const SESSION_COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production', // MUST be true for sameSite=none
-  sameSite: 'none' as const, // Changed from 'lax' to support OAuth redirects
+  // For localhost: secure=false allows sameSite=lax on HTTP
+  // For production: secure=true required for sameSite=none on HTTPS
+  secure: !isLocalhost,
+  // For localhost: sameSite=lax works for OAuth (top-level GET navigation)
+  // For production: sameSite=none required for cross-origin OAuth
+  sameSite: (isLocalhost ? 'lax' : 'none') as 'lax' | 'none',
   path: '/',
   maxAge: 24 * 60 * 60, // 24 hours
 };
@@ -427,7 +438,10 @@ authRoutes.get('/callback/:provider', async (c) => {
       cookieName: SESSION_COOKIE_NAME,
       sameSite: SESSION_COOKIE_OPTIONS.sameSite,
       secure: SESSION_COOKIE_OPTIONS.secure,
+      httpOnly: SESSION_COOKIE_OPTIONS.httpOnly,
       environment: process.env.NODE_ENV,
+      isLocalhost,
+      frontendUrl: process.env.FRONTEND_URL,
     });
 
     // Redirect to frontend
