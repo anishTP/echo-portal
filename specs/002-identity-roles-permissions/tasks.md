@@ -295,12 +295,12 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ---
 
-## Phase 8: User Story 6 — Audit Trail Review (P3) — ⬜ Pending
+## Phase 8: User Story 6 — Audit Trail Review (P3) — ✅ Completed
 
-**Beads Phase ID**: `echo-portal-s4v.8`
+**Beads Phase ID**: `echo-portal-s4v.8` — ✅ CLOSED
 **Goal**: Administrators can query audit logs for investigation
 **Acceptance**: Query logs by branch/user/action, view permission decisions, see AI-assisted action attribution
-**Dependencies**: Phase 2 complete
+**Completed**: 2026-01-27 (9/9 tasks)
 
 ### Tests (Constitution X: Testing as Contract)
 
@@ -318,9 +318,9 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 - [x] T088 [P] [US6] Create AuditLogViewer component (filterable table with actor, action, resource, outcome) `frontend/src/components/audit/AuditLogViewer.tsx`
 - [x] T089 [P] [US6] Create SecurityReportView component (failed logins, permission denials) `frontend/src/components/audit/SecurityReportView.tsx`
-- [ ] T090 [US6] Add audit log page for admins `frontend/src/pages/`
+- [x] T090 [US6] Add audit log page for admins `frontend/src/pages/`
 
-**✓ Checkpoint**: User Story 6 functional, audit queries work
+**✅ Checkpoint**: User Story 6 complete — audit functionality fully implemented
 
 ---
 

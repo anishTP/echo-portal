@@ -9,6 +9,7 @@ const BranchWorkspace = lazy(() => import('../pages/BranchWorkspace'));
 const ReviewQueue = lazy(() => import('../pages/ReviewQueue'));
 const PublishConfirm = lazy(() => import('../pages/PublishConfirm'));
 const AuthCallback = lazy(() => import('../pages/AuthCallback'));
+const AuditLog = lazy(() => import('../pages/AuditLog'));
 
 // Loading fallback
 function LoadingFallback() {
@@ -70,6 +71,11 @@ const router = createBrowserRouter([
       {
         path: 'branches/:id/publish',
         element: <PublishConfirm />,
+      },
+      // Audit log routes (Phase 8 - US6)
+      {
+        path: 'audit',
+        element: <AuditLog />,
       },
     ],
   },
