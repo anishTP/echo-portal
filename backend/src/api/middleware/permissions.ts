@@ -1,5 +1,6 @@
 import { createMiddleware } from 'hono/factory';
 import type { Context, Next } from 'hono';
+import type { BranchStateType } from '@echo-portal/shared';
 import {
   type Permission,
   type PermissionContext,
@@ -7,6 +8,11 @@ import {
   canAccessBranch,
   canEditBranch,
   canTransitionBranch,
+  canAccessBranchContextual,
+  canEditBranchContextual,
+  canManageCollaborators,
+  canManageReviewers,
+  canApproveBranch,
 } from '../../services/auth/permissions.js';
 import type { AuthEnv } from './auth.js';
 
@@ -299,4 +305,299 @@ export function checkBranchAccessWithGracefulHandling(
   });
 }
 
-export { hasPermission, canAccessBranch, canEditBranch, canTransitionBranch };
+/**
+ * Contextual branch access check with state, collaborators, and reviewers
+ * Uses the enhanced canAccessBranchContextual from permissions service
+ */
+export function checkBranchAccessContextual(
+  getBranchInfo: (
+    c: Context
+  ) => Promise<{
+    ownerId: string;
+    visibility: string;
+    reviewers: string[];
+    state: BranchStateType;
+    collaborators: string[];
+  } | null>
+) {
+  return createMiddleware<PermissionEnv>(async (c: Context, next: Next) => {
+    const user = c.get('user');
+
+    // Allow anonymous access for published public content
+    const branchInfo = await getBranchInfo(c);
+
+    if (!branchInfo) {
+      return c.json({ error: 'Not Found', message: 'Branch not found' }, 404);
+    }
+
+    const context: PermissionContext = {
+      userId: user?.id || 'anonymous',
+      roles: user?.roles || [],
+      resourceOwnerId: branchInfo.ownerId,
+      branchVisibility: branchInfo.visibility as 'private' | 'team' | 'public',
+      branchState: branchInfo.state,
+      branchReviewers: branchInfo.reviewers,
+      branchCollaborators: branchInfo.collaborators,
+      isAnonymous: !user,
+    };
+
+    if (!canAccessBranchContextual(context)) {
+      if (!user) {
+        return c.json(
+          {
+            error: 'Unauthorized',
+            message: 'Authentication required to access this branch',
+            code: 'AUTH_REQUIRED',
+          },
+          401
+        );
+      }
+
+      return c.json(
+        {
+          error: 'Forbidden',
+          message: 'You do not have access to this branch',
+          code: 'ACCESS_DENIED',
+        },
+        403
+      );
+    }
+
+    c.set('permissionContext', context);
+    return next();
+  });
+}
+
+/**
+ * Contextual branch edit check with collaborator awareness
+ * Uses the enhanced canEditBranchContextual from permissions service
+ */
+export function checkBranchEditContextual(
+  getBranchInfo: (
+    c: Context
+  ) => Promise<{
+    ownerId: string;
+    visibility: string;
+    reviewers: string[];
+    state: BranchStateType;
+    collaborators: string[];
+  } | null>
+) {
+  return createMiddleware<PermissionEnv>(async (c: Context, next: Next) => {
+    const user = c.get('user');
+
+    if (!user) {
+      return c.json({ error: 'Unauthorized', message: 'Authentication required' }, 401);
+    }
+
+    const branchInfo = await getBranchInfo(c);
+
+    if (!branchInfo) {
+      return c.json({ error: 'Not Found', message: 'Branch not found' }, 404);
+    }
+
+    const context: PermissionContext = {
+      userId: user.id,
+      roles: user.roles,
+      resourceOwnerId: branchInfo.ownerId,
+      branchVisibility: branchInfo.visibility as 'private' | 'team' | 'public',
+      branchState: branchInfo.state,
+      branchReviewers: branchInfo.reviewers,
+      branchCollaborators: branchInfo.collaborators,
+    };
+
+    if (!canEditBranchContextual(context)) {
+      const reason =
+        branchInfo.state !== 'draft'
+          ? 'Branch is not in draft state and cannot be edited'
+          : 'You do not have permission to edit this branch';
+
+      return c.json(
+        {
+          error: 'Forbidden',
+          message: reason,
+          code: 'EDIT_DENIED',
+        },
+        403
+      );
+    }
+
+    c.set('permissionContext', context);
+    return next();
+  });
+}
+
+/**
+ * Check if user can manage collaborators on a branch
+ * Only owner or admin can add/remove collaborators
+ */
+export function checkCollaboratorManagement(
+  getBranchInfo: (
+    c: Context
+  ) => Promise<{
+    ownerId: string;
+    reviewers: string[];
+  } | null>
+) {
+  return createMiddleware<PermissionEnv>(async (c: Context, next: Next) => {
+    const user = c.get('user');
+
+    if (!user) {
+      return c.json({ error: 'Unauthorized', message: 'Authentication required' }, 401);
+    }
+
+    const branchInfo = await getBranchInfo(c);
+
+    if (!branchInfo) {
+      return c.json({ error: 'Not Found', message: 'Branch not found' }, 404);
+    }
+
+    const context: PermissionContext = {
+      userId: user.id,
+      roles: user.roles,
+      resourceOwnerId: branchInfo.ownerId,
+    };
+
+    if (!canManageCollaborators(context)) {
+      return c.json(
+        {
+          error: 'Forbidden',
+          message: 'Only the branch owner can manage collaborators',
+          code: 'COLLABORATOR_MANAGEMENT_DENIED',
+        },
+        403
+      );
+    }
+
+    c.set('permissionContext', context);
+    return next();
+  });
+}
+
+/**
+ * Check if user can manage reviewers on a branch
+ * Only owner or admin can assign/remove reviewers
+ */
+export function checkReviewerManagement(
+  getBranchInfo: (
+    c: Context
+  ) => Promise<{
+    ownerId: string;
+    collaborators: string[];
+  } | null>
+) {
+  return createMiddleware<PermissionEnv>(async (c: Context, next: Next) => {
+    const user = c.get('user');
+
+    if (!user) {
+      return c.json({ error: 'Unauthorized', message: 'Authentication required' }, 401);
+    }
+
+    const branchInfo = await getBranchInfo(c);
+
+    if (!branchInfo) {
+      return c.json({ error: 'Not Found', message: 'Branch not found' }, 404);
+    }
+
+    const context: PermissionContext = {
+      userId: user.id,
+      roles: user.roles,
+      resourceOwnerId: branchInfo.ownerId,
+    };
+
+    if (!canManageReviewers(context)) {
+      return c.json(
+        {
+          error: 'Forbidden',
+          message: 'Only the branch owner can manage reviewers',
+          code: 'REVIEWER_MANAGEMENT_DENIED',
+        },
+        403
+      );
+    }
+
+    c.set('permissionContext', context);
+    return next();
+  });
+}
+
+/**
+ * Check if user can approve a branch (prevents self-review)
+ */
+export function checkBranchApproval(
+  getBranchInfo: (
+    c: Context
+  ) => Promise<{
+    ownerId: string;
+    reviewers: string[];
+  } | null>
+) {
+  return createMiddleware<PermissionEnv>(async (c: Context, next: Next) => {
+    const user = c.get('user');
+
+    if (!user) {
+      return c.json({ error: 'Unauthorized', message: 'Authentication required' }, 401);
+    }
+
+    const branchInfo = await getBranchInfo(c);
+
+    if (!branchInfo) {
+      return c.json({ error: 'Not Found', message: 'Branch not found' }, 404);
+    }
+
+    const context: PermissionContext = {
+      userId: user.id,
+      roles: user.roles,
+      resourceOwnerId: branchInfo.ownerId,
+      branchReviewers: branchInfo.reviewers,
+    };
+
+    if (!canApproveBranch(context)) {
+      if (context.resourceOwnerId === context.userId) {
+        return c.json(
+          {
+            error: 'Forbidden',
+            message: 'You cannot approve your own branch (self-review forbidden)',
+            code: 'SELF_REVIEW_FORBIDDEN',
+          },
+          403
+        );
+      }
+
+      if (!branchInfo.reviewers.includes(user.id)) {
+        return c.json(
+          {
+            error: 'Forbidden',
+            message: 'You must be assigned as a reviewer to approve this branch',
+            code: 'NOT_ASSIGNED_REVIEWER',
+          },
+          403
+        );
+      }
+
+      return c.json(
+        {
+          error: 'Forbidden',
+          message: 'You do not have permission to approve this branch',
+          code: 'APPROVAL_DENIED',
+        },
+        403
+      );
+    }
+
+    c.set('permissionContext', context);
+    return next();
+  });
+}
+
+export {
+  hasPermission,
+  canAccessBranch,
+  canEditBranch,
+  canTransitionBranch,
+  canAccessBranchContextual,
+  canEditBranchContextual,
+  canManageCollaborators,
+  canManageReviewers,
+  canApproveBranch,
+};

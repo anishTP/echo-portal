@@ -105,12 +105,11 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ---
 
-## Phase 2: Foundational — 🔄 In Progress
+## Phase 2: Foundational — ✅ Completed
 
-**Beads Phase ID**: `echo-portal-s4v.2`
+**Beads Phase ID**: `echo-portal-s4v.2` — ✅ CLOSED
 **Purpose**: Core infrastructure ALL user stories depend on
-**Blocks**: All user story implementation
-**⚠️ CRITICAL**: No user story work until this phase completes
+**Completed**: 2026-01-27 (13/13 tasks)
 
 ### Backend Services
 
@@ -129,16 +128,16 @@ Refer to `.specify/memory/constitution.md` for full principles.
 ### Backend Middleware
 
 - [x] T022 Extend auth middleware with session validation (cookie-based, sliding expiry update) `backend/src/api/middleware/auth.ts`
-- [ ] T023 Extend permissions middleware with contextual checks (branch state, visibility, role) `backend/src/api/middleware/permissions.ts`
+- [x] T023 Extend permissions middleware with contextual checks (branch state, visibility, role, collaborators, reviewers) `backend/src/api/middleware/permissions.ts`
 
 ### Frontend Foundation
 
-- [ ] T024 [P] Extend AuthContext with session management and role state `frontend/src/context/AuthContext.tsx`
-- [ ] T025 [P] Create usePermissions hook for contextual permission checks `frontend/src/hooks/usePermissions.ts`
-- [ ] T026 [P] Extend useAuth hook with OAuth callback handling `frontend/src/hooks/useAuth.ts`
-- [ ] T027 [P] Extend auth service API client (login, logout, me, sessions) `frontend/src/services/auth.ts`
+- [x] T024 [P] Extend AuthContext with session management and role state `frontend/src/context/AuthContext.tsx`
+- [x] T025 [P] Create usePermissions hook for contextual permission checks `frontend/src/hooks/usePermissions.ts`
+- [x] T026 [P] Extend useAuth hook with OAuth callback handling `frontend/src/hooks/useAuth.ts`
+- [x] T027 [P] Extend auth service API client (login, logout, me, sessions) `frontend/src/services/auth.ts`
 
-**✓ Checkpoint**: Foundation ready — user stories can begin in parallel
+**✅ Checkpoint**: Foundation ready — user stories can begin in parallel
 
 ---
 
