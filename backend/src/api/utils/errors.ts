@@ -32,8 +32,36 @@ export class ConflictError extends AppError {
 }
 
 export class ForbiddenError extends AppError {
-  constructor(message: string = 'You do not have permission to perform this action') {
-    super(403, 'FORBIDDEN', message);
+  constructor(message: string = 'You do not have permission to perform this action', details?: Record<string, unknown>) {
+    super(403, 'FORBIDDEN', message, details);
+  }
+}
+
+/**
+ * Access denied error with actionable guidance (SC-004)
+ */
+export class AccessDeniedError extends AppError {
+  constructor(
+    message: string,
+    guidance: {
+      reason: string;
+      requiredRole?: string;
+      requiredPermission?: string;
+      currentState?: string;
+      visibility?: string;
+      action?: string;
+    }
+  ) {
+    super(403, 'ACCESS_DENIED', message, {
+      guidance: {
+        reason: guidance.reason,
+        requiredRole: guidance.requiredRole,
+        requiredPermission: guidance.requiredPermission,
+        currentState: guidance.currentState,
+        visibility: guidance.visibility,
+        action: guidance.action || 'Please contact the branch owner or an administrator for access.',
+      },
+    });
   }
 }
 

@@ -6,6 +6,7 @@ import { TeamMemberPicker } from './TeamMemberPicker';
 import { CollaboratorPicker } from './CollaboratorPicker';
 import { SubmitForReviewButton } from './SubmitForReviewButton';
 import { EnvironmentIndicator } from '../common/EnvironmentIndicator';
+import { PermissionGate } from '../common/PermissionGate';
 import { useUpdateBranch, useDeleteBranch } from '../../hooks/useBranch';
 import { useAuth } from '../../context/AuthContext';
 import type { BranchResponse } from '../../services/branchService';
@@ -93,9 +94,9 @@ export function BranchDetail({ branch, onEdit }: BranchDetailProps) {
           </div>
         </div>
 
-        {isOwner && (
+        <PermissionGate checkPermission={() => isOwner || Boolean(user?.roles?.includes('administrator'))}>
           <div className="flex gap-2">
-            {permissions.canEdit && (
+            <PermissionGate checkPermission={() => permissions.canEdit}>
               <>
                 <button
                   onClick={onEdit}
@@ -110,12 +111,12 @@ export function BranchDetail({ branch, onEdit }: BranchDetailProps) {
                   Delete
                 </button>
               </>
-            )}
-            {permissions.canSubmitForReview && isDraft && (
+            </PermissionGate>
+            <PermissionGate checkPermission={() => permissions.canSubmitForReview && isDraft}>
               <SubmitForReviewButton branchId={branch.id} />
-            )}
+            </PermissionGate>
           </div>
-        )}
+        </PermissionGate>
       </div>
 
       {/* Description */}

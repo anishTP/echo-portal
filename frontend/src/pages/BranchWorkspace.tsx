@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useBranch, useUpdateBranch } from '../hooks/useBranch';
 import { BranchDetail } from '../components/branch/BranchDetail';
+import { AccessDenied } from '../components/common/AccessDenied';
 import { useAuth } from '../context/AuthContext';
 import type { BranchUpdateInput, VisibilityType } from '@echo-portal/shared';
 
@@ -38,6 +39,30 @@ export default function BranchWorkspace() {
   }
 
   if (error || !branch) {
+    // Check if it's an access denied error
+    const isAccessDenied = error instanceof Error && (
+      error.message.includes('ACCESS_DENIED') ||
+      error.message.includes('access denied') ||
+      error.message.includes('permission') ||
+      error.message.includes('forbidden')
+    );
+
+    if (isAccessDenied) {
+      return (
+        <div className="min-h-screen bg-gray-50">
+          <div className="mx-auto max-w-4xl px-4 py-8">
+            <AccessDenied
+              message="Access Denied"
+              guidance={{
+                reason: error?.message || 'You do not have permission to view this branch',
+                action: 'Please sign in with an account that has access to this branch, or contact the branch owner.',
+              }}
+            />
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="mx-auto max-w-4xl px-4 py-8">
