@@ -1,8 +1,13 @@
-import { eq, and, lt, desc } from 'drizzle-orm';
+import { eq, and, lt, gt, desc } from 'drizzle-orm';
 import { db } from '../../db';
 import { sessions, users } from '../../db/schema';
-import type { Session } from '@echo-portal/shared';
+import type { Session as SharedSession, RoleType } from '@echo-portal/shared';
 import { randomBytes } from 'crypto';
+
+// Extended session type with role for backend use
+export interface Session extends SharedSession {
+  role: RoleType;
+}
 
 // Session configuration
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -28,6 +33,7 @@ function generateSessionToken(): string {
  */
 export async function createSession(
   userId: string,
+  provider: string,
   userAgent?: string,
   ipAddress?: string
 ): Promise<Session> {
@@ -40,6 +46,7 @@ export async function createSession(
       id: randomBytes(16).toString('hex'),
       userId,
       token,
+      provider,
       expiresAt,
       userAgent: userAgent || null,
       ipAddress: ipAddress || null,
@@ -62,12 +69,14 @@ export async function createSession(
     id: session.id,
     userId: session.userId,
     token: session.token,
-    expiresAt: session.expiresAt,
-    userAgent: session.userAgent,
-    ipAddress: session.ipAddress,
-    lastActivityAt: session.lastActivityAt,
-    createdAt: session.createdAt,
-    role: user.role,
+    provider: session.provider as 'github' | 'google',
+    expiresAt: session.expiresAt.toISOString(),
+    userAgent: session.userAgent || undefined,
+    ipAddress: session.ipAddress || undefined,
+    lastActivityAt: session.lastActivityAt.toISOString(),
+    createdAt: session.createdAt.toISOString(),
+    revokedAt: session.revokedAt?.toISOString(),
+    role: user.roles[0] || 'viewer',
   };
 
   // Cache the session
@@ -128,12 +137,14 @@ export async function validateSession(token: string): Promise<Session | null> {
     id: session.id,
     userId: session.userId,
     token: session.token,
-    expiresAt: session.expiresAt,
-    userAgent: session.userAgent,
-    ipAddress: session.ipAddress,
-    lastActivityAt: session.lastActivityAt,
-    createdAt: session.createdAt,
-    role: user.role,
+    provider: session.provider as 'github' | 'google',
+    expiresAt: session.expiresAt.toISOString(),
+    userAgent: session.userAgent || undefined,
+    ipAddress: session.ipAddress || undefined,
+    lastActivityAt: session.lastActivityAt.toISOString(),
+    createdAt: session.createdAt.toISOString(),
+    revokedAt: session.revokedAt?.toISOString(),
+    role: user.roles[0] || 'viewer',
   };
 
   // Update cache
@@ -215,19 +226,21 @@ export async function getUserSessions(userId: string): Promise<Session[]> {
     })
     .from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))
-    .where(and(eq(sessions.userId, userId), lt(new Date(), sessions.expiresAt)))
+    .where(and(eq(sessions.userId, userId), gt(sessions.expiresAt, new Date())))
     .orderBy(desc(sessions.lastActivityAt));
 
   return sessionRecords.map(({ session, user }) => ({
     id: session.id,
     userId: session.userId,
     token: session.token,
-    expiresAt: session.expiresAt,
-    userAgent: session.userAgent,
-    ipAddress: session.ipAddress,
-    lastActivityAt: session.lastActivityAt,
-    createdAt: session.createdAt,
-    role: user.role,
+    provider: session.provider as 'github' | 'google',
+    expiresAt: session.expiresAt.toISOString(),
+    userAgent: session.userAgent || undefined,
+    ipAddress: session.ipAddress || undefined,
+    lastActivityAt: session.lastActivityAt.toISOString(),
+    createdAt: session.createdAt.toISOString(),
+    revokedAt: session.revokedAt?.toISOString(),
+    role: user.roles[0] || 'viewer',
   }));
 }
 
@@ -247,7 +260,7 @@ export function invalidateUserSessionCache(userId: string): void {
  * Clean up expired sessions (should be run periodically)
  */
 export async function cleanupExpiredSessions(): Promise<number> {
-  const result = await db.delete(sessions).where(lt(sessions.expiresAt, new Date()));
+  const result = await db.delete(sessions).where(lt(sessions.expiresAt, new Date())).returning();
 
   // Clear cache for expired sessions
   for (const [token, cached] of sessionCache.entries()) {
@@ -256,5 +269,5 @@ export async function cleanupExpiredSessions(): Promise<number> {
     }
   }
 
-  return result.rowCount || 0;
+  return result.length;
 }

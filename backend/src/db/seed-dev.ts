@@ -1,13 +1,21 @@
 import { db } from './index.js';
 import { users } from './schema/users.js';
 
-const DEV_USER = {
+const DEV_USER: {
+  id: string;
+  externalId: string;
+  provider: 'github';
+  email: string;
+  displayName: string;
+  roles: ('viewer' | 'contributor' | 'reviewer' | 'administrator')[];
+  isActive: boolean;
+} = {
   id: '00000000-0000-0000-0000-000000000001',
   externalId: 'dev-user',
-  provider: 'github' as const,
+  provider: 'github',
   email: 'dev@example.com',
   displayName: 'Dev User',
-  roles: ['contributor', 'reviewer', 'publisher', 'administrator'] as const,
+  roles: ['contributor', 'reviewer', 'administrator'],
   isActive: true,
 };
 

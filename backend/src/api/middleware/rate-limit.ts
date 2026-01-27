@@ -14,14 +14,15 @@ const ATTEMPT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
  * Track a login attempt
  */
 export async function trackLoginAttempt(
-  identifier: string,
+  email: string,
+  provider: 'github' | 'google',
   success: boolean,
   ipAddress?: string,
   userAgent?: string
 ): Promise<void> {
   await db.insert(loginAttempts).values({
-    identifier,
-    attemptedAt: new Date(),
+    email,
+    provider,
     success,
     ipAddress: ipAddress || null,
     userAgent: userAgent || null,
@@ -29,10 +30,10 @@ export async function trackLoginAttempt(
 
   // If failed, check if we need to lock the account
   if (!success) {
-    await checkAndLockAccount(identifier);
+    await checkAndLockAccount(email);
   } else {
     // If successful, clear the lockout and reset failed login count
-    await clearLockout(identifier);
+    await clearLockout(email);
   }
 }
 
@@ -48,7 +49,7 @@ async function checkAndLockAccount(identifier: string): Promise<void> {
     .from(loginAttempts)
     .where(
       and(
-        eq(loginAttempts.identifier, identifier),
+        eq(loginAttempts.email, identifier),
         eq(loginAttempts.success, false),
         gte(loginAttempts.attemptedAt, windowStart)
       )
@@ -128,7 +129,7 @@ export async function isAccountLocked(identifier: string): Promise<{
     .from(loginAttempts)
     .where(
       and(
-        eq(loginAttempts.identifier, identifier),
+        eq(loginAttempts.email, identifier),
         eq(loginAttempts.success, false),
         gte(loginAttempts.attemptedAt, windowStart)
       )
@@ -196,7 +197,7 @@ export async function getLoginAttempts(
   return db
     .select()
     .from(loginAttempts)
-    .where(eq(loginAttempts.identifier, identifier))
+    .where(eq(loginAttempts.email, identifier))
     .orderBy(loginAttempts.attemptedAt)
     .limit(limit);
 }

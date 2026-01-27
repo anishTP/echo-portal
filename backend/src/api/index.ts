@@ -9,6 +9,7 @@ import { branchRoutes } from './routes/branches.js';
 import { reviewRoutes } from './routes/reviews.js';
 import { convergenceRoutes } from './routes/convergence.js';
 import { auditRoutes } from './routes/audit.js';
+import { authRoutes } from './routes/auth.js';
 
 // Create Hono app
 const app = new Hono();
@@ -48,6 +49,7 @@ api.get('/', (c) =>
     version: '0.0.1',
     endpoints: {
       health: '/health',
+      auth: '/api/v1/auth',
       branches: '/api/v1/branches',
       reviews: '/api/v1/reviews',
       convergence: '/api/v1/convergence',
@@ -57,6 +59,7 @@ api.get('/', (c) =>
 );
 
 // Mount API routes
+api.route('/auth', authRoutes);
 api.route('/branches', branchRoutes);
 api.route('/reviews', reviewRoutes);
 api.route('/convergence', convergenceRoutes);

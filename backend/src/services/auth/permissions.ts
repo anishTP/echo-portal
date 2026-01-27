@@ -104,7 +104,7 @@ export function canAccessBranch(context: PermissionContext): boolean {
     case 'team':
       return (
         context.branchReviewers?.includes(context.userId) ||
-        context.roles.includes(Role.PUBLISHER)
+        context.roles.includes(Role.ADMINISTRATOR)
       );
     case 'private':
     default:

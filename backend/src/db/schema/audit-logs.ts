@@ -12,7 +12,7 @@ export const auditLogs = pgTable('audit_logs', {
   resourceType: text('resource_type').notNull(),
   resourceId: text('resource_id').notNull(),
   // FR-021: Permission decision logging
-  outcome: auditOutcomeEnum('outcome').notNull(),
+  outcome: auditOutcomeEnum('outcome'),
   // FR-003: AI-assisted action attribution
   initiatingUserId: uuid('initiating_user_id'),
   metadata: jsonb('metadata').default({}).notNull(),

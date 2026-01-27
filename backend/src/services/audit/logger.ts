@@ -8,7 +8,7 @@ export interface AuditLogInput {
   actorType: ActorTypeValue;
   actorIp?: string;
   actorUserAgent?: string;
-  resourceType: 'branch' | 'review' | 'convergence' | 'user' | 'permission' | 'auth';
+  resourceType: 'branch' | 'review' | 'convergence' | 'user' | 'permission' | 'auth' | 'session';
   resourceId: string;
   metadata?: Record<string, unknown>;
   requestId?: string;
@@ -307,3 +307,8 @@ export class AuditLogger {
 
 // Export singleton instance
 export const auditLogger = new AuditLogger();
+
+// Convenience function for direct audit logging
+export function logAudit(input: AuditLogInput): Promise<string> {
+  return auditLogger.log(input);
+}

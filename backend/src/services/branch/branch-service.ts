@@ -18,8 +18,8 @@ import { BranchState, ActorType } from '@echo-portal/shared';
 
 export interface BranchListOptions {
   ownerId?: string;
-  state?: string[];
-  visibility?: string[];
+  state?: ('draft' | 'review' | 'approved' | 'published' | 'archived')[];
+  visibility?: ('private' | 'team' | 'public')[];
   search?: string;
   page?: number;
   limit?: number;

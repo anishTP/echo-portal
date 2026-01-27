@@ -264,10 +264,13 @@ export class AuditQueryService {
 
     const actorMap = new Map(actors.map((a) => [a.id, a]));
 
-    return entries.map((entry) => ({
-      ...entry,
-      actor: actorMap.get(entry.actorId) || undefined,
-    }));
+    return entries.map((entry) => {
+      const actor = actorMap.get(entry.actorId);
+      return {
+        ...entry,
+        actor: actor ? { ...actor, avatarUrl: actor.avatarUrl || undefined } : undefined,
+      };
+    });
   }
 
   /**

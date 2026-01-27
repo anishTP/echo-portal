@@ -120,10 +120,20 @@ export type BranchResponse = z.infer<typeof branchResponseSchema>;
 /**
  * Validate state filter values
  */
-export function validateStateFilter(states: string[] | undefined): string[] | undefined {
+export function validateStateFilter(
+  states: string[] | undefined
+): ('draft' | 'review' | 'approved' | 'published' | 'archived')[] | undefined {
   if (!states) return undefined;
-  const validStates = ['draft', 'review', 'approved', 'published', 'archived'];
-  return states.filter((s) => validStates.includes(s));
+  const validStates: ('draft' | 'review' | 'approved' | 'published' | 'archived')[] = [
+    'draft',
+    'review',
+    'approved',
+    'published',
+    'archived',
+  ];
+  return states.filter((s): s is 'draft' | 'review' | 'approved' | 'published' | 'archived' =>
+    validStates.includes(s as any)
+  );
 }
 
 /**
@@ -131,8 +141,10 @@ export function validateStateFilter(states: string[] | undefined): string[] | un
  */
 export function validateVisibilityFilter(
   visibility: string[] | undefined
-): string[] | undefined {
+): ('private' | 'team' | 'public')[] | undefined {
   if (!visibility) return undefined;
-  const validVisibility = ['private', 'team', 'public'];
-  return visibility.filter((v) => validVisibility.includes(v));
+  const validVisibility: ('private' | 'team' | 'public')[] = ['private', 'team', 'public'];
+  return visibility.filter((v): v is 'private' | 'team' | 'public' =>
+    validVisibility.includes(v as any)
+  );
 }
