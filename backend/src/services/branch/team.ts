@@ -86,6 +86,14 @@ export class TeamService {
       throw new ValidationError('User is already a reviewer');
     }
 
+    // FR-017c: Mutual exclusion - cannot be both collaborator and reviewer
+    const currentCollaborators = branch.collaborators || [];
+    if (currentCollaborators.includes(reviewerId)) {
+      throw new ValidationError(
+        'User is already a collaborator. Collaborators and reviewers are mutually exclusive.'
+      );
+    }
+
     // Add reviewer
     await db
       .update(branches)
@@ -153,9 +161,10 @@ export class TeamService {
       throw new NotFoundError('Branch', branchId);
     }
 
-    // Get users matching the query who are not already reviewers
+    // Get users matching the query who are not already reviewers or collaborators (mutual exclusion)
     const currentReviewers = branch.reviewers || [];
-    const excludeIds = [...currentReviewers, branch.ownerId];
+    const currentCollaborators = branch.collaborators || [];
+    const excludeIds = [...currentReviewers, ...currentCollaborators, branch.ownerId];
 
     const matchingUsers = await db.query.users.findMany({
       where: (u, { and, or, ilike, notInArray, eq: eqOp }) =>
@@ -193,6 +202,175 @@ export class TeamService {
     });
 
     return reviewers.map((user) => ({
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      avatarUrl: user.avatarUrl || undefined,
+      roles: user.roles,
+    }));
+  }
+
+  /**
+   * Get all collaborators assigned to a branch
+   */
+  async getBranchCollaborators(branchId: string): Promise<TeamMember[]> {
+    const branch = await db.query.branches.findFirst({
+      where: eq(branches.id, branchId),
+    });
+
+    if (!branch) {
+      throw new NotFoundError('Branch', branchId);
+    }
+
+    if (!branch.collaborators || branch.collaborators.length === 0) {
+      return [];
+    }
+
+    const collaboratorUsers = await db.query.users.findMany({
+      where: inArray(users.id, branch.collaborators),
+    });
+
+    return collaboratorUsers.map((user) => ({
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      avatarUrl: user.avatarUrl || undefined,
+      roles: user.roles,
+    }));
+  }
+
+  /**
+   * Add a collaborator to a branch (with mutual exclusion check)
+   */
+  async addCollaborator(
+    branchId: string,
+    collaboratorId: string,
+    actorId: string
+  ): Promise<TeamMember[]> {
+    const branch = await db.query.branches.findFirst({
+      where: eq(branches.id, branchId),
+    });
+
+    if (!branch) {
+      throw new NotFoundError('Branch', branchId);
+    }
+
+    // Only owner or admin can add collaborators
+    if (branch.ownerId !== actorId) {
+      throw new ForbiddenError('Only the branch owner can add collaborators');
+    }
+
+    // Cannot add yourself as collaborator (owner)
+    if (collaboratorId === branch.ownerId) {
+      throw new ValidationError('Cannot add yourself as a collaborator');
+    }
+
+    // Check collaborator exists
+    const collaborator = await db.query.users.findFirst({
+      where: eq(users.id, collaboratorId),
+    });
+
+    if (!collaborator) {
+      throw new NotFoundError('User', collaboratorId);
+    }
+
+    // Check not already a collaborator
+    const currentCollaborators = branch.collaborators || [];
+    if (currentCollaborators.includes(collaboratorId)) {
+      throw new ValidationError('User is already a collaborator');
+    }
+
+    // FR-017c: Mutual exclusion - cannot be both collaborator and reviewer
+    const currentReviewers = branch.reviewers || [];
+    if (currentReviewers.includes(collaboratorId)) {
+      throw new ValidationError(
+        'User is already a reviewer. Collaborators and reviewers are mutually exclusive.'
+      );
+    }
+
+    // Add collaborator
+    await db
+      .update(branches)
+      .set({
+        collaborators: [...currentCollaborators, collaboratorId],
+        updatedAt: new Date(),
+      })
+      .where(eq(branches.id, branchId));
+
+    return this.getBranchCollaborators(branchId);
+  }
+
+  /**
+   * Remove a collaborator from a branch
+   */
+  async removeCollaborator(
+    branchId: string,
+    collaboratorId: string,
+    actorId: string
+  ): Promise<TeamMember[]> {
+    const branch = await db.query.branches.findFirst({
+      where: eq(branches.id, branchId),
+    });
+
+    if (!branch) {
+      throw new NotFoundError('Branch', branchId);
+    }
+
+    // Only owner or admin can remove collaborators
+    if (branch.ownerId !== actorId) {
+      throw new ForbiddenError('Only the branch owner can remove collaborators');
+    }
+
+    // Check collaborator is assigned
+    const currentCollaborators = branch.collaborators || [];
+    if (!currentCollaborators.includes(collaboratorId)) {
+      throw new ValidationError('User is not a collaborator');
+    }
+
+    // Remove collaborator
+    await db
+      .update(branches)
+      .set({
+        collaborators: currentCollaborators.filter((id) => id !== collaboratorId),
+        updatedAt: new Date(),
+      })
+      .where(eq(branches.id, branchId));
+
+    return this.getBranchCollaborators(branchId);
+  }
+
+  /**
+   * Search for users who can be added as collaborators
+   */
+  async searchPotentialCollaborators(
+    branchId: string,
+    query: string,
+    limit: number = 10
+  ): Promise<TeamMember[]> {
+    const branch = await db.query.branches.findFirst({
+      where: eq(branches.id, branchId),
+    });
+
+    if (!branch) {
+      throw new NotFoundError('Branch', branchId);
+    }
+
+    // Get users matching the query who are not already collaborators or reviewers (mutual exclusion)
+    const currentCollaborators = branch.collaborators || [];
+    const currentReviewers = branch.reviewers || [];
+    const excludeIds = [...currentCollaborators, ...currentReviewers, branch.ownerId];
+
+    const matchingUsers = await db.query.users.findMany({
+      where: (u, { and, or, ilike, notInArray, eq: eqOp }) =>
+        and(
+          notInArray(u.id, excludeIds),
+          eqOp(u.isActive, true),
+          or(ilike(u.email, `%${query}%`), ilike(u.displayName, `%${query}%`))
+        ),
+      limit,
+    });
+
+    return matchingUsers.map((user) => ({
       id: user.id,
       email: user.email,
       displayName: user.displayName,

@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { LifecycleStatus } from './LifecycleStatus';
 import { VisibilitySelector } from './VisibilitySelector';
 import { TeamMemberPicker } from './TeamMemberPicker';
+import { CollaboratorPicker } from './CollaboratorPicker';
+import { SubmitForReviewButton } from './SubmitForReviewButton';
 import { EnvironmentIndicator } from '../common/EnvironmentIndicator';
 import { useUpdateBranch, useDeleteBranch } from '../../hooks/useBranch';
 import { useAuth } from '../../context/AuthContext';
@@ -91,20 +93,27 @@ export function BranchDetail({ branch, onEdit }: BranchDetailProps) {
           </div>
         </div>
 
-        {isOwner && permissions.canEdit && (
+        {isOwner && (
           <div className="flex gap-2">
-            <button
-              onClick={onEdit}
-              className="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="rounded-md bg-red-50 px-4 py-2 text-sm font-medium text-red-700 ring-1 ring-red-200 hover:bg-red-100"
-            >
-              Delete
-            </button>
+            {permissions.canEdit && (
+              <>
+                <button
+                  onClick={onEdit}
+                  className="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="rounded-md bg-red-50 px-4 py-2 text-sm font-medium text-red-700 ring-1 ring-red-200 hover:bg-red-100"
+                >
+                  Delete
+                </button>
+              </>
+            )}
+            {permissions.canSubmitForReview && isDraft && (
+              <SubmitForReviewButton branchId={branch.id} />
+            )}
           </div>
         )}
       </div>
@@ -256,7 +265,13 @@ export function BranchDetail({ branch, onEdit }: BranchDetailProps) {
               </div>
             )}
 
-            {/* Team Member Picker */}
+            {/* Collaborator Picker */}
+            <CollaboratorPicker
+              branchId={branch.id}
+              disabled={!isDraft}
+            />
+
+            {/* Team Member Picker (Reviewers) */}
             <TeamMemberPicker
               branchId={branch.id}
               currentReviewers={branch.reviewers || []}

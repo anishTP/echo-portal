@@ -15,6 +15,9 @@ import {
   listBranchesQuerySchema,
   addReviewersBodySchema,
   removeReviewerParamsSchema,
+  addCollaboratorsBodySchema,
+  removeCollaboratorParamsSchema,
+  submitForReviewBodySchema,
   validateStateFilter,
   validateVisibilityFilter,
 } from '../schemas/branches.js';
@@ -249,6 +252,139 @@ branchRoutes.delete(
     await branchService.removeReviewer(id, reviewerId, user.id);
     const reviewers = await teamService.getBranchReviewers(id);
     return success(c, reviewers);
+  }
+);
+
+/**
+ * GET /api/v1/branches/:id/collaborators - Get collaborators for a branch with full details
+ */
+branchRoutes.get(
+  '/:id/collaborators',
+  zValidator('param', branchIdParamSchema),
+  async (c) => {
+    const { id } = c.req.valid('param');
+    const context = getAccessContext(c);
+
+    // Check branch exists and user has access
+    const branch = await branchService.getById(id);
+    if (!branch) {
+      throw new NotFoundError('Branch', id);
+    }
+
+    visibilityService.assertAccess(branch.toJSON(), context);
+
+    const collaborators = await teamService.getBranchCollaborators(id);
+    return success(c, collaborators);
+  }
+);
+
+/**
+ * GET /api/v1/branches/:id/collaborators/search - Search for potential collaborators
+ */
+branchRoutes.get(
+  '/:id/collaborators/search',
+  requireAuth,
+  zValidator('param', branchIdParamSchema),
+  async (c) => {
+    const { id } = c.req.valid('param');
+    const query = c.req.query('q') || '';
+    const limit = parseInt(c.req.query('limit') || '10', 10);
+
+    // Check branch exists
+    const branch = await branchService.getById(id);
+    if (!branch) {
+      throw new NotFoundError('Branch', id);
+    }
+
+    const potentialCollaborators = await teamService.searchPotentialCollaborators(
+      id,
+      query,
+      limit
+    );
+    return success(c, potentialCollaborators);
+  }
+);
+
+/**
+ * POST /api/v1/branches/:id/collaborators - Add collaborators to a branch
+ * Returns the updated list of collaborators with full details
+ */
+branchRoutes.post(
+  '/:id/collaborators',
+  requireAuth,
+  zValidator('param', branchIdParamSchema),
+  zValidator('json', addCollaboratorsBodySchema),
+  async (c) => {
+    const user = c.get('user')!;
+    const { id } = c.req.valid('param');
+    const { collaboratorIds } = c.req.valid('json');
+
+    // Add each collaborator
+    for (const collaboratorId of collaboratorIds) {
+      await teamService.addCollaborator(id, collaboratorId, user.id);
+    }
+
+    const collaborators = await teamService.getBranchCollaborators(id);
+    return success(c, collaborators);
+  }
+);
+
+/**
+ * DELETE /api/v1/branches/:id/collaborators/:collaboratorId - Remove a collaborator
+ * Returns the updated list of collaborators with full details
+ */
+branchRoutes.delete(
+  '/:id/collaborators/:collaboratorId',
+  requireAuth,
+  zValidator('param', removeCollaboratorParamsSchema),
+  async (c) => {
+    const user = c.get('user')!;
+    const { id, collaboratorId } = c.req.valid('param');
+
+    await teamService.removeCollaborator(id, collaboratorId, user.id);
+    const collaborators = await teamService.getBranchCollaborators(id);
+    return success(c, collaborators);
+  }
+);
+
+/**
+ * POST /api/v1/branches/:id/submit-for-review - Submit branch for review
+ * This is a convenience endpoint that transitions to review state and assigns reviewers
+ */
+branchRoutes.post(
+  '/:id/submit-for-review',
+  requireAuth,
+  zValidator('param', branchIdParamSchema),
+  zValidator('json', submitForReviewBodySchema),
+  async (c) => {
+    const user = c.get('user')!;
+    const { id } = c.req.valid('param');
+    const { reviewerIds, reason } = c.req.valid('json');
+
+    // Check branch exists
+    const branch = await branchService.getById(id);
+    if (!branch) {
+      throw new NotFoundError('Branch', id);
+    }
+
+    // FR-017a: Validate at least one reviewer
+    if (reviewerIds.length === 0) {
+      throw new ValidationError('At least one reviewer is required');
+    }
+
+    // Add reviewers first (validates mutual exclusion)
+    await branchService.addReviewers(id, reviewerIds, user.id);
+
+    // Then transition to review state
+    const result = await transitionService.executeTransition({
+      branchId: id,
+      event: 'submit_for_review' as TransitionEventType,
+      actorId: user.id,
+      actorRoles: user.roles || [],
+      reason,
+    });
+
+    return success(c, result);
   }
 );
 

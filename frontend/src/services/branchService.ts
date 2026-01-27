@@ -116,6 +116,14 @@ export const branchService = {
   removeReviewer: (id: string, reviewerId: string): Promise<BranchResponse> => {
     return api.delete<BranchResponse>(`/branches/${id}/reviewers/${reviewerId}`);
   },
+
+  /**
+   * Submit a branch for review with assigned reviewers
+   * FR-017a: At least one reviewer must be assigned
+   */
+  submitForReview: (id: string, reviewerIds: string[], reason?: string): Promise<any> => {
+    return api.post(`/branches/${id}/submit-for-review`, { reviewerIds, reason });
+  },
 };
 
 export default branchService;

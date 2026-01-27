@@ -83,6 +83,35 @@ export const removeReviewerParamsSchema = z.object({
 export type RemoveReviewerParams = z.infer<typeof removeReviewerParamsSchema>;
 
 /**
+ * Schema for adding collaborators to a branch
+ */
+export const addCollaboratorsBodySchema = z.object({
+  collaboratorIds: z.array(uuidSchema).min(1, 'At least one collaborator is required'),
+});
+
+export type AddCollaboratorsBody = z.infer<typeof addCollaboratorsBodySchema>;
+
+/**
+ * Schema for removing a collaborator
+ */
+export const removeCollaboratorParamsSchema = z.object({
+  id: uuidSchema,
+  collaboratorId: uuidSchema,
+});
+
+export type RemoveCollaboratorParams = z.infer<typeof removeCollaboratorParamsSchema>;
+
+/**
+ * Schema for submit-for-review action
+ */
+export const submitForReviewBodySchema = z.object({
+  reviewerIds: z.array(uuidSchema).min(1, 'At least one reviewer is required'),
+  reason: z.string().max(500).optional(),
+});
+
+export type SubmitForReviewBody = z.infer<typeof submitForReviewBodySchema>;
+
+/**
  * Schema for branch response
  */
 export const branchResponseSchema = z.object({

@@ -393,6 +393,7 @@ export class BranchService {
 
   /**
    * Remove a reviewer from a branch
+   * FR-017a: Auto-return to Draft if all reviewers removed from Review state
    */
   async removeReviewer(id: string, reviewerId: string, actorId: string): Promise<BranchModel> {
     const existing = await this.getByIdOrThrow(id);
@@ -404,14 +405,41 @@ export class BranchService {
 
     const newReviewers = existing.reviewers.filter((r) => r !== reviewerId);
 
+    // FR-017a: If removing the last reviewer from a branch in Review state,
+    // automatically return to Draft state
+    const shouldReturnToDraft =
+      existing.state === BranchState.REVIEW && newReviewers.length === 0;
+
+    const updateData: Partial<NewBranch> = {
+      reviewers: newReviewers,
+      updatedAt: new Date(),
+    };
+
+    if (shouldReturnToDraft) {
+      updateData.state = BranchState.DRAFT;
+      updateData.submittedAt = null;
+    }
+
     const [updated] = await db
       .update(branches)
-      .set({
-        reviewers: newReviewers,
-        updatedAt: new Date(),
-      })
+      .set(updateData)
       .where(eq(branches.id, id))
       .returning();
+
+    // Log the state transition if we auto-returned to Draft
+    if (shouldReturnToDraft) {
+      await db.insert(branchStateTransitions).values({
+        branchId: id,
+        fromState: BranchState.REVIEW,
+        toState: BranchState.DRAFT,
+        event: 'return_to_draft',
+        actorId,
+        actorType: ActorType.USER,
+        reason: 'All reviewers removed',
+        metadata: {},
+        createdAt: new Date(),
+      });
+    }
 
     return createBranchModel(updated);
   }
