@@ -306,6 +306,12 @@ authRoutes.get('/login/:provider', async (c) => {
     // Get authorization URL from provider (T040: handles provider unavailability)
     const authUrl = await getAuthorizationURL(provider, state, codeVerifier);
 
+    console.log('[AUTH] OAuth login initiated', {
+      provider,
+      authUrl: authUrl.toString(),
+      state,
+    });
+
     return c.json({
       url: authUrl.toString(),
       provider,
@@ -345,6 +351,14 @@ authRoutes.get('/callback/:provider', async (c) => {
   const provider = c.req.param('provider') as OAuthProvider;
   const code = c.req.query('code');
   const state = c.req.query('state');
+
+  console.log('[AUTH] OAuth callback received', {
+    provider,
+    hasCode: !!code,
+    hasState: !!state,
+    url: c.req.url,
+    method: c.req.method,
+  });
 
   if (!code || !state) {
     return c.json(
