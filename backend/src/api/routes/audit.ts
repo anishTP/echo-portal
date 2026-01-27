@@ -204,4 +204,59 @@ auditRoutes.get(
   }
 );
 
+/**
+ * GET /api/v1/audit/failed-logins - Get failed login report (T085)
+ * Requires authentication and admin role
+ */
+auditRoutes.get(
+  '/failed-logins',
+  requireAuth,
+  zValidator('query', auditStatsQuerySchema),
+  async (c) => {
+    const user = c.get('user')!;
+    const query = c.req.valid('query');
+
+    // Only admins can view security reports
+    if (!user.roles.includes('administrator')) {
+      throw new ForbiddenError('Insufficient permissions to view security reports');
+    }
+
+    const report = await auditQueryService.getFailedLoginReport({
+      startDate: query.startDate,
+      endDate: query.endDate,
+      limit: 100,
+    });
+
+    return success(c, report);
+  }
+);
+
+/**
+ * GET /api/v1/audit/permission-denials - Get permission denial report (T086)
+ * Requires authentication and admin role
+ */
+auditRoutes.get(
+  '/permission-denials',
+  requireAuth,
+  zValidator('query', auditStatsQuerySchema),
+  async (c) => {
+    const user = c.get('user')!;
+    const query = c.req.valid('query');
+
+    // Only admins can view security reports
+    if (!user.roles.includes('administrator')) {
+      throw new ForbiddenError('Insufficient permissions to view security reports');
+    }
+
+    const report = await auditQueryService.getPermissionDenialReport({
+      startDate: query.startDate,
+      endDate: query.endDate,
+      resourceType: query.resourceType,
+      limit: 100,
+    });
+
+    return success(c, report);
+  }
+);
+
 export { auditRoutes };

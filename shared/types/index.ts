@@ -5,3 +5,4 @@ export * from './convergence.js';
 export * from './workflow.js';
 export * from './auth.js';
 export * from './permissions.js';
+export * from './audit.js';

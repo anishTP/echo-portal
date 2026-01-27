@@ -290,6 +290,170 @@ export class AuditQueryService {
 
     return this.enrichWithActors(entries);
   }
+
+  /**
+   * Get failed login report for security monitoring (T085)
+   */
+  async getFailedLoginReport(options: {
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+  } = {}): Promise<{
+    entries: AuditEntryWithActor[];
+    summary: {
+      totalFailedAttempts: number;
+      uniqueUsers: number;
+      lockedAccounts: number;
+    };
+  }> {
+    const { startDate, endDate, limit = 100 } = options;
+
+    const conditions = [
+      inArray(auditLogs.action, ['auth.failed', 'auth.locked']),
+    ];
+
+    if (startDate) {
+      conditions.push(gte(auditLogs.timestamp, startDate));
+    }
+
+    if (endDate) {
+      conditions.push(lte(auditLogs.timestamp, endDate));
+    }
+
+    // Get failed login entries
+    const entries = await db.query.auditLogs.findMany({
+      where: and(...conditions),
+      orderBy: [desc(auditLogs.timestamp)],
+      limit,
+    });
+
+    // Calculate summary statistics
+    const failedAttempts = entries.filter((e) => e.action === 'auth.failed');
+    const lockedAccounts = entries.filter((e) => e.action === 'auth.locked');
+    const uniqueUsers = new Set(entries.map((e) => e.actorId)).size;
+
+    const enrichedEntries = await this.enrichWithActors(entries);
+
+    return {
+      entries: enrichedEntries,
+      summary: {
+        totalFailedAttempts: failedAttempts.length,
+        uniqueUsers,
+        lockedAccounts: lockedAccounts.length,
+      },
+    };
+  }
+
+  /**
+   * Get permission denial report (T086)
+   * Aggregated denials by actor/action for security monitoring
+   */
+  async getPermissionDenialReport(options: {
+    startDate?: Date;
+    endDate?: Date;
+    actorId?: string;
+    resourceType?: string;
+    limit?: number;
+  } = {}): Promise<{
+    entries: AuditEntryWithActor[];
+    aggregated: Array<{
+      actorId: string;
+      action: string;
+      resourceType: string;
+      count: number;
+      lastAttempt: Date;
+    }>;
+    summary: {
+      totalDenials: number;
+      uniqueActors: number;
+      mostDeniedAction: string | null;
+    };
+  }> {
+    const { startDate, endDate, actorId, resourceType, limit = 100 } = options;
+
+    const conditions = [
+      eq(auditLogs.outcome, 'denied'),
+    ];
+
+    if (startDate) {
+      conditions.push(gte(auditLogs.timestamp, startDate));
+    }
+
+    if (endDate) {
+      conditions.push(lte(auditLogs.timestamp, endDate));
+    }
+
+    if (actorId) {
+      conditions.push(eq(auditLogs.actorId, actorId));
+    }
+
+    if (resourceType) {
+      conditions.push(eq(auditLogs.resourceType, resourceType));
+    }
+
+    // Get denied permission entries
+    const entries = await db.query.auditLogs.findMany({
+      where: and(...conditions),
+      orderBy: [desc(auditLogs.timestamp)],
+      limit,
+    });
+
+    // Aggregate by actor, action, and resource type
+    const aggregationMap = new Map<string, {
+      actorId: string;
+      action: string;
+      resourceType: string;
+      count: number;
+      lastAttempt: Date;
+    }>();
+
+    for (const entry of entries) {
+      const key = `${entry.actorId}:${entry.action}:${entry.resourceType}`;
+      const existing = aggregationMap.get(key);
+
+      if (existing) {
+        existing.count++;
+        if (entry.timestamp > existing.lastAttempt) {
+          existing.lastAttempt = entry.timestamp;
+        }
+      } else {
+        aggregationMap.set(key, {
+          actorId: entry.actorId,
+          action: entry.action,
+          resourceType: entry.resourceType,
+          count: 1,
+          lastAttempt: entry.timestamp,
+        });
+      }
+    }
+
+    const aggregated = Array.from(aggregationMap.values())
+      .sort((a, b) => b.count - a.count);
+
+    // Calculate summary
+    const uniqueActors = new Set(entries.map((e) => e.actorId)).size;
+    const actionCounts = new Map<string, number>();
+
+    for (const entry of entries) {
+      actionCounts.set(entry.action, (actionCounts.get(entry.action) || 0) + 1);
+    }
+
+    const mostDeniedAction = actionCounts.size > 0
+      ? Array.from(actionCounts.entries()).sort((a, b) => b[1] - a[1])[0][0]
+      : null;
+
+    const enrichedEntries = await this.enrichWithActors(entries);
+
+    return {
+      entries: enrichedEntries,
+      aggregated,
+      summary: {
+        totalDenials: entries.length,
+        uniqueActors,
+        mostDeniedAction,
+      },
+    };
+  }
 }
 
 // Export singleton instance

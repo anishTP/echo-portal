@@ -309,15 +309,15 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ### Backend Implementation
 
-- [ ] T084 [US6] Implement audit log query endpoints (filter by actor, resource, action, date range; paginated; <5s per SC-006) `backend/src/api/routes/audit.ts`
-- [ ] T085 [US6] Implement failed login report endpoint (for security monitoring) `backend/src/api/routes/audit.ts`
-- [ ] T086 [US6] Implement permission denial report endpoint (aggregated denials by actor/action) `backend/src/api/routes/audit.ts`
-- [ ] T087 [US6] Add AI-assisted action attribution to audit service (initiating_user_id field) `backend/src/services/audit/index.ts`
+- [x] T084 [US6] Implement audit log query endpoints (filter by actor, resource, action, date range; paginated; <5s per SC-006) `backend/src/api/routes/audit.ts`
+- [x] T085 [US6] Implement failed login report endpoint (for security monitoring) `backend/src/api/routes/audit.ts`
+- [x] T086 [US6] Implement permission denial report endpoint (aggregated denials by actor/action) `backend/src/api/routes/audit.ts`
+- [x] T087 [US6] Add AI-assisted action attribution to audit service (initiating_user_id field) `backend/src/services/audit/index.ts`
 
 ### Frontend Implementation
 
-- [ ] T088 [P] [US6] Create AuditLogViewer component (filterable table with actor, action, resource, outcome) `frontend/src/components/audit/AuditLogViewer.tsx`
-- [ ] T089 [P] [US6] Create SecurityReportView component (failed logins, permission denials) `frontend/src/components/audit/SecurityReportView.tsx`
+- [x] T088 [P] [US6] Create AuditLogViewer component (filterable table with actor, action, resource, outcome) `frontend/src/components/audit/AuditLogViewer.tsx`
+- [x] T089 [P] [US6] Create SecurityReportView component (failed logins, permission denials) `frontend/src/components/audit/SecurityReportView.tsx`
 - [ ] T090 [US6] Add audit log page for admins `frontend/src/pages/`
 
 **✓ Checkpoint**: User Story 6 functional, audit queries work
