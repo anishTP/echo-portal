@@ -34,17 +34,36 @@ export function AuthCallback() {
       }
 
       if (success === 'true') {
-        // Successful authentication - refresh session to get user data
-        try {
-          await refreshSession();
-          // Redirect to dashboard
-          navigate('/dashboard', { replace: true });
-        } catch (err) {
-          console.error('Failed to refresh session:', err);
-          setError('Failed to complete authentication. Please try logging in again.');
-          setTimeout(() => {
-            navigate('/', { replace: true });
-          }, 3000);
+        // Successful authentication - retry session refresh with backoff
+        const maxRetries = 3;
+        const retryDelay = 500; // 500ms between retries
+
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          try {
+            console.log(`[AUTH] Refreshing session (attempt ${attempt}/${maxRetries})`);
+
+            // Small delay before retry to allow cookie processing
+            if (attempt > 1) {
+              await new Promise(resolve => setTimeout(resolve, retryDelay));
+            }
+
+            await refreshSession();
+            console.log('[AUTH] Session refresh successful');
+
+            // Redirect to dashboard
+            navigate('/dashboard', { replace: true });
+            return;
+          } catch (err) {
+            console.error(`[AUTH] Session refresh attempt ${attempt} failed:`, err);
+
+            if (attempt === maxRetries) {
+              console.error('[AUTH] All retry attempts exhausted');
+              setError('Failed to complete authentication. Please try logging in again.');
+              setTimeout(() => {
+                navigate('/', { replace: true });
+              }, 3000);
+            }
+          }
         }
       } else {
         // No success or error param - might be invalid callback

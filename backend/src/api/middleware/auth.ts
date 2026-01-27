@@ -4,6 +4,9 @@ import type { RoleType } from '@echo-portal/shared';
 import { validateSession } from '../../services/auth/session';
 import { getCookie } from 'hono/cookie';
 import { PermissionDenials } from '../utils/errors.js';
+import { db } from '../../db/index.js';
+import { users } from '../../db/schema/index.js';
+import { eq } from 'drizzle-orm';
 
 export interface AuthUser {
   id: string;
@@ -36,21 +39,29 @@ export const authMiddleware = createMiddleware<AuthEnv>(async (c: Context, next:
       const session = await validateSession(sessionToken);
 
       if (session) {
-        // Fetch user details from database to get email and isActive status
-        // For now, we'll use the session data
-        c.set('user', {
-          id: session.userId,
-          email: '', // Will be populated from user record
-          role: session.role,
-          roles: [session.role], // Simplified to single role
-          isActive: true,
-        });
-        c.set('sessionId', session.id);
-        return next();
+        // Fetch full user details to populate email and verify active status
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, session.userId))
+          .limit(1);
+
+        if (user && user.isActive) {
+          c.set('user', {
+            id: user.id,
+            email: user.email, // Now properly populated from database
+            role: session.role,
+            roles: [session.role],
+            isActive: user.isActive,
+          });
+          c.set('sessionId', session.id);
+          return next();
+        } else if (user && !user.isActive) {
+          console.warn('[AUTH] Inactive user attempted access', { userId: user.id });
+        }
       }
     } catch (error) {
-      // Invalid session, continue without auth
-      console.error('Session validation error:', error);
+      console.error('[AUTH] Session validation error:', error);
     }
   }
 
@@ -65,15 +76,24 @@ export const authMiddleware = createMiddleware<AuthEnv>(async (c: Context, next:
       const session = await validateSession(token);
 
       if (session) {
-        c.set('user', {
-          id: session.userId,
-          email: '',
-          role: session.role,
-          roles: [session.role],
-          isActive: true,
-        });
-        c.set('sessionId', session.id);
-        return next();
+        // Fetch full user details
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, session.userId))
+          .limit(1);
+
+        if (user && user.isActive) {
+          c.set('user', {
+            id: user.id,
+            email: user.email, // Populated from database
+            role: session.role,
+            roles: [session.role],
+            isActive: user.isActive,
+          });
+          c.set('sessionId', session.id);
+          return next();
+        }
       }
     } catch (error) {
       // Invalid token

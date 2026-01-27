@@ -42,8 +42,8 @@ setInterval(() => {
 const SESSION_COOKIE_NAME = getSessionCookieName();
 const SESSION_COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax' as const,
+  secure: process.env.NODE_ENV === 'production', // MUST be true for sameSite=none
+  sameSite: 'none' as const, // Changed from 'lax' to support OAuth redirects
   path: '/',
   maxAge: 24 * 60 * 60, // 24 hours
 };
@@ -419,6 +419,16 @@ authRoutes.get('/callback/:provider', async (c) => {
 
     // Set session cookie
     setCookie(c, SESSION_COOKIE_NAME, session.token, SESSION_COOKIE_OPTIONS);
+
+    // Debug logging for cookie troubleshooting
+    console.log('[AUTH] Session cookie set', {
+      sessionId: session.id,
+      userId: user.id,
+      cookieName: SESSION_COOKIE_NAME,
+      sameSite: SESSION_COOKIE_OPTIONS.sameSite,
+      secure: SESSION_COOKIE_OPTIONS.secure,
+      environment: process.env.NODE_ENV,
+    });
 
     // Redirect to frontend
     const redirectUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
