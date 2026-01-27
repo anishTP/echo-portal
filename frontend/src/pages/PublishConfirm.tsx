@@ -35,7 +35,7 @@ export default function PublishConfirm() {
   const canPublish =
     branch?.state === 'approved' &&
     validation?.isValid &&
-    (user?.roles?.includes('publisher') || user?.roles?.includes('administrator'));
+    (user?.roles?.includes('administrator') || user?.roles?.includes('administrator'));
 
   const handlePublish = async () => {
     if (!id) return;
@@ -234,7 +234,7 @@ export default function PublishConfirm() {
               {validation && !validation.isValid && (
                 <p>All validation checks must pass before publishing.</p>
               )}
-              {!user?.roles?.includes('publisher') &&
+              {!user?.roles?.includes('administrator') &&
                 !user?.roles?.includes('administrator') && (
                   <p>You need publisher or administrator role to publish.</p>
                 )}

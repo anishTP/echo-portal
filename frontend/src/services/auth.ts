@@ -1,4 +1,4 @@
-import { apiClient } from './api';
+import { api } from './api';
 import type { RoleType } from '@echo-portal/shared';
 
 /**
@@ -56,10 +56,7 @@ export const authService = {
    * Initiate OAuth login flow
    */
   async initiateLogin(provider: 'github' | 'google'): Promise<{ redirectUrl: string }> {
-    const response = await apiClient(`/auth/login/${provider}`, {
-      method: 'POST',
-    });
-    return response.data;
+    return await api.post<{ redirectUrl: string }>(`/auth/login/${provider}`);
   },
 
   /**
@@ -75,78 +72,50 @@ export const authService = {
     if (codeVerifier) {
       params.append('codeVerifier', codeVerifier);
     }
-
-    const response = await apiClient(`/auth/callback/${provider}?${params.toString()}`, {
-      method: 'GET',
-      credentials: 'include',
-    });
-    return response.data;
+    return await api.get<CurrentUser>(`/auth/callback/${provider}?${params.toString()}`);
   },
 
   /**
    * Get current authenticated user
    */
   async me(): Promise<CurrentUser> {
-    const response = await apiClient('/auth/me', {
-      method: 'GET',
-      credentials: 'include',
-    });
-    return response.data;
+    return await api.get<CurrentUser>('/auth/me');
   },
 
   /**
    * Logout (revoke current or all sessions)
    */
   async logout(allSessions = false): Promise<void> {
-    await apiClient('/auth/logout', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ allSessions }),
-    });
+    await api.post<void>('/auth/logout', { allSessions });
   },
 
   /**
    * List active sessions for current user
    */
   async listSessions(): Promise<Session[]> {
-    const response = await apiClient('/auth/sessions', {
-      method: 'GET',
-      credentials: 'include',
-    });
-    return response.data.sessions || [];
+    const response = await api.get<{ sessions: Session[] }>('/auth/sessions');
+    return response.sessions || [];
   },
 
   /**
    * Revoke a specific session by ID
    */
   async revokeSession(sessionId: string): Promise<void> {
-    await apiClient(`/auth/sessions/${sessionId}`, {
-      method: 'DELETE',
-      credentials: 'include',
-    });
+    await api.delete<void>(`/auth/sessions/${sessionId}`);
   },
 
   /**
    * Check OAuth provider health
    */
   async checkOAuthHealth(): Promise<OAuthHealthResponse> {
-    const response = await apiClient('/auth/health', {
-      method: 'GET',
-      credentials: 'include',
-    });
-    return response.data;
+    return await api.get<OAuthHealthResponse>('/auth/health');
   },
 
   /**
    * Refresh current session (validate and extend)
    */
   async refreshSession(): Promise<CurrentUser> {
-    const response = await apiClient('/auth/me', {
-      method: 'GET',
-      credentials: 'include',
-    });
-    return response.data;
+    return await api.get<CurrentUser>('/auth/me');
   },
 };
 
@@ -180,57 +149,39 @@ export const userService = {
       });
     }
 
-    const response = await apiClient(`/users?${queryParams.toString()}`, {
-      method: 'GET',
-      credentials: 'include',
-    });
-    return response.data;
+    return await api.get<{
+      users: CurrentUser[];
+      total: number;
+      limit: number;
+      offset: number;
+    }>(`/users?${queryParams.toString()}`);
   },
 
   /**
    * Get user by ID
    */
   async getUser(userId: string): Promise<CurrentUser> {
-    const response = await apiClient(`/users/${userId}`, {
-      method: 'GET',
-      credentials: 'include',
-    });
-    return response.data;
+    return await api.get<CurrentUser>(`/users/${userId}`);
   },
 
   /**
    * Change user role (admin only)
    */
   async changeRole(userId: string, newRole: RoleType, reason?: string): Promise<void> {
-    await apiClient(`/users/${userId}/role`, {
-      method: 'PUT',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ newRole, reason }),
-    });
+    await api.patch<void>(`/users/${userId}/role`, { newRole, reason });
   },
 
   /**
    * Update user status (admin only)
    */
   async updateStatus(userId: string, isActive: boolean, reason?: string): Promise<void> {
-    await apiClient(`/users/${userId}/status`, {
-      method: 'PUT',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isActive, reason }),
-    });
+    await api.patch<void>(`/users/${userId}/status`, { isActive, reason });
   },
 
   /**
    * Unlock user account (admin only)
    */
   async unlockAccount(userId: string, reason?: string): Promise<void> {
-    await apiClient(`/users/${userId}/unlock`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reason }),
-    });
+    await api.post<void>(`/users/${userId}/unlock`, { reason });
   },
 };

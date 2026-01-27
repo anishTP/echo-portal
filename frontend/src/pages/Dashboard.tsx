@@ -25,7 +25,7 @@ export default function Dashboard() {
               <div className="flex items-center gap-4">
                 <span className="text-gray-600">Welcome, {user?.displayName || user?.email}</span>
                 <button
-                  onClick={logout}
+                  onClick={() => logout()}
                   className="rounded-md px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
                 >
                   Sign out

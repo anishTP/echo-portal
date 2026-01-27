@@ -27,7 +27,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   session: Session | null;
   sessions: Session[];
-  login: (provider: 'github' | 'google') => void;
+  login: (provider: 'github' | 'google') => Promise<void>;
   loginDev: () => void;
   logout: (allSessions?: boolean) => Promise<void>;
   hasRole: (role: RoleType) => boolean;
@@ -85,7 +85,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (response.ok) {
         const data = await response.json();
-        setUser(data.data);
+        // Backend returns { user: {...}, sessionId: '...' }
+        const userData = data.user;
+        setUser({
+          id: userData.id,
+          email: userData.email,
+          displayName: userData.displayName,
+          avatarUrl: userData.avatarUrl,
+          roles: userData.roles,
+          role: userData.roles[0], // Primary role
+        });
+        setSession({ id: data.sessionId, ...userData });
       } else {
         setUser(null);
       }
@@ -96,9 +106,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function login(provider: 'github' | 'google') {
-    // Redirect to OAuth flow
-    window.location.href = `/api/v1/auth/login/${provider}`;
+  async function login(provider: 'github' | 'google') {
+    try {
+      // Get OAuth authorization URL from backend
+      const response = await fetch(`/api/v1/auth/login/${provider}`, {
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Redirect to OAuth provider
+        window.location.href = data.url;
+      } else {
+        const error = await response.json();
+        console.error('Login failed:', error);
+        // Could show user-friendly error message here
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      // Could show user-friendly error message here
+    }
   }
 
   function loginDev() {
@@ -138,7 +165,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (response.ok) {
         const data = await response.json();
-        setUser(data.data);
+        const userData = data.user;
+        setUser({
+          id: userData.id,
+          email: userData.email,
+          displayName: userData.displayName,
+          avatarUrl: userData.avatarUrl,
+          roles: userData.roles,
+          role: userData.roles[0],
+        });
+        setSession({ id: data.sessionId, ...userData });
       } else if (response.status === 401) {
         // Session expired
         setUser(null);
@@ -162,7 +198,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (response.ok) {
         const data = await response.json();
-        setSessions(data.data.sessions || []);
+        setSessions(data.sessions || []);
       }
     } catch {
       // Ignore errors

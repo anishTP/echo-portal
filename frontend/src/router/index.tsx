@@ -1,12 +1,14 @@
 import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom';
 import { Suspense, lazy } from 'react';
 import ErrorBoundary from '../components/common/ErrorBoundary';
+import { AppHeader } from '../components/layout';
 
 // Lazy load pages for code splitting
 const Dashboard = lazy(() => import('../pages/Dashboard'));
 const BranchWorkspace = lazy(() => import('../pages/BranchWorkspace'));
 const ReviewQueue = lazy(() => import('../pages/ReviewQueue'));
 const PublishConfirm = lazy(() => import('../pages/PublishConfirm'));
+const AuthCallback = lazy(() => import('../pages/AuthCallback'));
 
 // Loading fallback
 function LoadingFallback() {
@@ -25,6 +27,7 @@ function RootLayout() {
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gray-50">
+        <AppHeader />
         <Suspense fallback={<LoadingFallback />}>
           <Outlet />
         </Suspense>
@@ -47,6 +50,11 @@ const router = createBrowserRouter([
       {
         path: 'dashboard',
         element: <Dashboard />,
+      },
+      // Auth callback route (Phase 3 - US1)
+      {
+        path: 'auth/callback',
+        element: <AuthCallback />,
       },
       // Branch routes (Phase 3 - US1)
       {
