@@ -1,20 +1,33 @@
 import { useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useBranch, useUpdateBranch } from '../hooks/useBranch';
 import { BranchDetail } from '../components/branch/BranchDetail';
+import { ContentList, ContentEditor, VersionHistory, VersionDiff } from '../components/content';
 import { AccessDenied } from '../components/common/AccessDenied';
-import { useAuth } from '../context/AuthContext';
-import type { BranchUpdateInput, VisibilityType } from '@echo-portal/shared';
+import { useContentList, useContent } from '../hooks/useContent';
+import type { BranchUpdateInput, VisibilityType, ContentSummary } from '@echo-portal/shared';
+
+type ContentView =
+  | { mode: 'list' }
+  | { mode: 'create' }
+  | { mode: 'edit'; contentId: string }
+  | { mode: 'diff'; contentId: string; fromTimestamp: string; toTimestamp: string };
 
 export default function BranchWorkspace() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
   const { data: branch, isLoading, error } = useBranch(id);
   const updateBranch = useUpdateBranch();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<BranchUpdateInput>({});
+  const [contentView, setContentView] = useState<ContentView>({ mode: 'list' });
+
+  const selectedContentId = contentView.mode === 'edit' || contentView.mode === 'diff'
+    ? contentView.contentId
+    : undefined;
+
+  const { data: contentListData, isLoading: isContentListLoading } = useContentList(id);
+  const { data: selectedContent, isLoading: isContentLoading } = useContent(selectedContentId);
 
   if (!id) {
     return (
@@ -107,11 +120,52 @@ export default function BranchWorkspace() {
     setEditForm({});
   };
 
+  const handleSelectContent = (content: ContentSummary) => {
+    setContentView({ mode: 'edit', contentId: content.id });
+  };
+
+  const handleCreateContent = () => {
+    setContentView({ mode: 'create' });
+  };
+
+  const handleContentSaved = () => {
+    setContentView({ mode: 'list' });
+  };
+
+  const handleContentCancel = () => {
+    setContentView({ mode: 'list' });
+  };
+
+  const handleSelectDiff = (fromTimestamp: string, toTimestamp: string) => {
+    if (contentView.mode === 'edit') {
+      setContentView({
+        mode: 'diff',
+        contentId: contentView.contentId,
+        fromTimestamp,
+        toTimestamp,
+      });
+    }
+  };
+
+  const handleCloseDiff = () => {
+    if (contentView.mode === 'diff') {
+      setContentView({ mode: 'edit', contentId: contentView.contentId });
+    }
+  };
+
+  const handleBackToList = () => {
+    setContentView({ mode: 'list' });
+  };
+
+  const canEdit = branch.permissions.canEdit && branch.state === 'draft';
+  const isReadOnly = !canEdit;
+  const containerMaxWidth = contentView.mode === 'edit' ? 'max-w-6xl' : 'max-w-4xl';
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto max-w-4xl px-4 py-4">
+        <div className={`mx-auto ${containerMaxWidth} px-4 py-4`}>
           <nav className="flex items-center gap-2 text-sm text-gray-500">
             <Link to="/dashboard" className="hover:text-gray-700">
               Dashboard
@@ -123,7 +177,7 @@ export default function BranchWorkspace() {
       </header>
 
       {/* Content */}
-      <main className="mx-auto max-w-4xl px-4 py-8">
+      <main className={`mx-auto ${containerMaxWidth} px-4 py-8`}>
         {isEditing ? (
           <div className="rounded-lg border border-gray-200 bg-white p-6">
             <h2 className="mb-4 text-lg font-semibold text-gray-900">Edit Branch</h2>
@@ -199,17 +253,102 @@ export default function BranchWorkspace() {
           <BranchDetail branch={branch} onEdit={handleStartEdit} />
         )}
 
-        {/* Workspace Area - Placeholder for future content editing */}
-        {branch.permissions.canEdit && !isEditing && (
-          <div className="mt-8 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-8 text-center">
-            <h3 className="text-lg font-medium text-gray-700">Content Workspace</h3>
-            <p className="mt-2 text-gray-500">
-              Content editing features will be available here. You can modify files, preview
-              changes, and commit your work.
-            </p>
-            <p className="mt-4 text-sm text-gray-400">
-              Coming in future iterations
-            </p>
+        {/* Content Workspace */}
+        {!isEditing && (
+          <div className="mt-8">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Content</h3>
+              <div className="flex gap-2">
+                {contentView.mode !== 'list' && (
+                  <button
+                    type="button"
+                    onClick={handleBackToList}
+                    className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Back to list
+                  </button>
+                )}
+                {contentView.mode === 'list' && canEdit && (
+                  <button
+                    type="button"
+                    onClick={handleCreateContent}
+                    className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+                  >
+                    New Content
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {contentView.mode === 'list' && (
+              <ContentList
+                contents={contentListData?.items ?? []}
+                isLoading={isContentListLoading}
+                onSelect={handleSelectContent}
+                emptyMessage="No content in this branch yet"
+              />
+            )}
+
+            {contentView.mode === 'create' && (
+              <div className="rounded-lg border border-gray-200 bg-white p-6">
+                <ContentEditor
+                  branchId={branch.id}
+                  onSave={handleContentSaved}
+                  onCancel={handleContentCancel}
+                />
+              </div>
+            )}
+
+            {contentView.mode === 'edit' && (
+              isContentLoading ? (
+                <div className="animate-pulse space-y-4 rounded-lg border border-gray-200 bg-white p-6">
+                  <div className="h-6 w-1/3 rounded bg-gray-200" />
+                  <div className="h-4 w-2/3 rounded bg-gray-100" />
+                  <div className="h-40 rounded bg-gray-100" />
+                </div>
+              ) : selectedContent ? (
+                <div className="grid grid-cols-3 gap-6">
+                  <div className="col-span-2 rounded-lg border border-gray-200 bg-white p-6">
+                    <ContentEditor
+                      key={selectedContent.id}
+                      branchId={branch.id}
+                      content={selectedContent}
+                      onSave={handleContentSaved}
+                      onCancel={handleBackToList}
+                    />
+                  </div>
+                  <div className="rounded-lg border border-gray-200 bg-white p-4">
+                    <VersionHistory
+                      contentId={selectedContent.id}
+                      onSelectDiff={handleSelectDiff}
+                      isReadOnly={isReadOnly}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
+                  <p className="text-red-600">Content not found</p>
+                  <button
+                    type="button"
+                    onClick={handleBackToList}
+                    className="mt-2 text-sm text-red-700 underline hover:text-red-800"
+                  >
+                    Return to list
+                  </button>
+                </div>
+              )
+            )}
+
+            {contentView.mode === 'diff' && (
+              <div className="rounded-lg border border-gray-200 bg-white p-6">
+                <VersionDiff
+                  contentId={contentView.contentId}
+                  fromTimestamp={contentView.fromTimestamp}
+                  toTimestamp={contentView.toTimestamp}
+                  onClose={handleCloseDiff}
+                />
+              </div>
+            )}
           </div>
         )}
       </main>
