@@ -8,11 +8,13 @@ export interface AuditLogInput {
   actorType: ActorTypeValue;
   actorIp?: string;
   actorUserAgent?: string;
-  resourceType: 'branch' | 'review' | 'convergence' | 'user';
+  resourceType: 'branch' | 'review' | 'convergence' | 'user' | 'permission' | 'auth';
   resourceId: string;
   metadata?: Record<string, unknown>;
   requestId?: string;
   sessionId?: string;
+  outcome?: 'success' | 'failure' | 'denied';
+  initiatingUserId?: string;
 }
 
 export class AuditLogger {
@@ -33,6 +35,8 @@ export class AuditLogger {
         metadata: input.metadata || {},
         requestId: input.requestId,
         sessionId: input.sessionId,
+        outcome: input.outcome || null,
+        initiatingUserId: input.initiatingUserId || null,
       })
       .returning({ id: auditLogs.id });
 
@@ -138,6 +142,162 @@ export class AuditLogger {
       resourceType: 'user',
       resourceId: userId,
       metadata,
+      actorIp: requestContext?.ip,
+      actorUserAgent: requestContext?.userAgent,
+      requestId: requestContext?.requestId,
+    });
+  }
+
+  /**
+   * Log permission decision (granted or denied)
+   */
+  async logPermissionCheck(
+    action: string,
+    granted: boolean,
+    actorId: string,
+    resourceType: 'branch' | 'review' | 'convergence' | 'user',
+    resourceId: string,
+    metadata?: {
+      requiredPermission?: string;
+      actorRoles?: string[];
+      reason?: string;
+      branchState?: string;
+      [key: string]: unknown;
+    },
+    requestContext?: { ip?: string; userAgent?: string; requestId?: string; sessionId?: string }
+  ): Promise<string> {
+    return this.log({
+      action: granted ? 'permission.granted' : 'permission.denied',
+      actorId,
+      actorType: 'user',
+      resourceType: 'permission',
+      resourceId: `${resourceType}:${resourceId}:${action}`,
+      outcome: granted ? 'success' : 'denied',
+      metadata: {
+        ...metadata,
+        targetAction: action,
+        targetResourceType: resourceType,
+        targetResourceId: resourceId,
+      },
+      actorIp: requestContext?.ip,
+      actorUserAgent: requestContext?.userAgent,
+      requestId: requestContext?.requestId,
+      sessionId: requestContext?.sessionId,
+    });
+  }
+
+  /**
+   * Log authentication events (login, logout, failures)
+   */
+  async logAuthEvent(
+    action: 'auth.login' | 'auth.logout' | 'auth.failed' | 'auth.locked',
+    success: boolean,
+    identifier: string,
+    metadata?: {
+      provider?: string;
+      reason?: string;
+      attemptsRemaining?: number;
+      lockedUntil?: Date;
+      [key: string]: unknown;
+    },
+    requestContext?: { ip?: string; userAgent?: string; requestId?: string }
+  ): Promise<string> {
+    return this.log({
+      action,
+      actorId: identifier,
+      actorType: 'user',
+      resourceType: 'auth',
+      resourceId: identifier,
+      outcome: success ? 'success' : 'failure',
+      metadata,
+      actorIp: requestContext?.ip,
+      actorUserAgent: requestContext?.userAgent,
+      requestId: requestContext?.requestId,
+    });
+  }
+
+  /**
+   * Log role change events (FR-009, FR-010)
+   */
+  async logRoleChange(
+    userId: string,
+    oldRole: string,
+    newRole: string,
+    actorId: string,
+    metadata?: Record<string, unknown>,
+    requestContext?: { ip?: string; userAgent?: string; requestId?: string }
+  ): Promise<string> {
+    return this.log({
+      action: 'role.changed',
+      actorId,
+      actorType: 'user',
+      resourceType: 'user',
+      resourceId: userId,
+      outcome: 'success',
+      initiatingUserId: actorId,
+      metadata: {
+        ...metadata,
+        oldRole,
+        newRole,
+      },
+      actorIp: requestContext?.ip,
+      actorUserAgent: requestContext?.userAgent,
+      requestId: requestContext?.requestId,
+    });
+  }
+
+  /**
+   * Log collaborator management events (FR-017b)
+   */
+  async logCollaboratorEvent(
+    action: 'collaborator.added' | 'collaborator.removed',
+    branchId: string,
+    collaboratorId: string,
+    actorId: string,
+    metadata?: Record<string, unknown>,
+    requestContext?: { ip?: string; userAgent?: string; requestId?: string }
+  ): Promise<string> {
+    return this.log({
+      action,
+      actorId,
+      actorType: 'user',
+      resourceType: 'branch',
+      resourceId: branchId,
+      outcome: 'success',
+      initiatingUserId: actorId,
+      metadata: {
+        ...metadata,
+        collaboratorId,
+      },
+      actorIp: requestContext?.ip,
+      actorUserAgent: requestContext?.userAgent,
+      requestId: requestContext?.requestId,
+    });
+  }
+
+  /**
+   * Log reviewer assignment events (FR-017a)
+   */
+  async logReviewerEvent(
+    action: 'reviewer.assigned' | 'reviewer.unassigned',
+    branchId: string,
+    reviewerId: string,
+    actorId: string,
+    metadata?: Record<string, unknown>,
+    requestContext?: { ip?: string; userAgent?: string; requestId?: string }
+  ): Promise<string> {
+    return this.log({
+      action,
+      actorId,
+      actorType: 'user',
+      resourceType: 'branch',
+      resourceId: branchId,
+      outcome: 'success',
+      initiatingUserId: actorId,
+      metadata: {
+        ...metadata,
+        reviewerId,
+      },
       actorIp: requestContext?.ip,
       actorUserAgent: requestContext?.userAgent,
       requestId: requestContext?.requestId,

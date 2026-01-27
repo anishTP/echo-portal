@@ -1,5 +1,5 @@
 import { pgTable, uuid, text, timestamp, jsonb, index } from 'drizzle-orm/pg-core';
-import { actorTypeEnum } from './enums.js';
+import { actorTypeEnum, auditOutcomeEnum } from './enums.js';
 
 export const auditLogs = pgTable('audit_logs', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -11,6 +11,10 @@ export const auditLogs = pgTable('audit_logs', {
   actorUserAgent: text('actor_user_agent'),
   resourceType: text('resource_type').notNull(),
   resourceId: text('resource_id').notNull(),
+  // FR-021: Permission decision logging
+  outcome: auditOutcomeEnum('outcome').notNull(),
+  // FR-003: AI-assisted action attribution
+  initiatingUserId: uuid('initiating_user_id'),
   metadata: jsonb('metadata').default({}).notNull(),
   requestId: text('request_id'),
   sessionId: text('session_id'),

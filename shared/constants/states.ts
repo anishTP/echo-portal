@@ -24,12 +24,14 @@ export type VisibilityType = (typeof Visibility)[keyof typeof Visibility];
 
 /**
  * User roles
+ * Note: VIEWER is implicit for anonymous/unauthenticated users
+ * Constitution v1.0.1 canonical roles: viewer, contributor, reviewer, administrator
  */
 export const Role = {
+  VIEWER: 'viewer', // Implicit for anonymous users
   CONTRIBUTOR: 'contributor',
   REVIEWER: 'reviewer',
-  PUBLISHER: 'publisher',
-  ADMINISTRATOR: 'administrator',
+  ADMINISTRATOR: 'administrator', // Consolidated publisher role per constitution
 } as const;
 
 export type RoleType = (typeof Role)[keyof typeof Role];

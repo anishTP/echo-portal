@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, boolean, integer } from 'drizzle-orm/pg-core';
 import { authProviderEnum, roleEnum } from './enums.js';
 
 export const users = pgTable('users', {
@@ -13,6 +13,10 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
+  // Lockout fields for FR-005a
+  lockedUntil: timestamp('locked_until', { withTimezone: true }),
+  failedLoginCount: integer('failed_login_count').default(0).notNull(),
+  lastFailedLoginAt: timestamp('last_failed_login_at', { withTimezone: true }),
 });
 
 export type User = typeof users.$inferSelect;

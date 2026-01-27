@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, integer, index } from 'drizzle-orm/pg-core';
 import { branchStateEnum, visibilityEnum } from './enums.js';
 import { users } from './users.js';
 
@@ -16,6 +16,10 @@ export const branches = pgTable('branches', {
     .references(() => users.id)
     .notNull(),
   reviewers: uuid('reviewers').array().default([]),
+  // Collaboration fields for FR-017b/c
+  collaborators: uuid('collaborators').array().default([]),
+  assignedReviewers: uuid('assigned_reviewers').array().default([]),
+  requiredApprovals: integer('required_approvals').default(1).notNull(),
   description: text('description'),
   labels: text('labels').array().default([]),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

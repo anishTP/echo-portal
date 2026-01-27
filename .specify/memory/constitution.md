@@ -1,38 +1,28 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version Change: Template → 1.0.0
-Bump Rationale: MAJOR - Initial constitution ratification with comprehensive governance framework
+Version Change: 1.0.0 → 1.0.1
+Bump Rationale: PATCH - Fix role terminology in Principle V to match spec-defined roles
 
 Modified Principles:
-  - [NEW] Principle I: Explicit Change Control
-  - [NEW] Principle II: Single Source of Truth
-  - [NEW] Principle III: Branch-First Collaboration
-  - [NEW] Principle IV: Separation of Concerns
-  - [NEW] Principle V: Role-Driven Governance
-  - [NEW] Principle VI: Open by Default
-  - [NEW] Principle VII: Layered Architecture Stability
-  - [NEW] Principle VIII: Specification Completeness
-  - [NEW] Principle IX: Clarity Over Breadth
-  - [NEW] Principle X: Testing as Contract
+  - [UPDATED] Principle V: Role-Driven Governance
+    - "viewer, editor, reviewer, publisher" → "viewer, contributor, reviewer, administrator"
+    - Aligns with spec 002-identity-roles-permissions role definitions
 
-Added Sections:
-  - Core Principles (all 10 principles)
-  - Specification Requirements
-  - Governance
-
-Removed Sections:
-  - Template placeholders
+Added Sections: (none)
+Removed Sections: (none)
 
 Templates Requiring Updates:
-  ✅ plan-template.md - Constitution Check section aligned
-  ✅ spec-template.md - Requirements structure aligns with principle VIII
-  ✅ tasks-template.md - Testing discipline reflects principle X
-  ⚠ commands/*.md - No command files found in templates/commands/
+  ✅ plan-template.md - No references to old role names
+  ✅ spec-template.md - Uses template placeholders (Editor/Publisher as examples), no change needed
+  ✅ tasks-template.md - No references to old role names
+  ✅ constitution.md - Role names corrected
 
 Follow-up TODOs:
   - TODO(RATIFICATION_DATE): Original adoption date not known - marked as 2026-01-20 (creation date)
-  - Future: Consider creating command template files if needed
+  - Note: spec-template.md uses "Editor" and "Publisher" as example placeholder values in its
+    template tables. These are illustrative and do not conflict with the constitution's
+    authoritative role list. Feature specs should use the constitution's canonical role names.
 -->
 
 # Echo Portal Constitution
@@ -95,7 +85,7 @@ Review, approval, and publication MUST be deliberate and attributable, not impli
 
 **Non-negotiable rules**:
 - Every action MUST be attributable to a specific user or system actor
-- Roles (viewer, editor, reviewer, publisher) MUST be explicitly assigned
+- Roles (viewer, contributor, reviewer, administrator) MUST be explicitly assigned
 - Permission checks MUST occur at every state transition
 - Audit logs MUST record actor, action, timestamp, and affected resources
 
@@ -265,4 +255,4 @@ In exceptional circumstances, temporary deviations MAY be permitted:
 4. Track deviation as technical debt
 5. Resolve before next major release
 
-**Version**: 1.0.0 | **Ratified**: 2026-01-20 | **Last Amended**: 2026-01-20
+**Version**: 1.0.1 | **Ratified**: 2026-01-20 | **Last Amended**: 2026-01-26

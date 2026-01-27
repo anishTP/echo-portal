@@ -8,3 +8,5 @@ export * from './branch-transitions.js';
 export * from './reviews.js';
 export * from './convergence.js';
 export * from './audit-logs.js';
+export * from './sessions.js';
+export * from './login-attempts.js';
