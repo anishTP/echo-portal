@@ -6,7 +6,7 @@ import { users } from '../../db/schema';
 import { eq, sql, desc } from 'drizzle-orm';
 import { requireAuth, type AuthEnv } from '../middleware/auth.js';
 import { success } from '../utils/responses.js';
-import { NotFoundError, ForbiddenError, BadRequestError } from '../utils/errors.js';
+import { NotFoundError, ForbiddenError, BadRequestError, PermissionDenials } from '../utils/errors.js';
 import { auditLogger } from '../../services/audit';
 import type { RoleType } from '@echo-portal/shared';
 
@@ -37,7 +37,11 @@ usersRoutes.get(
 
     // Only administrators can list users
     if (!user.roles.includes('administrator')) {
-      throw new ForbiddenError('Insufficient permissions to view user list');
+      throw PermissionDenials.insufficientRole(
+        user.role,
+        'administrator',
+        'view user list'
+      );
     }
 
     const allUsers = await db
@@ -74,7 +78,11 @@ usersRoutes.get(
 
     // Only administrators can view user details (or users viewing themselves)
     if (!currentUser.roles.includes('administrator') && currentUser.id !== id) {
-      throw new ForbiddenError('Insufficient permissions to view user details');
+      throw PermissionDenials.insufficientRole(
+        currentUser.role,
+        'administrator',
+        'view other users\' details'
+      );
     }
 
     const [targetUser] = await db
@@ -120,12 +128,16 @@ usersRoutes.put(
 
     // FR-009: Only administrators can change roles
     if (!currentUser.roles.includes('administrator')) {
-      throw new ForbiddenError('Insufficient permissions to change user roles');
+      throw PermissionDenials.insufficientRole(
+        currentUser.role,
+        'administrator',
+        'change user roles'
+      );
     }
 
     // FR-009: Prevent self-role-change (including admins)
     if (currentUser.id === targetUserId) {
-      throw new ForbiddenError('Cannot change your own role');
+      throw new BadRequestError('Cannot change your own role. This is a security measure to prevent accidental privilege loss. Ask another administrator to change your role if needed.');
     }
 
     // Get target user
@@ -204,7 +216,11 @@ usersRoutes.post(
 
     // Only administrators can unlock accounts
     if (!currentUser.roles.includes('administrator')) {
-      throw new ForbiddenError('Insufficient permissions to unlock user accounts');
+      throw PermissionDenials.insufficientRole(
+        currentUser.role,
+        'administrator',
+        'unlock user accounts'
+      );
     }
 
     // Get target user
@@ -280,7 +296,11 @@ usersRoutes.get(
 
     // Only administrators can view stats
     if (!user.roles.includes('administrator')) {
-      throw new ForbiddenError('Insufficient permissions to view user statistics');
+      throw PermissionDenials.insufficientRole(
+        user.role,
+        'administrator',
+        'view user statistics'
+      );
     }
 
     // Count users by role

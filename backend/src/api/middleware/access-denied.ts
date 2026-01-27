@@ -114,17 +114,23 @@ export function createAccessDeniedError(
   options: {
     requiredRole?: string;
     requiredPermission?: string;
+    currentRole?: string;
     currentState?: string;
     visibility?: string;
     customAction?: string;
+    ownerName?: string;
+    branchId?: string;
   } = {}
 ): AccessDeniedError {
   return new AccessDeniedError(message, {
     reason: message,
     requiredRole: options.requiredRole,
     requiredPermission: options.requiredPermission,
+    currentRole: options.currentRole,
     currentState: options.currentState,
     visibility: options.visibility,
+    ownerName: options.ownerName,
+    branchId: options.branchId,
     action: options.customAction,
   });
 }

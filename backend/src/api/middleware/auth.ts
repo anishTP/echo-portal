@@ -3,6 +3,7 @@ import type { Context, Next } from 'hono';
 import type { RoleType } from '@echo-portal/shared';
 import { validateSession } from '../../services/auth/session';
 import { getCookie } from 'hono/cookie';
+import { PermissionDenials } from '../utils/errors.js';
 
 export interface AuthUser {
   id: string;
@@ -139,15 +140,21 @@ export function requireRoles(...requiredRoles: RoleType[]) {
     const hasRequiredRole = requiredRoles.some((role) => user.roles.includes(role));
 
     if (!hasRequiredRole) {
-      return c.json(
-        {
-          error: 'Forbidden',
-          message: `Required role: ${requiredRoles.join(' or ')}`,
-          code: 'INSUFFICIENT_ROLE',
-          requiredRoles,
-          currentRole: user.role,
-        },
-        403
+      // Use PermissionDenials helper for comprehensive error
+      const actionMap: Record<string, string> = {
+        administrator: 'perform administrative actions',
+        reviewer: 'review branches',
+        contributor: 'contribute to branches',
+        viewer: 'view content',
+      };
+
+      const requiredRole = requiredRoles[0]; // Primary required role
+      const action = actionMap[requiredRole] || 'perform this action';
+
+      throw PermissionDenials.insufficientRole(
+        user.role,
+        requiredRole,
+        action
       );
     }
 
