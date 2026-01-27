@@ -10,6 +10,7 @@ const ReviewQueue = lazy(() => import('../pages/ReviewQueue'));
 const PublishConfirm = lazy(() => import('../pages/PublishConfirm'));
 const AuthCallback = lazy(() => import('../pages/AuthCallback'));
 const AuditLog = lazy(() => import('../pages/AuditLog'));
+const UserManagement = lazy(() => import('../pages/UserManagement'));
 
 // Loading fallback
 function LoadingFallback() {
@@ -76,6 +77,11 @@ const router = createBrowserRouter([
       {
         path: 'audit',
         element: <AuditLog />,
+      },
+      // User management routes (Phase 9 - US7)
+      {
+        path: 'users',
+        element: <UserManagement />,
       },
     ],
   },
