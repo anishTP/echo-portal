@@ -18,6 +18,7 @@ import {
   addCollaboratorsBodySchema,
   removeCollaboratorParamsSchema,
   submitForReviewBodySchema,
+  updateApprovalThresholdBodySchema,
   validateStateFilter,
   validateVisibilityFilter,
 } from '../schemas/branches.js';
@@ -385,6 +386,42 @@ branchRoutes.post(
     });
 
     return success(c, result);
+  }
+);
+
+/**
+ * PATCH /api/v1/branches/:id/approval-threshold - Update approval threshold
+ * Admin only - Configure per-branch approval threshold (1-10)
+ */
+branchRoutes.patch(
+  '/:id/approval-threshold',
+  requireAuth,
+  zValidator('param', branchIdParamSchema),
+  zValidator('json', updateApprovalThresholdBodySchema),
+  async (c) => {
+    const user = c.get('user')!;
+    const { id } = c.req.valid('param');
+    const { requiredApprovals } = c.req.valid('json');
+
+    // Check if user is admin
+    if (!user.roles?.includes('administrator')) {
+      throw new ForbiddenError('Only administrators can configure approval thresholds');
+    }
+
+    // Check branch exists
+    const branch = await branchService.getById(id);
+    if (!branch) {
+      throw new NotFoundError('Branch', id);
+    }
+
+    // Update threshold
+    const updated = await branchService.update(
+      id,
+      { requiredApprovals },
+      user.id
+    );
+
+    return success(c, updated.toResponse());
   }
 );
 

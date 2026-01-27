@@ -113,17 +113,32 @@ export const branchMachine = createMachine({
             approvalCount: 0,
           }),
         },
-        APPROVE: {
-          target: 'approved',
-          guard: 'canApprove',
-          actions: assign({
-            actorId: ({ event }) => event.actorId,
-            actorRoles: ({ event }) => event.actorRoles,
-            reason: ({ event }) => event.reason,
-            hasApproval: true,
-            approvalCount: ({ context }) => context.approvalCount + 1,
-          }),
-        },
+        APPROVE: [
+          {
+            // If approval threshold is met, transition to approved
+            target: 'approved',
+            guard: 'meetsApprovalThreshold',
+            actions: assign({
+              actorId: ({ event }) => event.actorId,
+              actorRoles: ({ event }) => event.actorRoles,
+              reason: ({ event }) => event.reason,
+              hasApproval: true,
+              approvalCount: ({ context }) => context.approvalCount + 1,
+            }),
+          },
+          {
+            // Otherwise, stay in review and increment approval count
+            target: 'review',
+            guard: 'canApprove',
+            actions: assign({
+              actorId: ({ event }) => event.actorId,
+              actorRoles: ({ event }) => event.actorRoles,
+              reason: ({ event }) => event.reason,
+              hasApproval: true,
+              approvalCount: ({ context }) => context.approvalCount + 1,
+            }),
+          },
+        ],
         ARCHIVE: {
           target: 'archived',
           guard: 'canArchive',

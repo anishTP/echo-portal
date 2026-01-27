@@ -112,6 +112,19 @@ export const submitForReviewBodySchema = z.object({
 export type SubmitForReviewBody = z.infer<typeof submitForReviewBodySchema>;
 
 /**
+ * Schema for updating approval threshold
+ */
+export const updateApprovalThresholdBodySchema = z.object({
+  requiredApprovals: z
+    .number()
+    .int()
+    .min(1, 'At least 1 approval required')
+    .max(10, 'Maximum 10 approvals allowed'),
+});
+
+export type UpdateApprovalThresholdBody = z.infer<typeof updateApprovalThresholdBodySchema>;
+
+/**
  * Schema for branch response
  */
 export const branchResponseSchema = z.object({

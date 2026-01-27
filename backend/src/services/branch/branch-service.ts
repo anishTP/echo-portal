@@ -246,7 +246,7 @@ export class BranchService {
       throw new ForbiddenError('Only the branch owner can update this branch');
     }
 
-    const { name, description, visibility, reviewers, labels } = parsed.data;
+    const { name, description, visibility, reviewers, labels, requiredApprovals } = parsed.data;
 
     // Build update object
     const updateData: Partial<NewBranch> = {
@@ -271,6 +271,10 @@ export class BranchService {
 
     if (labels !== undefined) {
       updateData.labels = labels;
+    }
+
+    if (requiredApprovals !== undefined) {
+      updateData.requiredApprovals = requiredApprovals;
     }
 
     // Perform update

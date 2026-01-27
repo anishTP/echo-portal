@@ -108,6 +108,30 @@ const hasApprovedReviewGuard: ValidationGuard = {
 };
 
 /**
+ * Guard: Branch must have required number of approvals (FR-017a)
+ * Counts approved reviews and compares against branch.requiredApprovals
+ */
+const hasRequiredApprovalsGuard: ValidationGuard = {
+  name: 'hasRequiredApprovals',
+  check: async (context) => {
+    // Get count of approved reviews for this branch
+    const approvedReviews = await db.query.reviews.findMany({
+      where: and(
+        eq(reviews.branchId, context.branchId),
+        eq(reviews.status, ReviewStatus.COMPLETED),
+        eq(reviews.decision, ReviewDecision.APPROVED)
+      ),
+    });
+
+    const approvalCount = approvedReviews.length;
+    const requiredApprovals = (context.metadata.requiredApprovals as number) || 1;
+
+    return approvalCount >= requiredApprovals;
+  },
+  errorMessage: 'Branch does not have enough approvals to proceed',
+};
+
+/**
  * Guard: Actor has publisher role (for publishing)
  */
 const hasPublisherRoleGuard: ValidationGuard = {

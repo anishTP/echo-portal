@@ -290,16 +290,34 @@ export class ReviewService {
 
     // Trigger branch state transition based on decision
     if (decision === ReviewDecision.APPROVED) {
-      // Transition branch to approved state
-      await transitionService.executeTransition({
-        branchId: review.branchId,
-        event: TransitionEvent.APPROVE,
-        actorId,
-        actorRoles,
-        reason: reason || 'Review approved',
+      // Check if approval threshold is met
+      const branch = await db.query.branches.findFirst({
+        where: eq(branches.id, review.branchId),
       });
+
+      if (!branch) {
+        throw new NotFoundError('Branch', review.branchId);
+      }
+
+      // Count approved reviews (including this one)
+      const stats = await this.getBranchReviewStats(review.branchId);
+      const approvalCount = stats.approved;
+      const requiredApprovals = branch.requiredApprovals || 1;
+
+      // Only transition to approved if threshold is met
+      if (approvalCount >= requiredApprovals) {
+        await transitionService.executeTransition({
+          branchId: review.branchId,
+          event: TransitionEvent.APPROVE,
+          actorId,
+          actorRoles,
+          reason: reason || `${approvalCount}/${requiredApprovals} approvals received`,
+          metadata: { approvalCount, requiredApprovals },
+        });
+      }
+      // Otherwise, branch stays in review state, just accumulating approvals
     } else if (decision === ReviewDecision.CHANGES_REQUESTED) {
-      // Transition branch back to draft state
+      // Transition branch back to draft state (resets approval count)
       await transitionService.executeTransition({
         branchId: review.branchId,
         event: TransitionEvent.REQUEST_CHANGES,

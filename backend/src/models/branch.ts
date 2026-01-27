@@ -39,6 +39,7 @@ export const updateBranchSchema = z.object({
   visibility: z.enum(['private', 'team', 'public']).optional(),
   reviewers: z.array(z.string().uuid()).optional(),
   labels: z.array(z.string().max(50)).max(20).optional(),
+  requiredApprovals: z.number().int().min(1).max(10).optional(),
 });
 
 export type UpdateBranchInput = z.infer<typeof updateBranchSchema>;
