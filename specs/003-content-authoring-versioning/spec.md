@@ -1,6 +1,6 @@
 # Feature Specification: Content Authoring and Versioning
 
-**Feature Branch**: `001-content-authoring-versioning`
+**Feature Branch**: `003-content-authoring-versioning`
 **Created**: 2026-01-27
 **Status**: Draft
 **Input**: User description: "This feature defines how content is created, structured, and evolved within Echo as part of VIDA's design culture system. All content must exist within an explicit branch and participate in the system's governed contribution model. Content creation and modification are never ad-hoc actions; they are versioned contributions that progress through defined lifecycle stages before becoming part of the published source of truth."

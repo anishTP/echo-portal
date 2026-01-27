@@ -3,6 +3,7 @@
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-01-27
 **Feature**: [spec.md](../spec.md)
+**Feature Number**: 003
 
 ## Content Quality
 
