@@ -7,7 +7,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 function getDevAuthHeader(): Record<string, string> {
   if (localStorage.getItem('dev_auth') === 'true') {
     // Format: userId:email:roles (as expected by backend)
-    const token = '00000000-0000-0000-0000-000000000001:dev@example.com:contributor,reviewer,publisher,administrator';
+    const token = '00000000-0000-0000-0000-000000000001:dev@example.com:contributor,reviewer,administrator';
     return { Authorization: `Bearer ${token}` };
   }
   return {};
@@ -73,10 +73,59 @@ export async function apiFetch<T>(
   return data.data as T;
 }
 
+// Paginated response shape expected by frontend consumers
+export interface PaginatedResult<T> {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
+}
+
+// Fetch paginated data, transforming the backend { data: [...], meta: {...} } envelope
+async function apiFetchPaginated<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<PaginatedResult<T>> {
+  const url = `${API_BASE_URL}${endpoint}`;
+
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...getDevAuthHeader(),
+      ...options.headers,
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new ApiError(
+      response.status,
+      errorData.error?.code || 'UNKNOWN_ERROR',
+      errorData.error?.message || 'An error occurred',
+      errorData.error?.details
+    );
+  }
+
+  const json = await response.json();
+  return {
+    items: json.data ?? [],
+    total: json.meta?.total ?? 0,
+    page: json.meta?.page ?? 1,
+    limit: json.meta?.limit ?? 20,
+    hasMore: json.meta?.hasMore ?? false,
+  };
+}
+
 // Convenience methods
 export const api = {
   get: <T>(endpoint: string, options?: RequestInit) =>
     apiFetch<T>(endpoint, { ...options, method: 'GET' }),
+
+  getPaginated: <T>(endpoint: string, options?: RequestInit) =>
+    apiFetchPaginated<T>(endpoint, { ...options, method: 'GET' }),
 
   post: <T>(endpoint: string, body?: unknown, options?: RequestInit) =>
     apiFetch<T>(endpoint, {

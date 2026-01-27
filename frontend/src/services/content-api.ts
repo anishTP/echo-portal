@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api, type PaginatedResult } from './api';
 import type {
   ContentDetail,
   ContentSummary,
@@ -11,14 +11,6 @@ import type {
   ContentUpdateInput,
   ContentRevertInput,
 } from '@echo-portal/shared';
-
-interface PaginatedResponse<T> {
-  items: T[];
-  total: number;
-  page: number;
-  limit: number;
-  hasMore: boolean;
-}
 
 export const contentApi = {
   /** Create content within a branch */
@@ -46,14 +38,14 @@ export const contentApi = {
     category?: string;
     page?: number;
     limit?: number;
-  }): Promise<PaginatedResponse<ContentSummary>> {
+  }): Promise<PaginatedResult<ContentSummary>> {
     const searchParams = new URLSearchParams();
     searchParams.set('branchId', params.branchId);
     if (params.contentType) searchParams.set('contentType', params.contentType);
     if (params.category) searchParams.set('category', params.category);
     if (params.page) searchParams.set('page', String(params.page));
     if (params.limit) searchParams.set('limit', String(params.limit));
-    return api.get<PaginatedResponse<ContentSummary>>(`/contents?${searchParams.toString()}`);
+    return api.getPaginated<ContentSummary>(`/contents?${searchParams.toString()}`);
   },
 
   /** List published public content */
@@ -62,14 +54,14 @@ export const contentApi = {
     category?: string;
     page?: number;
     limit?: number;
-  }): Promise<PaginatedResponse<ContentSummary>> {
+  }): Promise<PaginatedResult<ContentSummary>> {
     const searchParams = new URLSearchParams();
     if (params?.contentType) searchParams.set('contentType', params.contentType);
     if (params?.category) searchParams.set('category', params.category);
     if (params?.page) searchParams.set('page', String(params.page));
     if (params?.limit) searchParams.set('limit', String(params.limit));
     const qs = searchParams.toString();
-    return api.get<PaginatedResponse<ContentSummary>>(
+    return api.getPaginated<ContentSummary>(
       `/contents/published${qs ? `?${qs}` : ''}`
     );
   },
@@ -80,13 +72,13 @@ export const contentApi = {
     contentType?: string;
     page?: number;
     limit?: number;
-  }): Promise<PaginatedResponse<ContentSummary>> {
+  }): Promise<PaginatedResult<ContentSummary>> {
     const searchParams = new URLSearchParams();
     searchParams.set('q', params.q);
     if (params.contentType) searchParams.set('contentType', params.contentType);
     if (params.page) searchParams.set('page', String(params.page));
     if (params.limit) searchParams.set('limit', String(params.limit));
-    return api.get<PaginatedResponse<ContentSummary>>(
+    return api.getPaginated<ContentSummary>(
       `/contents/search?${searchParams.toString()}`
     );
   },
@@ -95,12 +87,12 @@ export const contentApi = {
   getVersions(
     contentId: string,
     params?: { page?: number; limit?: number }
-  ): Promise<PaginatedResponse<ContentVersionSummary>> {
+  ): Promise<PaginatedResult<ContentVersionSummary>> {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.set('page', String(params.page));
     if (params?.limit) searchParams.set('limit', String(params.limit));
     const qs = searchParams.toString();
-    return api.get<PaginatedResponse<ContentVersionSummary>>(
+    return api.getPaginated<ContentVersionSummary>(
       `/contents/${contentId}/versions${qs ? `?${qs}` : ''}`
     );
   },
