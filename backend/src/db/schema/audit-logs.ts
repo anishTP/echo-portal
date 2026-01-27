@@ -19,10 +19,27 @@ export const auditLogs = pgTable('audit_logs', {
   requestId: text('request_id'),
   sessionId: text('session_id'),
 }, (table) => [
+  // Original indexes (T085, T086)
   index('audit_logs_resource_idx').on(table.resourceType, table.resourceId),
   index('audit_logs_actor_id_idx').on(table.actorId),
   index('audit_logs_timestamp_idx').on(table.timestamp),
   index('audit_logs_action_idx').on(table.action),
+
+  // T101: Composite indexes for 5-second query performance (SC-006)
+  // Optimizes resource history queries with date ranges
+  index('audit_logs_resource_timestamp_idx').on(
+    table.resourceType,
+    table.resourceId,
+    table.timestamp
+  ),
+  // Optimizes failed login reports and action-based filtering with date ranges
+  index('audit_logs_action_timestamp_idx').on(table.action, table.timestamp),
+  // Optimizes permission denial reports (T086)
+  index('audit_logs_outcome_timestamp_idx').on(table.outcome, table.timestamp),
+  // Optimizes user activity queries filtered by action type
+  index('audit_logs_actor_action_idx').on(table.actorId, table.action),
+  // Optimizes security monitoring (denied actions by user)
+  index('audit_logs_actor_outcome_idx').on(table.actorId, table.outcome),
 ]);
 
 export type AuditLog = typeof auditLogs.$inferSelect;

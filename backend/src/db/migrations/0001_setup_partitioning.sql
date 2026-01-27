@@ -52,10 +52,18 @@ BEGIN
 END $$;
 
 -- 3. Create indexes on partitioned table
+-- Original indexes (T085, T086)
 CREATE INDEX IF NOT EXISTS audit_logs_resource_idx ON audit_logs (resource_type, resource_id);
 CREATE INDEX IF NOT EXISTS audit_logs_actor_id_idx ON audit_logs (actor_id);
 CREATE INDEX IF NOT EXISTS audit_logs_timestamp_idx ON audit_logs (timestamp);
 CREATE INDEX IF NOT EXISTS audit_logs_action_idx ON audit_logs (action);
+
+-- T101: Composite indexes for 5-second query performance (SC-006)
+CREATE INDEX IF NOT EXISTS audit_logs_resource_timestamp_idx ON audit_logs (resource_type, resource_id, timestamp DESC);
+CREATE INDEX IF NOT EXISTS audit_logs_action_timestamp_idx ON audit_logs (action, timestamp DESC);
+CREATE INDEX IF NOT EXISTS audit_logs_outcome_timestamp_idx ON audit_logs (outcome, timestamp DESC) WHERE outcome IS NOT NULL;
+CREATE INDEX IF NOT EXISTS audit_logs_actor_action_idx ON audit_logs (actor_id, action);
+CREATE INDEX IF NOT EXISTS audit_logs_actor_outcome_idx ON audit_logs (actor_id, outcome) WHERE outcome IS NOT NULL;
 
 -- 4. Create function to automatically create future partitions
 CREATE OR REPLACE FUNCTION create_audit_log_partition()
