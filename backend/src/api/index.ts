@@ -11,6 +11,7 @@ import { convergenceRoutes } from './routes/convergence.js';
 import { auditRoutes } from './routes/audit.js';
 import { authRoutes } from './routes/auth.js';
 import { publicRoutes } from './routes/public.js';
+import { usersRoutes } from './routes/users.js';
 
 // Create Hono app
 const app = new Hono();
@@ -56,6 +57,7 @@ api.get('/', (c) =>
       convergence: '/api/v1/convergence',
       audit: '/api/v1/audit',
       public: '/api/v1/public',
+      users: '/api/v1/users',
     },
   })
 );
@@ -67,6 +69,7 @@ api.route('/reviews', reviewRoutes);
 api.route('/convergence', convergenceRoutes);
 api.route('/audit', auditRoutes);
 api.route('/public', publicRoutes);
+api.route('/users', usersRoutes);
 
 app.route('/api/v1', api);
 

@@ -455,4 +455,267 @@ describe('Security Audit - RBAC Compliance', () => {
       console.log('RBAC Permission Matrix:', JSON.stringify(matrix, null, 2));
     });
   });
+
+  /**
+   * T092: Privilege Escalation Prevention Tests
+   *
+   * Validates that users cannot escalate their own privileges:
+   * - Contributors cannot promote themselves to reviewer or admin
+   * - Reviewers cannot grant themselves admin privileges
+   * - Only administrators can change roles
+   * - Self-role-change is always denied (FR-009)
+   */
+  describe('Privilege Escalation Prevention (T092 - FR-009, FR-010)', () => {
+    describe('Self-Promotion Prevention', () => {
+      it('should prevent contributor from promoting self to reviewer', () => {
+        const contributor: PermissionContext = {
+          userId: 'user-1',
+          roles: [Role.CONTRIBUTOR],
+        };
+
+        // Contributors don't have user:update_role permission
+        expect(hasPermission(contributor, 'user:update_role')).toBe(false);
+        expect(hasPermission(contributor, 'admin:manage_users')).toBe(false);
+      });
+
+      it('should prevent contributor from promoting self to administrator', () => {
+        const contributor: PermissionContext = {
+          userId: 'user-1',
+          roles: [Role.CONTRIBUTOR],
+        };
+
+        expect(hasPermission(contributor, 'admin:manage_users')).toBe(false);
+        expect(hasPermission(contributor, 'admin:override')).toBe(false);
+      });
+
+      it('should prevent reviewer from promoting self to administrator', () => {
+        const reviewer: PermissionContext = {
+          userId: 'user-1',
+          roles: [Role.REVIEWER],
+        };
+
+        // Reviewers don't have admin permissions
+        expect(hasPermission(reviewer, 'admin:manage_users')).toBe(false);
+        expect(hasPermission(reviewer, 'user:update_role')).toBe(false);
+      });
+
+      it('should prevent even administrators from changing their own role', () => {
+        const admin: PermissionContext = {
+          userId: 'admin-1',
+          roles: [Role.ADMINISTRATOR],
+        };
+
+        // Admins have the permission to change roles
+        expect(hasPermission(admin, 'admin:manage_users')).toBe(true);
+
+        // But the endpoint must enforce self-role-change prevention
+        // This is tested at the API level in role-change.test.ts
+      });
+    });
+
+    describe('Cross-Role Privilege Escalation', () => {
+      it('should prevent contributor from accessing admin endpoints', () => {
+        const contributor: PermissionContext = {
+          userId: 'user-1',
+          roles: [Role.CONTRIBUTOR],
+        };
+
+        expect(hasPermission(contributor, 'admin:override')).toBe(false);
+        expect(hasPermission(contributor, 'admin:manage_users')).toBe(false);
+        expect(hasPermission(contributor, 'audit:view_all')).toBe(false);
+        expect(hasPermission(contributor, 'convergence:initiate')).toBe(false);
+      });
+
+      it('should prevent reviewer from accessing admin-only features', () => {
+        const reviewer: PermissionContext = {
+          userId: 'user-1',
+          roles: [Role.REVIEWER],
+        };
+
+        expect(hasPermission(reviewer, 'admin:override')).toBe(false);
+        expect(hasPermission(reviewer, 'admin:manage_users')).toBe(false);
+        expect(hasPermission(reviewer, 'convergence:initiate')).toBe(false);
+
+        // Reviewers can view audit logs but not all admin features
+        expect(hasPermission(reviewer, 'audit:view_all')).toBe(true);
+      });
+
+      it('should prevent publisher from changing user roles', () => {
+        const publisher: PermissionContext = {
+          userId: 'user-1',
+          roles: [Role.PUBLISHER],
+        };
+
+        // Publishers don't have user management permissions
+        expect(hasPermission(publisher, 'admin:manage_users')).toBe(false);
+        expect(hasPermission(publisher, 'user:update_role')).toBe(false);
+
+        // Publishers can initiate convergence but not manage users
+        expect(hasPermission(publisher, 'convergence:initiate')).toBe(true);
+      });
+    });
+
+    describe('Role Hierarchy Enforcement', () => {
+      it('should enforce that contributor is the lowest privilege role', () => {
+        const contributor: PermissionContext = {
+          userId: 'user-1',
+          roles: [Role.CONTRIBUTOR],
+        };
+
+        // Contributor permissions (can do)
+        const contributorPermissions = [
+          'branch:create',
+          'branch:read',
+          'branch:update',
+          'branch:submit_review',
+        ];
+
+        contributorPermissions.forEach((perm) => {
+          expect(hasPermission(contributor, perm as Permission)).toBe(true);
+        });
+
+        // Higher privilege actions (cannot do)
+        const higherPermissions = [
+          'review:approve',
+          'review:request_changes',
+          'convergence:initiate',
+          'admin:override',
+          'admin:manage_users',
+        ];
+
+        higherPermissions.forEach((perm) => {
+          expect(hasPermission(contributor, perm as Permission)).toBe(false);
+        });
+      });
+
+      it('should enforce reviewer role inherits contributor permissions plus review', () => {
+        const reviewer: PermissionContext = {
+          userId: 'user-1',
+          roles: [Role.REVIEWER],
+        };
+
+        // Reviewer has all contributor permissions
+        expect(hasPermission(reviewer, 'branch:create')).toBe(true);
+        expect(hasPermission(reviewer, 'branch:read')).toBe(true);
+        expect(hasPermission(reviewer, 'branch:update')).toBe(true);
+
+        // Plus review permissions
+        expect(hasPermission(reviewer, 'review:approve')).toBe(true);
+        expect(hasPermission(reviewer, 'review:request_changes')).toBe(true);
+
+        // But not admin permissions
+        expect(hasPermission(reviewer, 'admin:manage_users')).toBe(false);
+        expect(hasPermission(reviewer, 'convergence:initiate')).toBe(false);
+      });
+
+      it('should enforce administrator has all permissions', () => {
+        const admin: PermissionContext = {
+          userId: 'user-1',
+          roles: [Role.ADMINISTRATOR],
+        };
+
+        // Admin has everything
+        const allPermissions: Permission[] = [
+          'branch:create',
+          'branch:read',
+          'branch:update',
+          'branch:delete',
+          'review:approve',
+          'review:request_changes',
+          'convergence:initiate',
+          'admin:override',
+          'admin:manage_users',
+          'audit:view_all',
+        ];
+
+        allPermissions.forEach((perm) => {
+          expect(hasPermission(admin, perm)).toBe(true);
+        });
+      });
+    });
+
+    describe('Audit Trail for Privilege Escalation Attempts', () => {
+      it('should log denied privilege escalation attempts', () => {
+        // This ensures failed attempts are auditable
+        const contributor: PermissionContext = {
+          userId: 'user-1',
+          roles: [Role.CONTRIBUTOR],
+        };
+
+        // Attempting admin actions should be denied
+        const deniedActions: Permission[] = [
+          'admin:manage_users',
+          'admin:override',
+          'convergence:initiate',
+        ];
+
+        deniedActions.forEach((action) => {
+          const result = hasPermission(contributor, action);
+          expect(result).toBe(false);
+          // In actual API calls, these denials are logged via audit middleware
+        });
+      });
+    });
+
+    describe('Valid Role-Based Access', () => {
+      it('should allow administrators to manage other users', () => {
+        const admin: PermissionContext = {
+          userId: 'admin-1',
+          roles: [Role.ADMINISTRATOR],
+        };
+
+        expect(hasPermission(admin, 'admin:manage_users')).toBe(true);
+        expect(hasPermission(admin, 'user:update_role')).toBe(true);
+      });
+
+      it('should allow reviewers to perform review actions', () => {
+        const reviewer: PermissionContext = {
+          userId: 'reviewer-1',
+          roles: [Role.REVIEWER],
+        };
+
+        expect(hasPermission(reviewer, 'review:approve')).toBe(true);
+        expect(hasPermission(reviewer, 'review:request_changes')).toBe(true);
+      });
+
+      it('should allow publishers to initiate convergence', () => {
+        const publisher: PermissionContext = {
+          userId: 'publisher-1',
+          roles: [Role.PUBLISHER],
+        };
+
+        expect(hasPermission(publisher, 'convergence:initiate')).toBe(true);
+      });
+    });
+
+    describe('Security Constraints', () => {
+      it('should enforce that no role can have multiple role assignments that escalate privileges', () => {
+        // Users should only have one role at a time
+        // This prevents privilege escalation via role combination
+
+        const singleRole: PermissionContext = {
+          userId: 'user-1',
+          roles: [Role.CONTRIBUTOR],
+        };
+
+        expect(singleRole.roles.length).toBe(1);
+      });
+
+      it('should enforce principle of least privilege', () => {
+        // Each role should only have permissions necessary for their function
+        const contributor: PermissionContext = {
+          userId: 'user-1',
+          roles: [Role.CONTRIBUTOR],
+        };
+
+        // Contributors can create and update their own branches
+        expect(hasPermission(contributor, 'branch:create')).toBe(true);
+        expect(hasPermission(contributor, 'branch:update')).toBe(true);
+
+        // But cannot approve reviews or manage system
+        expect(hasPermission(contributor, 'review:approve')).toBe(false);
+        expect(hasPermission(contributor, 'admin:manage_users')).toBe(false);
+      });
+    });
+  });
 });

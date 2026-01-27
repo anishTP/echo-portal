@@ -332,14 +332,14 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ### Tests (Constitution X: Testing as Contract)
 
-- [ ] T091 [P] Write role change tests (admin only, no self-escalation, takes effect within 30s) `backend/tests/integration/role-change.test.ts`
-- [ ] T092 [P] Write privilege escalation prevention tests (contributor cannot promote self, reviewer cannot grant admin) `backend/tests/integration/security-audit.test.ts`
+- [x] T091 [P] Write role change tests (admin only, no self-escalation, takes effect within 30s) `backend/tests/integration/role-change.test.ts`
+- [x] T092 [P] Write privilege escalation prevention tests (contributor cannot promote self, reviewer cannot grant admin) `backend/tests/integration/security-audit.test.ts`
 
 ### Backend Implementation
 
-- [ ] T093 Create user management routes (list users, get user) `backend/src/api/routes/users.ts`
-- [ ] T094 Implement role change endpoint with admin check and escalation prevention (FR-009, FR-010) `backend/src/api/routes/users.ts`
-- [ ] T095 Implement user unlock endpoint (admin clears lockout) `backend/src/api/routes/users.ts`
+- [x] T093 Create user management routes (list users, get user) `backend/src/api/routes/users.ts`
+- [x] T094 Implement role change endpoint with admin check and escalation prevention (FR-009, FR-010) `backend/src/api/routes/users.ts`
+- [x] T095 Implement user unlock endpoint (admin clears lockout) `backend/src/api/routes/users.ts`
 
 ### Frontend Implementation
 
