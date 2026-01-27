@@ -55,6 +55,9 @@ const SESSION_COOKIE_OPTIONS = {
   // For localhost: sameSite=lax works for OAuth (top-level GET navigation)
   // For production: sameSite=none required for cross-origin OAuth
   sameSite: (isLocalhost ? 'lax' : 'none') as 'lax' | 'none',
+  // Set domain to 'localhost' to work across all localhost ports (3001, 5173, etc)
+  // In production, omit domain to default to current host
+  domain: isLocalhost ? 'localhost' : undefined,
   path: '/',
   maxAge: 24 * 60 * 60, // 24 hours
 };
@@ -436,6 +439,7 @@ authRoutes.get('/callback/:provider', async (c) => {
       sessionId: session.id,
       userId: user.id,
       cookieName: SESSION_COOKIE_NAME,
+      domain: SESSION_COOKIE_OPTIONS.domain || '(current host)',
       sameSite: SESSION_COOKIE_OPTIONS.sameSite,
       secure: SESSION_COOKIE_OPTIONS.secure,
       httpOnly: SESSION_COOKIE_OPTIONS.httpOnly,
