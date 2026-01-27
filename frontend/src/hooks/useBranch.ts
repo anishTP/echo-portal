@@ -250,4 +250,41 @@ export function useRemoveReviewer() {
   });
 }
 
+/**
+ * Hook to publish a branch (publisher/admin only)
+ */
+export function usePublishBranch() {
+  const queryClient = useQueryClient();
+  const addNotification = useUIStore((s) => s.addNotification);
+  const updateBranchInLists = useBranchStore((s) => s.updateBranchInLists);
+
+  return useMutation({
+    mutationFn: (id: string) => branchService.publish(id),
+    onSuccess: (result) => {
+      const branch = result.branch;
+      if (branch) {
+        queryClient.setQueryData(branchKeys.detail(branch.id), branch);
+        updateBranchInLists(branch);
+      }
+
+      // Invalidate lists
+      queryClient.invalidateQueries({ queryKey: branchKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: branchKeys.myBranches() });
+
+      addNotification({
+        type: 'success',
+        title: 'Branch published',
+        message: 'Branch has been published successfully.',
+      });
+    },
+    onError: (error: Error) => {
+      addNotification({
+        type: 'error',
+        title: 'Failed to publish branch',
+        message: error.message,
+      });
+    },
+  });
+}
+
 export default useBranch;

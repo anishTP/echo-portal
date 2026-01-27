@@ -131,6 +131,13 @@ export const branchService = {
   setApprovalThreshold: (id: string, requiredApprovals: number): Promise<BranchResponse> => {
     return api.patch<BranchResponse>(`/branches/${id}/approval-threshold`, { requiredApprovals });
   },
+
+  /**
+   * Publish a branch (publisher/admin only)
+   */
+  publish: (id: string): Promise<any> => {
+    return api.post(`/branches/${id}/publish`);
+  },
 };
 
 export default branchService;

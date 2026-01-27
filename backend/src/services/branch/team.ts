@@ -255,6 +255,11 @@ export class TeamService {
       throw new NotFoundError('Branch', branchId);
     }
 
+    // Check if branch is published (immutable)
+    if (branch.state === 'published') {
+      throw new ForbiddenError('Cannot modify collaborators on a published branch');
+    }
+
     // Only owner or admin can add collaborators
     if (branch.ownerId !== actorId) {
       throw new ForbiddenError('Only the branch owner can add collaborators');
@@ -314,6 +319,11 @@ export class TeamService {
 
     if (!branch) {
       throw new NotFoundError('Branch', branchId);
+    }
+
+    // Check if branch is published (immutable)
+    if (branch.state === 'published') {
+      throw new ForbiddenError('Cannot modify collaborators on a published branch');
     }
 
     // Only owner or admin can remove collaborators

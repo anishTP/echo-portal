@@ -426,6 +426,47 @@ branchRoutes.patch(
 );
 
 /**
+ * POST /api/v1/branches/:id/publish - Publish a branch
+ * Publisher/Admin only - Transition approved branch to published state
+ */
+branchRoutes.post(
+  '/:id/publish',
+  requireAuth,
+  zValidator('param', branchIdParamSchema),
+  async (c) => {
+    const user = c.get('user')!;
+    const { id } = c.req.valid('param');
+
+    // Check if user has publisher or admin role
+    const hasPublishRole = user.roles?.includes('publisher') || user.roles?.includes('administrator');
+    if (!hasPublishRole) {
+      throw new ForbiddenError('Only publishers or administrators can publish branches');
+    }
+
+    // Check branch exists
+    const branch = await branchService.getById(id);
+    if (!branch) {
+      throw new NotFoundError('Branch', id);
+    }
+
+    // Check branch is in approved state
+    if (branch.state !== 'approved') {
+      throw new ValidationError(`Branch must be in approved state to publish (current state: ${branch.state})`);
+    }
+
+    // Execute publish transition
+    const result = await transitionService.executeTransition({
+      branchId: id,
+      event: 'PUBLISH' as TransitionEventType,
+      actorId: user.id,
+      actorRoles: user.roles || [],
+    });
+
+    return success(c, result);
+  }
+);
+
+/**
  * POST /api/v1/branches/:id/transitions - Trigger a state transition
  */
 branchRoutes.post(

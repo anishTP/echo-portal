@@ -374,6 +374,11 @@ export class BranchService {
   async addReviewers(id: string, reviewerIds: string[], actorId: string): Promise<BranchModel> {
     const existing = await this.getByIdOrThrow(id);
 
+    // Check if branch is published (immutable)
+    if (existing.state === BranchState.PUBLISHED) {
+      throw new ForbiddenError('Cannot modify reviewers on a published branch');
+    }
+
     // Check ownership
     if (existing.ownerId !== actorId) {
       throw new ForbiddenError('Only the branch owner can add reviewers');
@@ -401,6 +406,11 @@ export class BranchService {
    */
   async removeReviewer(id: string, reviewerId: string, actorId: string): Promise<BranchModel> {
     const existing = await this.getByIdOrThrow(id);
+
+    // Check if branch is published (immutable)
+    if (existing.state === BranchState.PUBLISHED) {
+      throw new ForbiddenError('Cannot modify reviewers on a published branch');
+    }
 
     // Check ownership
     if (existing.ownerId !== actorId) {
@@ -452,6 +462,14 @@ export class BranchService {
    * Update the head commit of a branch (after changes are made)
    */
   async updateHeadCommit(id: string, headCommit: string): Promise<BranchModel> {
+    // Check if branch exists and is not published
+    const existing = await this.getByIdOrThrow(id);
+
+    // Check if branch is published (immutable)
+    if (existing.state === BranchState.PUBLISHED) {
+      throw new ForbiddenError('Cannot update head commit on a published branch');
+    }
+
     const [updated] = await db
       .update(branches)
       .set({
