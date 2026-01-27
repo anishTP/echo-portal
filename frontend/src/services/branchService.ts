@@ -124,6 +124,13 @@ export const branchService = {
   submitForReview: (id: string, reviewerIds: string[], reason?: string): Promise<any> => {
     return api.post(`/branches/${id}/submit-for-review`, { reviewerIds, reason });
   },
+
+  /**
+   * Configure approval threshold for a branch (admin only)
+   */
+  setApprovalThreshold: (id: string, requiredApprovals: number): Promise<BranchResponse> => {
+    return api.patch<BranchResponse>(`/branches/${id}/approval-threshold`, { requiredApprovals });
+  },
 };
 
 export default branchService;
