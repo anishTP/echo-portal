@@ -5,6 +5,16 @@
 **Status**: Draft
 **Input**: User description: "This feature defines how content is created, structured, and evolved within Echo as part of VIDA's design culture system. All content must exist within an explicit branch and participate in the system's governed contribution model. Content creation and modification are never ad-hoc actions; they are versioned contributions that progress through defined lifecycle stages before becoming part of the published source of truth."
 
+## Clarifications
+
+### Session 2026-01-27
+
+- Q: Who resolves conflicts when two branches have divergent version histories? → A: Author must manually resolve conflicts before re-submitting for review (with optional reviewer guidance)
+- Q: How are reviewers notified when content is submitted for review? → A: Both in-app notifications and email (redundant channels for reliability)
+- Q: How many reviewer approvals are required before content can be published? → A: At least one reviewer approval required (default for all content)
+- Q: What versioning scheme is used to identify versions? → A: Timestamp-based (ISO 8601 timestamps like 2026-01-27T10:30:00Z)
+- Q: What is the maximum content size limit per content item? → A: 50 MB per content item (allows larger embedded assets)
+
 ## User Scenarios & Testing
 
 ### User Story 1 - Create New Content Contribution (Priority: P1)
@@ -21,6 +31,7 @@ As a VIDA team member, I need to create new design guideline content (such as ty
 2. **Given** I am creating content, **When** I structure it with metadata (title, type, category), **Then** the system validates and stores this structure for addressability
 3. **Given** I have created content, **When** I view the content history, **Then** I can see the initial version with full attribution and timestamp
 4. **Given** I attempt to create content outside a branch, **When** I try to save, **Then** the system prevents the action and requires me to work within a branch
+5. **Given** I attempt to save content exceeding 50 MB, **When** I submit, **Then** the system rejects the submission with a clear error message indicating the size limit
 
 ---
 
@@ -35,7 +46,7 @@ As a content contributor, I need to modify existing content within my branch and
 **Acceptance Scenarios**:
 
 1. **Given** I have existing content in my branch, **When** I make modifications, **Then** the system creates a new version preserving the previous version as immutable history
-2. **Given** I have multiple versions of content, **When** I view the version history, **Then** I can see all changes with timestamps, authors, and change descriptions
+2. **Given** I have multiple versions of content, **When** I view the version history, **Then** I can see all versions ordered chronologically by their ISO 8601 timestamps (which serve as version identifiers), along with authors and change descriptions
 3. **Given** I want to understand changes, **When** I compare two versions, **Then** the system shows me a clear diff of what changed between versions
 4. **Given** I made an error, **When** I revert to a previous version, **Then** the system creates a new version based on the historical version (not deleting the error)
 
@@ -51,7 +62,7 @@ As a content author, I need to submit my branch content for review so that it ca
 
 **Acceptance Scenarios**:
 
-1. **Given** I have content in draft state, **When** I submit for review, **Then** the content transitions to review state and assigned reviewers are notified
+1. **Given** I have content in draft state, **When** I submit for review, **Then** the content transitions to review state and assigned reviewers are notified via both in-app notification and email
 2. **Given** content is in review, **When** reviewers provide feedback, **Then** feedback is versioned and attached to the specific version being reviewed
 3. **Given** I receive requested changes, **When** I address them, **Then** each change creates new versions and the submission can be re-reviewed
 4. **Given** content is approved, **When** the approval is recorded, **Then** the system tracks approval metadata (who, when, which version) immutably
@@ -94,12 +105,12 @@ As a design system administrator or auditor, I need to access and compare any hi
 
 ### Edge Cases
 
-- **What happens when two contributors modify the same content in different branches simultaneously?** System must detect conflicts during merge/convergence and provide conflict resolution workflow
+- **What happens when two contributors modify the same content in different branches simultaneously?** System detects conflicts during merge/convergence. The author must manually resolve conflicts before re-submitting for review. System provides conflict visualization showing both versions, and authors can optionally request reviewer guidance during resolution.
 - **How does the system handle content that references other content that gets versioned?** System maintains reference integrity and tracks which version of referenced content was linked at each point
 - **What happens when a user attempts to delete published content?** System prevents deletion but allows archival, which marks content as non-current while preserving all history
 - **How are permissions enforced when content visibility changes?** System validates permissions at access time based on content state and user roles, with audit logging of access attempts
 - **What happens when an author's account is deactivated?** Content attribution remains intact (immutable), but author can no longer modify; ownership can be transferred via administrative action
-- **How does the system handle very large content objects or binary assets?** System applies same versioning principles but may use content-addressable storage for efficiency (implementation detail for planning phase)
+- **How does the system handle very large content objects or binary assets?** System enforces a 50 MB maximum size limit per content item. Content exceeding this limit is rejected with a clear error message. For larger binary assets (videos, high-resolution files), content should reference external asset storage rather than embedding directly.
 
 ## Requirements
 
@@ -107,10 +118,10 @@ As a design system administrator or auditor, I need to access and compare any hi
 
 - **FR-001**: System MUST require all content to exist within an explicit branch (no ad-hoc content creation outside branches)
 - **FR-002**: System MUST create a new version for every content modification, preserving the previous version as immutable history
-- **FR-003**: System MUST record complete attribution metadata for every version: author ID, timestamp (ISO 8601), change description
+- **FR-003**: System MUST record complete attribution metadata for every version: author ID, timestamp in ISO 8601 format (which serves as the version identifier), change description
 - **FR-004**: System MUST enforce branch lifecycle states (draft, review, approved, published, archived) for all content
 - **FR-005**: System MUST prevent direct modification of published content (requires new branch for updates)
-- **FR-006**: System MUST maintain version lineage showing the progression from first version to current version
+- **FR-006**: System MUST maintain version lineage showing the progression from first version to current version, with each version uniquely identified by its ISO 8601 creation timestamp
 - **FR-007**: System MUST support structured, addressable content with metadata: title, type, category, tags, description
 - **FR-008**: System MUST enable comparison between any two versions showing additions, deletions, and modifications
 - **FR-009**: System MUST allow reverting to previous versions by creating a new version based on historical state
@@ -125,14 +136,19 @@ As a design system administrator or auditor, I need to access and compare any hi
 - **FR-018**: System MUST detect conflicts when merging content from branches with divergent version histories
 - **FR-019**: System MUST maintain reference integrity when content references other versioned content
 - **FR-020**: System MUST record justifications and context for state transitions (e.g., approval reasons)
+- **FR-021**: System MUST require authors to manually resolve conflicts when attempting to merge branches with divergent version histories, providing conflict visualization and blocking submission until resolved
+- **FR-022**: System MUST notify assigned reviewers via both in-app notifications and email when content is submitted for review
+- **FR-023**: System MUST require at least one reviewer approval before content can transition from Review to Approved state
+- **FR-024**: System MUST use ISO 8601 timestamps as unique version identifiers, ensuring chronological ordering and globally unique identification
+- **FR-025**: System MUST enforce a maximum content size limit of 50 MB per content item, rejecting submissions that exceed this limit with a clear error message
 
 ### Key Entities
 
-- **Content**: Represents a design guideline, asset, or cultural contribution with structured metadata (title, type, category, tags, description, visibility). Each content item has a unique identifier and participates in versioning and branch lifecycle.
+- **Content**: Represents a design guideline, asset, or cultural contribution with structured metadata (title, type, category, tags, description, visibility). Each content item has a unique identifier, participates in versioning and branch lifecycle, and is limited to 50 MB maximum size.
 
-- **Version**: Represents a specific state of content at a point in time, including the full content body, metadata snapshot, author attribution, timestamp, version number, parent version reference, and change description. Versions are immutable once created.
+- **Version**: Represents a specific state of content at a point in time, including the full content body, metadata snapshot, author attribution, ISO 8601 timestamp (serves as version identifier), parent version reference, and change description. Versions are immutable once created and uniquely identified by their creation timestamp.
 
-- **Branch**: Represents a workspace for content creation and modification, containing one or more content items in various states. Branches have metadata: name, creator, creation timestamp, base reference (what it branched from), current state, and associated reviewers.
+- **Branch**: Represents a workspace for content creation and modification, containing one or more content items in various states. Branches have metadata: name, creator, creation timestamp, base reference (what it branched from), current state, associated reviewers, and required approvals count (minimum 1).
 
 - **Authorship Record**: Captures who created or modified content, when, and why. Includes user ID, timestamp, action type (create, modify, review, approve, publish), and contextual metadata.
 
@@ -176,6 +192,7 @@ Archived → [No transitions] (terminal state)
 - Each transition creates an immutable audit record
 - Transitions may require additional metadata (e.g., approval reason, change request description)
 - Content cannot skip states (e.g., Draft → Published)
+- Transition from Review to Approved requires at least one reviewer approval
 
 ### Visibility Boundaries
 

@@ -3,6 +3,13 @@
 **Branch**: `003-content-authoring-versioning` | **Date**: 2026-01-27 | **Spec**: [spec.md](./spec.md)
 **Input**: Feature specification from `/specs/003-content-authoring-versioning/spec.md`
 
+**Companion Documents**:
+- [research.md](./research.md) - Technology decisions and alternatives analysis
+- [data-model.md](./data-model.md) - Entity schemas, relationships, validation rules, migration strategy
+- [quickstart.md](./quickstart.md) - Developer setup guide and API usage examples
+- [contracts/contents-api.yaml](./contracts/contents-api.yaml) - OpenAPI 3.1 contract for Content and Versioning API
+- [contracts/notifications-api.yaml](./contracts/notifications-api.yaml) - OpenAPI 3.1 contract for Notifications API
+
 ## Summary
 
 This plan delivers a branch-bound content authoring and versioning system for Echo Portal. Contributors create, modify, and evolve structured design knowledge (guidelines, assets, Opinions) within explicit branches. Every modification produces a new immutable version identified by its ISO 8601 timestamp, preserving authorship, intent, and lineage. Published content represents stable truth and cannot be directly mutated; evolution occurs through new branches. The system integrates with the existing branch lifecycle, review workflow, permissions model, and audit infrastructure.
@@ -135,124 +142,31 @@ No Constitution violations. All design choices follow existing patterns.
 
 ## Data Model
 
-### New Tables
+> Full data model documentation: **[data-model.md](./data-model.md)**
 
-#### `contents` - Content items within branches
+**New Tables** (4):
+- `contents` - Content items within branches (title, type, category, tags, visibility, publication state, lineage)
+- `content_versions` - Immutable version snapshots (body, metadata snapshot, attribution, checksum, revert tracking)
+- `content_references` - Cross-content reference tracking (source/target versioned links)
+- `notifications` - In-app notifications (type, message, read state)
 
-```
-contents
-├── id: UUID (PK, default gen_random_uuid())
-├── branch_id: UUID (FK → branches.id, NOT NULL)
-├── title: TEXT (NOT NULL)
-├── slug: TEXT (NOT NULL)
-├── content_type: content_type_enum (NOT NULL)  -- 'guideline' | 'asset' | 'opinion'
-├── category: TEXT
-├── tags: TEXT[] (DEFAULT '{}')
-├── description: TEXT
-├── visibility: visibility_enum (DEFAULT 'private')
-├── current_version_id: UUID (FK → content_versions.id, nullable)
-├── is_published: BOOLEAN (DEFAULT false)
-├── published_at: TIMESTAMPTZ
-├── published_by: UUID (FK → users.id, nullable)
-├── published_version_id: UUID (FK → content_versions.id, nullable)
-├── source_content_id: UUID (FK → contents.id, nullable)  -- links to content this updates
-├── created_by: UUID (FK → users.id, NOT NULL)
-├── created_at: TIMESTAMPTZ (DEFAULT now())
-├── updated_at: TIMESTAMPTZ (DEFAULT now())
-├── archived_at: TIMESTAMPTZ
-└── UNIQUE(branch_id, slug)
-```
+**New Enum**: `content_type_enum` ('guideline' | 'asset' | 'opinion')
 
-**Indexes**: `branch_id`, `content_type`, `is_published`, `created_by`, `source_content_id`, composite `(branch_id, content_type)`, GIN index on `tags`
+**Key Design Decisions**:
+- Content bodies stored as TEXT in PostgreSQL (TOAST handles compression for large content)
+- Each version identified by ISO 8601 timestamp with `UNIQUE(content_id, version_timestamp)` constraint
+- SHA-256 checksum per version for integrity verification
+- Immutability enforced via service layer + database trigger on published content
+- Metadata frozen in JSONB snapshot per version (title, category, tags at creation time)
+- Self-referential `source_content_id` creates lineage chain for content updates
 
-#### `content_versions` - Immutable version snapshots
-
-```
-content_versions
-├── id: UUID (PK, default gen_random_uuid())
-├── content_id: UUID (FK → contents.id, NOT NULL)
-├── version_timestamp: TIMESTAMPTZ (NOT NULL, DEFAULT now())  -- serves as version identifier
-├── parent_version_id: UUID (FK → content_versions.id, nullable)
-├── body: TEXT (NOT NULL)  -- content body (markdown, structured text)
-├── body_format: TEXT (DEFAULT 'markdown')  -- 'markdown' | 'structured' | 'rich_text'
-├── metadata_snapshot: JSONB (NOT NULL)  -- frozen copy of title, category, tags at this version
-├── change_description: TEXT (NOT NULL)
-├── author_id: UUID (FK → users.id, NOT NULL)
-├── author_type: actor_type_enum (DEFAULT 'user')  -- 'user' | 'system' (for AI attribution)
-├── byte_size: INTEGER (NOT NULL)  -- enforced <= 50MB (52,428,800 bytes)
-├── checksum: TEXT (NOT NULL)  -- SHA-256 hash of body for integrity verification
-├── is_revert: BOOLEAN (DEFAULT false)  -- marks versions created via revert
-├── reverted_from_id: UUID (FK → content_versions.id, nullable)
-├── created_at: TIMESTAMPTZ (DEFAULT now())
-└── UNIQUE(content_id, version_timestamp)
-```
-
-**Indexes**: `content_id`, `version_timestamp`, `author_id`, composite `(content_id, version_timestamp DESC)` for efficient history retrieval
-
-**Immutability enforcement**: No UPDATE or DELETE operations exposed at the service layer. Database-level trigger prevents UPDATE/DELETE on rows where the parent content is published.
-
-#### `content_references` - Cross-content reference tracking
-
-```
-content_references
-├── id: UUID (PK, default gen_random_uuid())
-├── source_content_id: UUID (FK → contents.id, NOT NULL)
-├── source_version_id: UUID (FK → content_versions.id, NOT NULL)
-├── target_content_id: UUID (FK → contents.id, NOT NULL)
-├── target_version_id: UUID (FK → content_versions.id, nullable)  -- null = latest
-├── reference_type: TEXT (DEFAULT 'link')  -- 'link' | 'embed' | 'extends' | 'replaces'
-├── created_at: TIMESTAMPTZ (DEFAULT now())
-└── UNIQUE(source_version_id, target_content_id, reference_type)
-```
-
-**Indexes**: `source_content_id`, `target_content_id`, `source_version_id`
-
-#### `notifications` - In-app notifications
-
-```
-notifications
-├── id: UUID (PK, default gen_random_uuid())
-├── user_id: UUID (FK → users.id, NOT NULL)
-├── type: TEXT (NOT NULL)  -- 'review_requested' | 'review_completed' | 'changes_requested' | 'content_published'
-├── title: TEXT (NOT NULL)
-├── message: TEXT (NOT NULL)
-├── resource_type: TEXT  -- 'content' | 'branch' | 'review'
-├── resource_id: UUID
-├── is_read: BOOLEAN (DEFAULT false)
-├── created_at: TIMESTAMPTZ (DEFAULT now())
-└── read_at: TIMESTAMPTZ
-```
-
-**Indexes**: `user_id`, composite `(user_id, is_read)`, `created_at`
-
-### New Enums
-
-```
-content_type_enum: 'guideline' | 'asset' | 'opinion'
-```
-
-### Schema Relationships
-
-```
-branches (existing)
-  └── contents (1:many via branch_id)
-       ├── content_versions (1:many via content_id)
-       │    └── content_references (1:many via source_version_id)
-       ├── users (FK: created_by, published_by)
-       └── contents (self-ref: source_content_id for update lineage)
-
-users (existing)
-  ├── content_versions (1:many via author_id)
-  └── notifications (1:many via user_id)
-```
-
-### Migration Strategy
-
-Additive migration only. New tables and enums are created alongside existing schema. No modification to existing tables required. The migration will be generated via `pnpm db:generate` and applied via `pnpm db:push`.
+**Migration Strategy**: Additive only. No existing tables modified. Generated via `pnpm db:generate`, applied via `pnpm db:push`.
 
 ---
 
 ## API Design
+
+> Full OpenAPI contracts: **[contracts/contents-api.yaml](./contracts/contents-api.yaml)**, **[contracts/notifications-api.yaml](./contracts/notifications-api.yaml)**
 
 All content routes are scoped under `/api/v1/contents` and require authentication (except published public content reads). Routes follow existing Hono patterns with Zod validation.
 
