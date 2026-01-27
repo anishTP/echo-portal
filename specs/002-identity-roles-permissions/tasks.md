@@ -304,8 +304,8 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ### Tests (Constitution X: Testing as Contract)
 
-- [ ] T082 [P] [US6] Write audit log query tests (filter by actor, resource, action, date range) `backend/tests/integration/audit-query.test.ts`
-- [ ] T083 [P] [US6] Write audit partitioning tests (verify partitions created, queries span partitions correctly) `backend/tests/integration/audit-partitioning.test.ts`
+- [x] T082 [P] [US6] Write audit log query tests (filter by actor, resource, action, date range) `backend/tests/integration/audit-query.test.ts`
+- [x] T083 [P] [US6] Write audit partitioning tests (verify partitions created, queries span partitions correctly) `backend/tests/integration/audit-partitioning.test.ts`
 
 ### Backend Implementation
 
