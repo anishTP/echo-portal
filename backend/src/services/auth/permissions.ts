@@ -31,7 +31,8 @@ export type Permission =
   | 'admin:change_roles'
   | 'audit:view_all';
 
-const ROLE_PERMISSIONS: Record<RoleType, Permission[]> = {
+// T100: Use Sets for O(1) permission lookups instead of arrays
+const ROLE_PERMISSIONS_ARRAY: Record<RoleType, Permission[]> = {
   [Role.VIEWER]: ['branch:read'], // Only published public content
   [Role.CONTRIBUTOR]: [
     'branch:create',
@@ -76,10 +77,19 @@ const ROLE_PERMISSIONS: Record<RoleType, Permission[]> = {
   ],
 };
 
+// T100: Pre-compute permission Sets for O(1) lookups (performance optimization)
+const ROLE_PERMISSIONS: Record<RoleType, Set<Permission>> = {
+  [Role.VIEWER]: new Set(ROLE_PERMISSIONS_ARRAY[Role.VIEWER]),
+  [Role.CONTRIBUTOR]: new Set(ROLE_PERMISSIONS_ARRAY[Role.CONTRIBUTOR]),
+  [Role.REVIEWER]: new Set(ROLE_PERMISSIONS_ARRAY[Role.REVIEWER]),
+  [Role.ADMINISTRATOR]: new Set(ROLE_PERMISSIONS_ARRAY[Role.ADMINISTRATOR]),
+};
+
+// T100: Optimized permission check using Set.has() for O(1) lookup
 export function hasPermission(context: PermissionContext, permission: Permission): boolean {
-  // Check role-based permissions
+  // Check role-based permissions (O(1) Set lookup instead of O(n) array includes)
   for (const role of context.roles) {
-    if (ROLE_PERMISSIONS[role]?.includes(permission)) {
+    if (ROLE_PERMISSIONS[role]?.has(permission)) {
       return true;
     }
   }
