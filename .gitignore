@@ -7,10 +7,21 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+.pnpm-store/
+
+# Build outputs
 dist
 dist-ssr
+build
 *.local
+
+# Environment files
+.env
+.env.local
+.env.*.local
+!.env.example
 
 # Editor directories and files
 .vscode/*
@@ -39,4 +50,21 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Testing
+coverage/
+.nyc_output/
+
+# TypeScript
+*.tsbuildinfo
+
+# Database
+*.sql.backup
+data/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
 

@@ -1,0 +1,33 @@
+{
+  "name": "@echo-portal/frontend",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "test:e2e": "playwright test",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.75.5",
+    "monaco-editor": "^0.52.2",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.5.3",
+    "zustand": "^5.0.4",
+    "@echo-portal/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0",
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.4",
+    "vitest": "^3.1.3"
+  }
+}

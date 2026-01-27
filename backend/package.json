@@ -1,0 +1,41 @@
+{
+  "name": "@echo-portal/backend",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "db:generate": "tsx node_modules/drizzle-kit/bin.cjs generate",
+    "db:migrate": "tsx node_modules/drizzle-kit/bin.cjs migrate",
+    "db:push": "tsx node_modules/drizzle-kit/bin.cjs push",
+    "db:studio": "tsx node_modules/drizzle-kit/bin.cjs studio",
+    "db:seed-dev": "tsx src/db/seed-dev.ts",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "@echo-portal/shared": "workspace:*",
+    "@hono/node-server": "^1.14.1",
+    "@hono/zod-openapi": "^0.19.3",
+    "@hono/zod-validator": "^0.7.6",
+    "arctic": "^3.5.0",
+    "drizzle-orm": "^0.44.0",
+    "hono": "^4.8.2",
+    "isomorphic-git": "^1.28.2",
+    "postgres": "^3.4.5",
+    "uuid": "^11.0.5",
+    "xstate": "^5.19.2",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "@types/uuid": "^10.0.0",
+    "drizzle-kit": "^0.30.4",
+    "tsx": "^4.19.2",
+    "typescript": "~5.9.3",
+    "vitest": "^3.1.3"
+  }
+}
