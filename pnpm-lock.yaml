@@ -47,6 +47,9 @@ importers:
       arctic:
         specifier: ^3.5.0
         version: 3.7.0
+      dotenv:
+        specifier: ^17.2.3
+        version: 17.2.3
       drizzle-orm:
         specifier: ^0.44.0
         version: 0.44.7(gel@2.2.0)(postgres@3.4.8)
@@ -1208,6 +1211,10 @@ packages:
 
   diff3@0.0.3:
     resolution: {integrity: sha512-iSq8ngPOt0K53A6eVr4d5Kn6GNrM2nQZtC740pzIriHtn4pOQ2lyzEXQMBeVcWERN0ye7fhBsk9PbLLQOnUx/g==}
+
+  dotenv@17.2.3:
+    resolution: {integrity: sha512-JVUnt+DUIzu87TABbhPmNfVdBDt18BLOWjMUFJMSi/Qqg7NTYtabbvSNJGOJ7afbRuv9D/lngizHtP7QyLQ+9w==}
+    engines: {node: '>=12'}
 
   drizzle-kit@0.30.6:
     resolution: {integrity: sha512-U4wWit0fyZuGuP7iNmRleQyK2V8wCuv57vf5l3MnG4z4fzNTjY/U13M8owyQ5RavqvqxBifWORaR3wIUzlN64g==}
@@ -2994,6 +3001,8 @@ snapshots:
       gopd: 1.2.0
 
   diff3@0.0.3: {}
+
+  dotenv@17.2.3: {}
 
   drizzle-kit@0.30.6:
     dependencies:
