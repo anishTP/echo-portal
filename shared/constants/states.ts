@@ -95,6 +95,57 @@ export const AuthProvider = {
 export type AuthProviderType = (typeof AuthProvider)[keyof typeof AuthProvider];
 
 /**
+ * Content types (003-content-authoring-versioning)
+ */
+export const ContentType = {
+  GUIDELINE: 'guideline',
+  ASSET: 'asset',
+  OPINION: 'opinion',
+} as const;
+
+export type ContentTypeValue = (typeof ContentType)[keyof typeof ContentType];
+
+/**
+ * Content body formats
+ */
+export const BodyFormat = {
+  MARKDOWN: 'markdown',
+  STRUCTURED: 'structured',
+  RICH_TEXT: 'rich_text',
+} as const;
+
+export type BodyFormatType = (typeof BodyFormat)[keyof typeof BodyFormat];
+
+/**
+ * Content reference types
+ */
+export const ReferenceType = {
+  LINK: 'link',
+  EMBED: 'embed',
+  EXTENDS: 'extends',
+  REPLACES: 'replaces',
+} as const;
+
+export type ReferenceTypeValue = (typeof ReferenceType)[keyof typeof ReferenceType];
+
+/**
+ * Notification types
+ */
+export const NotificationType = {
+  REVIEW_REQUESTED: 'review_requested',
+  REVIEW_COMPLETED: 'review_completed',
+  CHANGES_REQUESTED: 'changes_requested',
+  CONTENT_PUBLISHED: 'content_published',
+} as const;
+
+export type NotificationTypeValue = (typeof NotificationType)[keyof typeof NotificationType];
+
+/**
+ * Content size limit (50 MB in bytes)
+ */
+export const CONTENT_MAX_BYTE_SIZE = 52_428_800;
+
+/**
  * Valid state transitions
  */
 export const ValidTransitions: Record<BranchStateType, BranchStateType[]> = {

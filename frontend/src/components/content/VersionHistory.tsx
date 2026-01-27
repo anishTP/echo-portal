@@ -1,0 +1,161 @@
+import { useState, memo, useCallback } from 'react';
+import { useVersionHistory, useRevertContent } from '../../hooks/useVersionHistory';
+import type { ContentVersionSummary } from '@echo-portal/shared';
+
+interface VersionHistoryProps {
+  contentId: string;
+  onSelectDiff?: (from: string, to: string) => void;
+  isReadOnly?: boolean;
+}
+
+export function VersionHistory({ contentId, onSelectDiff, isReadOnly }: VersionHistoryProps) {
+  const { data, isLoading } = useVersionHistory(contentId);
+  const revertMutation = useRevertContent(contentId);
+  const [selectedVersions, setSelectedVersions] = useState<string[]>([]);
+
+  const handleToggleSelect = useCallback(
+    (timestamp: string) => {
+      setSelectedVersions((prev) => {
+        if (prev.includes(timestamp)) {
+          return prev.filter((t) => t !== timestamp);
+        }
+        if (prev.length >= 2) {
+          return [prev[1], timestamp];
+        }
+        return [...prev, timestamp];
+      });
+    },
+    []
+  );
+
+  const handleCompare = useCallback(() => {
+    if (selectedVersions.length === 2) {
+      const [from, to] = selectedVersions.sort();
+      onSelectDiff?.(from, to);
+    }
+  }, [selectedVersions, onSelectDiff]);
+
+  const handleRevert = useCallback(
+    async (version: ContentVersionSummary) => {
+      const description = window.prompt(
+        `Revert to version from ${new Date(version.versionTimestamp).toLocaleString()}?`,
+        `Reverted to version from ${version.versionTimestamp}`
+      );
+      if (description) {
+        await revertMutation.mutateAsync({
+          targetVersionTimestamp: version.versionTimestamp,
+          changeDescription: description,
+        });
+      }
+    },
+    [revertMutation]
+  );
+
+  if (isLoading) {
+    return <div className="animate-pulse space-y-3 p-4">Loading version history...</div>;
+  }
+
+  const versions = data?.items ?? [];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-gray-900">
+          Version History ({data?.total ?? 0})
+        </h3>
+        {selectedVersions.length === 2 && (
+          <button
+            type="button"
+            onClick={handleCompare}
+            className="rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
+          >
+            Compare Selected
+          </button>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        {versions.map((version, idx) => (
+          <VersionEntry
+            key={version.id}
+            version={version}
+            isLatest={idx === 0}
+            isSelected={selectedVersions.includes(version.versionTimestamp)}
+            onToggleSelect={() => handleToggleSelect(version.versionTimestamp)}
+            onRevert={!isReadOnly && idx > 0 ? () => handleRevert(version) : undefined}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+interface VersionEntryProps {
+  version: ContentVersionSummary;
+  isLatest: boolean;
+  isSelected: boolean;
+  onToggleSelect: () => void;
+  onRevert?: () => void;
+}
+
+const VersionEntry = memo(function VersionEntry({
+  version,
+  isLatest,
+  isSelected,
+  onToggleSelect,
+  onRevert,
+}: VersionEntryProps) {
+  const formattedDate = new Date(version.versionTimestamp).toLocaleString();
+  const sizeKB = (version.byteSize / 1024).toFixed(1);
+
+  return (
+    <div
+      className={`rounded-lg border p-3 ${
+        isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'
+      }`}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex items-start gap-2">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={onToggleSelect}
+            className="mt-1 rounded border-gray-300 text-blue-600"
+          />
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-900">{formattedDate}</span>
+              {isLatest && (
+                <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+                  Current
+                </span>
+              )}
+              {version.isRevert && (
+                <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800">
+                  Revert
+                </span>
+              )}
+            </div>
+            <p className="mt-0.5 text-sm text-gray-600">{version.changeDescription}</p>
+            <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
+              <span>{version.author.displayName}</span>
+              <span>&middot;</span>
+              <span>{sizeKB} KB</span>
+            </div>
+          </div>
+        </div>
+        {onRevert && (
+          <button
+            type="button"
+            onClick={onRevert}
+            className="text-xs text-blue-600 hover:text-blue-800"
+          >
+            Revert
+          </button>
+        )}
+      </div>
+    </div>
+  );
+});
+
+export default VersionHistory;

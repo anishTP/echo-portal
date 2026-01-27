@@ -29,6 +29,15 @@ export const Permission = {
 
   // Audit permissions
   AUDIT_VIEW: 'audit.view',
+
+  // Content permissions (003-content-authoring-versioning)
+  CONTENT_CREATE: 'content.create',
+  CONTENT_READ: 'content.read',
+  CONTENT_UPDATE: 'content.update',
+  CONTENT_REVERT: 'content.revert',
+  CONTENT_PUBLISH: 'content.publish',
+  CONTENT_ARCHIVE: 'content.archive',
+  CONTENT_SEARCH: 'content.search',
 } as const;
 
 /**
@@ -39,6 +48,7 @@ export const Permission = {
 export const RolePermissions: Record<RoleType, PermissionAction[]> = {
   [Role.VIEWER]: [
     Permission.BRANCH_VIEW, // Published public content only (contextual)
+    Permission.CONTENT_READ, // Published public content only
   ],
   [Role.CONTRIBUTOR]: [
     Permission.BRANCH_VIEW,
@@ -48,6 +58,11 @@ export const RolePermissions: Record<RoleType, PermissionAction[]> = {
     Permission.BRANCH_SUBMIT,
     Permission.COLLABORATOR_ADD, // Own branches only (contextual)
     Permission.COLLABORATOR_REMOVE, // Own branches only (contextual)
+    Permission.CONTENT_CREATE,
+    Permission.CONTENT_READ,
+    Permission.CONTENT_UPDATE,
+    Permission.CONTENT_REVERT,
+    Permission.CONTENT_SEARCH,
   ],
   [Role.REVIEWER]: [
     Permission.BRANCH_VIEW,
@@ -60,6 +75,11 @@ export const RolePermissions: Record<RoleType, PermissionAction[]> = {
     Permission.REVIEW_APPROVE, // Not own branches (FR-013)
     Permission.REVIEW_REQUEST_CHANGES,
     Permission.REVIEW_ASSIGN, // Admins or owners only (contextual)
+    Permission.CONTENT_CREATE,
+    Permission.CONTENT_READ,
+    Permission.CONTENT_UPDATE,
+    Permission.CONTENT_REVERT,
+    Permission.CONTENT_SEARCH,
   ],
   [Role.ADMINISTRATOR]: [
     Permission.BRANCH_VIEW,
@@ -76,6 +96,13 @@ export const RolePermissions: Record<RoleType, PermissionAction[]> = {
     Permission.USER_MANAGE,
     Permission.USER_CHANGE_ROLE,
     Permission.AUDIT_VIEW,
+    Permission.CONTENT_CREATE,
+    Permission.CONTENT_READ,
+    Permission.CONTENT_UPDATE,
+    Permission.CONTENT_REVERT,
+    Permission.CONTENT_PUBLISH,
+    Permission.CONTENT_ARCHIVE,
+    Permission.CONTENT_SEARCH,
   ],
 };
 

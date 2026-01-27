@@ -17,7 +17,14 @@ export type PermissionAction =
   | 'collaborator.remove'
   | 'user.manage'
   | 'user.change_role'
-  | 'audit.view';
+  | 'audit.view'
+  | 'content.create'
+  | 'content.read'
+  | 'content.update'
+  | 'content.revert'
+  | 'content.publish'
+  | 'content.archive'
+  | 'content.search';
 
 /**
  * Permission context for contextual evaluation (FR-011)

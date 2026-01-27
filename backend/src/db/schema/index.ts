@@ -10,3 +10,5 @@ export * from './convergence.js';
 export * from './audit-logs.js';
 export * from './sessions.js';
 export * from './login-attempts.js';
+export * from './contents.js';
+export * from './notifications.js';

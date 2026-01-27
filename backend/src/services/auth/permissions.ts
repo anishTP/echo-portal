@@ -29,11 +29,18 @@ export type Permission =
   | 'admin:publish'
   | 'admin:manage_users'
   | 'admin:change_roles'
-  | 'audit:view_all';
+  | 'audit:view_all'
+  | 'content:create'
+  | 'content:read'
+  | 'content:update'
+  | 'content:revert'
+  | 'content:publish'
+  | 'content:archive'
+  | 'content:search';
 
 // T100: Use Sets for O(1) permission lookups instead of arrays
 const ROLE_PERMISSIONS_ARRAY: Record<RoleType, Permission[]> = {
-  [Role.VIEWER]: ['branch:read'], // Only published public content
+  [Role.VIEWER]: ['branch:read', 'content:read'], // Only published public content
   [Role.CONTRIBUTOR]: [
     'branch:create',
     'branch:read',
@@ -43,6 +50,11 @@ const ROLE_PERMISSIONS_ARRAY: Record<RoleType, Permission[]> = {
     'branch:remove_collaborator',
     'branch:assign_reviewer',
     'branch:remove_reviewer',
+    'content:create',
+    'content:read',
+    'content:update',
+    'content:revert',
+    'content:search',
   ],
   [Role.REVIEWER]: [
     'branch:create',
@@ -55,6 +67,11 @@ const ROLE_PERMISSIONS_ARRAY: Record<RoleType, Permission[]> = {
     'branch:remove_reviewer',
     'review:approve',
     'review:request_changes',
+    'content:create',
+    'content:read',
+    'content:update',
+    'content:revert',
+    'content:search',
   ],
   [Role.ADMINISTRATOR]: [
     'branch:create',
@@ -74,6 +91,13 @@ const ROLE_PERMISSIONS_ARRAY: Record<RoleType, Permission[]> = {
     'admin:manage_users',
     'admin:change_roles',
     'audit:view_all',
+    'content:create',
+    'content:read',
+    'content:update',
+    'content:revert',
+    'content:publish',
+    'content:archive',
+    'content:search',
   ],
 };
 

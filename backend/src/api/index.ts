@@ -12,6 +12,8 @@ import { auditRoutes } from './routes/audit.js';
 import { authRoutes } from './routes/auth.js';
 import { publicRoutes } from './routes/public.js';
 import { usersRoutes } from './routes/users.js';
+import { contentRoutes } from './routes/contents.js';
+import { notificationRoutes } from './routes/notifications.js';
 
 // Create Hono app
 const app = new Hono();
@@ -73,6 +75,8 @@ api.route('/convergence', convergenceRoutes);
 api.route('/audit', auditRoutes);
 api.route('/public', publicRoutes);
 api.route('/users', usersRoutes);
+api.route('/contents', contentRoutes);
+api.route('/notifications', notificationRoutes);
 
 app.route('/api/v1', api);
 

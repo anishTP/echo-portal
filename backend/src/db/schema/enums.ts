@@ -36,6 +36,9 @@ export const convergenceStatusEnum = pgEnum('convergence_status', [
   'rolled_back',
 ]);
 
+// Content type enum for 003-content-authoring-versioning
+export const contentTypeEnum = pgEnum('content_type', ['guideline', 'asset', 'opinion']);
+
 // Audit outcome enum for FR-021
 export const auditOutcomeEnum = pgEnum('audit_outcome', ['success', 'failure', 'denied']);
 
