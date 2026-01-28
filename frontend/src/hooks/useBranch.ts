@@ -1,19 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { branchService, type BranchListParams, type BranchResponse } from '../services/branchService';
+import { branchService, type BranchListParams } from '../services/branchService';
 import { useBranchStore } from '../stores/branchStore';
 import { useUIStore } from '../stores/index';
 import type { BranchCreateInput, BranchUpdateInput } from '@echo-portal/shared';
+import { branchKeys, invalidateWorkflowQueries } from './queryKeys';
 
-// Query keys
-export const branchKeys = {
-  all: ['branches'] as const,
-  lists: () => [...branchKeys.all, 'list'] as const,
-  list: (params: BranchListParams) => [...branchKeys.lists(), params] as const,
-  details: () => [...branchKeys.all, 'detail'] as const,
-  detail: (id: string) => [...branchKeys.details(), id] as const,
-  myBranches: () => [...branchKeys.all, 'my'] as const,
-  reviewBranches: () => [...branchKeys.all, 'reviews'] as const,
-};
+// Re-export for existing consumers
+export { branchKeys } from './queryKeys';
 
 /**
  * Hook to fetch a single branch by ID
@@ -95,9 +88,7 @@ export function useCreateBranch() {
       return branchService.create(input);
     },
     onSuccess: (branch) => {
-      // Invalidate related queries
-      queryClient.invalidateQueries({ queryKey: branchKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: branchKeys.myBranches() });
+      invalidateWorkflowQueries(queryClient, branch.id);
 
       addNotification({
         type: 'success',
@@ -130,12 +121,9 @@ export function useUpdateBranch() {
     mutationFn: ({ id, input }: { id: string; input: BranchUpdateInput }) =>
       branchService.update(id, input),
     onSuccess: (branch) => {
-      // Update in cache
       queryClient.setQueryData(branchKeys.detail(branch.id), branch);
       updateBranchInLists(branch);
-
-      // Invalidate lists
-      queryClient.invalidateQueries({ queryKey: branchKeys.lists() });
+      invalidateWorkflowQueries(queryClient, branch.id);
 
       addNotification({
         type: 'success',
@@ -164,13 +152,9 @@ export function useDeleteBranch() {
   return useMutation({
     mutationFn: (id: string) => branchService.delete(id),
     onSuccess: (_, id) => {
-      // Remove from cache
       queryClient.removeQueries({ queryKey: branchKeys.detail(id) });
       removeBranchFromLists(id);
-
-      // Invalidate lists
-      queryClient.invalidateQueries({ queryKey: branchKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: branchKeys.myBranches() });
+      invalidateWorkflowQueries(queryClient, id);
 
       addNotification({
         type: 'success',
@@ -202,6 +186,7 @@ export function useAddReviewers() {
     onSuccess: (branch) => {
       queryClient.setQueryData(branchKeys.detail(branch.id), branch);
       updateBranchInLists(branch);
+      invalidateWorkflowQueries(queryClient, branch.id);
 
       addNotification({
         type: 'success',
@@ -233,6 +218,7 @@ export function useRemoveReviewer() {
     onSuccess: (branch) => {
       queryClient.setQueryData(branchKeys.detail(branch.id), branch);
       updateBranchInLists(branch);
+      invalidateWorkflowQueries(queryClient, branch.id);
 
       addNotification({
         type: 'success',
@@ -260,16 +246,9 @@ export function usePublishBranch() {
 
   return useMutation({
     mutationFn: (id: string) => branchService.publish(id),
-    onSuccess: (result) => {
-      const branch = result.branch;
-      if (branch) {
-        queryClient.setQueryData(branchKeys.detail(branch.id), branch);
-        updateBranchInLists(branch);
-      }
-
-      // Invalidate lists
-      queryClient.invalidateQueries({ queryKey: branchKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: branchKeys.myBranches() });
+    onSuccess: (_result, branchId) => {
+      // Invalidate the specific branch detail so the UI refetches the updated state
+      invalidateWorkflowQueries(queryClient, branchId);
 
       addNotification({
         type: 'success',

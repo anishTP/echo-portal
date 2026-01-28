@@ -5,6 +5,7 @@ import { VisibilitySelector } from './VisibilitySelector';
 import { TeamMemberPicker } from './TeamMemberPicker';
 import { CollaboratorPicker } from './CollaboratorPicker';
 import { SubmitForReviewButton } from './SubmitForReviewButton';
+import { PublishButton } from './PublishButton';
 import { EnvironmentIndicator } from '../common/EnvironmentIndicator';
 import { PermissionGate } from '../common/PermissionGate';
 import { useUpdateBranch, useDeleteBranch } from '../../hooks/useBranch';
@@ -94,29 +95,30 @@ export function BranchDetail({ branch, onEdit }: BranchDetailProps) {
           </div>
         </div>
 
-        <PermissionGate checkPermission={() => isOwner || Boolean(user?.roles?.includes('administrator'))}>
-          <div className="flex gap-2">
-            <PermissionGate checkPermission={() => permissions.canEdit}>
-              <>
-                <button
-                  onClick={onEdit}
-                  className="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="rounded-md bg-red-50 px-4 py-2 text-sm font-medium text-red-700 ring-1 ring-red-200 hover:bg-red-100"
-                >
-                  Delete
-                </button>
-              </>
-            </PermissionGate>
-            <PermissionGate checkPermission={() => permissions.canSubmitForReview && isDraft}>
-              <SubmitForReviewButton branchId={branch.id} />
-            </PermissionGate>
-          </div>
-        </PermissionGate>
+        <div className="flex gap-2">
+          <PermissionGate checkPermission={() => permissions.canEdit}>
+            <>
+              <button
+                onClick={onEdit}
+                className="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50"
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="rounded-md bg-red-50 px-4 py-2 text-sm font-medium text-red-700 ring-1 ring-red-200 hover:bg-red-100"
+              >
+                Delete
+              </button>
+            </>
+          </PermissionGate>
+          <PermissionGate checkPermission={() => permissions.canSubmitForReview && isDraft}>
+            <SubmitForReviewButton branchId={branch.id} />
+          </PermissionGate>
+          <PermissionGate checkPermission={() => permissions.canPublish && branch.state === 'approved'}>
+            <PublishButton branch={branch} />
+          </PermissionGate>
+        </div>
       </div>
 
       {/* Description */}
@@ -279,21 +281,6 @@ export function BranchDetail({ branch, onEdit }: BranchDetailProps) {
               disabled={!isDraft}
             />
           </div>
-        </div>
-      )}
-
-      {/* Read-only Reviewers for non-owners */}
-      {!isOwner && branch.reviewers && branch.reviewers.length > 0 && (
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
-          <h3 className="font-medium text-gray-900">Reviewers</h3>
-          <ul className="mt-3 space-y-2">
-            {branch.reviewers.map((reviewerId) => (
-              <li key={reviewerId} className="flex items-center gap-2 text-sm">
-                <div className="h-8 w-8 rounded-full bg-gray-200" />
-                <span className="font-mono text-gray-600">{reviewerId.slice(0, 8)}...</span>
-              </li>
-            ))}
-          </ul>
         </div>
       )}
 

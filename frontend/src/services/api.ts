@@ -7,7 +7,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 function getDevAuthHeader(): Record<string, string> {
   if (localStorage.getItem('dev_auth') === 'true') {
     // Format: userId:email:roles (as expected by backend)
-    const token = '00000000-0000-0000-0000-000000000001:dev@example.com:contributor,reviewer,administrator';
+    const token = '00000000-0000-0000-0000-000000000001:dev@example.com:contributor,reviewer,publisher,administrator';
     return { Authorization: `Bearer ${token}` };
   }
   return {};

@@ -93,11 +93,14 @@ export const authMiddleware = createMiddleware<AuthEnv>(async (c: Context, next:
         .limit(1);
 
       if (devUser && devUser.isActive) {
+        // In dev mode, prefer token roles over database roles for flexibility
+        // This allows developers to test different role combinations easily
+        const effectiveRoles = devRoles.length > 0 ? devRoles : (devUser.roles as RoleType[]) || [];
         c.set('user', {
           id: devUser.id,
           email: devUser.email,
-          role: (devUser.roles?.[0] as RoleType) || devRoles[0] || 'viewer',
-          roles: (devUser.roles as RoleType[]) || devRoles,
+          role: effectiveRoles[0] || 'viewer',
+          roles: effectiveRoles,
           isActive: devUser.isActive,
         });
         c.set('sessionId', null);

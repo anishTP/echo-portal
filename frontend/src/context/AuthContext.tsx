@@ -42,7 +42,7 @@ const DEV_USER: AuthUser = {
   id: '00000000-0000-0000-0000-000000000001',
   email: 'dev@example.com',
   displayName: 'Dev User',
-  roles: ['contributor', 'reviewer', 'administrator'],
+  roles: ['contributor', 'reviewer', 'publisher', 'administrator'],
   role: 'administrator',
 };
 
@@ -56,19 +56,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
 
+  // Check for existing session on mount (run once)
   useEffect(() => {
-    // Check for existing session on mount
     checkAuth();
+  }, []);
 
-    // Set up periodic session validation (30s interval for role change detection)
+  // Set up periodic session validation (30s interval for role change detection)
+  useEffect(() => {
+    if (!user) return;
+
     const intervalId = setInterval(() => {
-      if (user) {
-        refreshSession();
-      }
+      refreshSession();
     }, SESSION_CHECK_INTERVAL);
 
     return () => clearInterval(intervalId);
-  }, [user]);
+  }, [user?.id]); // Only re-run if user ID changes, not on every user object change
 
   async function checkAuth() {
     // Check for dev auth first
