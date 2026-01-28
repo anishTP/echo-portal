@@ -528,6 +528,8 @@ export const contentMergeService = {
                 category: content.category,
                 tags: content.tags,
                 description: content.description,
+                visibility: 'public',
+                isPublished: true,
                 publishedAt: new Date(),
                 publishedBy: actorId,
                 updatedAt: new Date(),
