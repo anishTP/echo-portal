@@ -6,6 +6,8 @@ import { diffService } from '../../services/content/diff-service.js';
 import { referenceService } from '../../services/content/reference-service.js';
 import { requireAuth, type AuthEnv } from '../middleware/auth.js';
 import { success, created, paginated, getPagination } from '../utils/responses.js';
+import { branchService } from '../../services/branch/branch-service.js';
+import { ForbiddenError } from '../utils/errors.js';
 import {
   createContentBodySchema,
   updateContentBodySchema,
@@ -23,6 +25,29 @@ import {
 const contentRoutes = new Hono<AuthEnv>();
 
 /**
+ * Assert the user can edit content in the given branch.
+ * Requires draft state and user must be owner, collaborator, or admin.
+ */
+async function assertCanEditBranchContent(
+  branchId: string,
+  user: { id: string; roles?: string[] }
+): Promise<void> {
+  const branch = await branchService.getById(branchId);
+  if (!branch) {
+    throw new ForbiddenError('Branch not found');
+  }
+  if (branch.state !== 'draft') {
+    throw new ForbiddenError('Content can only be modified in draft branches');
+  }
+  const isOwner = branch.ownerId === user.id;
+  const isCollaborator = branch.collaborators.includes(user.id);
+  const isAdmin = user.roles?.includes('administrator') ?? false;
+  if (!isOwner && !isCollaborator && !isAdmin) {
+    throw new ForbiddenError('You do not have permission to edit content in this branch');
+  }
+}
+
+/**
  * POST /api/v1/contents - Create content within a branch
  */
 contentRoutes.post('/', requireAuth, zValidator('json', createContentBodySchema), async (c) => {
@@ -37,6 +62,9 @@ contentRoutes.post('/', requireAuth, zValidator('json', createContentBodySchema)
       413
     );
   }
+
+  // Authorization: user must be owner, collaborator, or admin on a draft branch
+  await assertCanEditBranchContent(body.branchId, user);
 
   try {
     const content = await contentService.create(body, { userId: user.id });
@@ -161,6 +189,13 @@ contentRoutes.put(
       );
     }
 
+    // Authorization: look up content to get branchId, then check permissions
+    const existing = await contentService.getById(contentId);
+    if (!existing) {
+      return c.json({ error: { code: 'NOT_FOUND', message: 'Content not found' } }, 404);
+    }
+    await assertCanEditBranchContent(existing.branchId, user);
+
     try {
       const content = await contentService.update(contentId, body, { userId: user.id });
       return success(c, content);
@@ -265,6 +300,13 @@ contentRoutes.post(
     const user = c.get('user')!;
     const { contentId } = c.req.valid('param');
     const body = c.req.valid('json');
+
+    // Authorization: look up content to get branchId, then check permissions
+    const existingContent = await contentService.getById(contentId);
+    if (!existingContent) {
+      return c.json({ error: { code: 'NOT_FOUND', message: 'Content not found' } }, 404);
+    }
+    await assertCanEditBranchContent(existingContent.branchId, user);
 
     try {
       const version = await versionService.revert(

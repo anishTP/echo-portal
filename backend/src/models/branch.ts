@@ -194,6 +194,10 @@ export class BranchModel {
     return this.data.reviewers || [];
   }
 
+  get collaborators(): string[] {
+    return this.data.collaborators || [];
+  }
+
   get description(): string | null {
     return this.data.description;
   }
@@ -312,7 +316,67 @@ export class BranchModel {
   }
 
   /**
-   * Get a serializable representation for API responses
+   * Get a serializable representation with user-aware permissions
+   */
+  toResponseForUser(context: { userId: string | null; roles: string[] }): Record<string, unknown> {
+    const { userId, roles } = context;
+    const isOwner = !!userId && this.ownerId === userId;
+    const isCollaborator = !!userId && this.collaborators.includes(userId);
+    const isAssignedReviewer = !!userId && this.reviewers.includes(userId);
+    const isAdmin = roles.includes('administrator');
+    const isPublisher = roles.includes('publisher');
+
+    const userPermissions = {
+      canEdit: (isOwner || isCollaborator || isAdmin) && this.state === BranchState.DRAFT,
+      canSubmitForReview: isOwner && this.state === BranchState.DRAFT,
+      canApprove: (isAssignedReviewer || isAdmin) && !isOwner && this.state === BranchState.REVIEW,
+      canPublish: (isPublisher || isAdmin) && this.state === BranchState.APPROVED,
+      canArchive: (isOwner || isAdmin) && this.state !== BranchState.ARCHIVED,
+      validTransitions: this.getValidTransitions().filter((target) => {
+        switch (target) {
+          case BranchState.REVIEW:
+            return isOwner;
+          case BranchState.DRAFT:
+            // Return to draft (request changes) — reviewer or admin, not owner
+            return (isAssignedReviewer || isAdmin) && !isOwner;
+          case BranchState.APPROVED:
+            return (isAssignedReviewer || isAdmin) && !isOwner;
+          case BranchState.PUBLISHED:
+            return isPublisher || isAdmin;
+          case BranchState.ARCHIVED:
+            return isOwner || isAdmin;
+          default:
+            return false;
+        }
+      }),
+    };
+
+    return {
+      id: this.id,
+      name: this.name,
+      slug: this.slug,
+      gitRef: this.gitRef,
+      baseRef: this.baseRef,
+      baseCommit: this.baseCommit,
+      headCommit: this.headCommit,
+      state: this.state,
+      visibility: this.visibility,
+      ownerId: this.ownerId,
+      reviewers: this.reviewers,
+      description: this.description,
+      labels: this.labels,
+      createdAt: this.createdAt.toISOString(),
+      updatedAt: this.updatedAt.toISOString(),
+      submittedAt: this.submittedAt?.toISOString() ?? null,
+      approvedAt: this.approvedAt?.toISOString() ?? null,
+      publishedAt: this.publishedAt?.toISOString() ?? null,
+      archivedAt: this.archivedAt?.toISOString() ?? null,
+      permissions: userPermissions,
+    };
+  }
+
+  /**
+   * Get a serializable representation for API responses (state-based only, no user context)
    */
   toResponse(): Record<string, unknown> {
     return {

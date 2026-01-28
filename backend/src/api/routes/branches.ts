@@ -4,6 +4,7 @@ import { branchService } from '../../services/branch/branch-service.js';
 import { visibilityService, type AccessContext } from '../../services/branch/visibility.js';
 import { teamService } from '../../services/branch/team.js';
 import { transitionService } from '../../services/workflow/transitions.js';
+import { reviewService } from '../../services/review/review-service.js';
 import { diffService } from '../../services/git/diff.js';
 import { requireAuth, type AuthEnv } from '../middleware/auth.js';
 import { success, created, paginated, noContent } from '../utils/responses.js';
@@ -23,7 +24,7 @@ import {
   validateVisibilityFilter,
 } from '../schemas/branches.js';
 import { transitionBranchBodySchema } from '../schemas/reviews.js';
-import type { TransitionEventType } from '@echo-portal/shared';
+import { TransitionEvent, type TransitionEventType } from '@echo-portal/shared';
 
 const branchRoutes = new Hono<AuthEnv>();
 
@@ -41,6 +42,14 @@ function getAccessContext(c: any): AccessContext {
 }
 
 /**
+ * Helper to extract user context for user-aware branch permissions
+ */
+function getBranchUserContext(c: any): { userId: string | null; roles: string[] } {
+  const user = c.get('user');
+  return { userId: user?.id ?? null, roles: user?.roles ?? [] };
+}
+
+/**
  * POST /api/v1/branches - Create a new branch
  */
 branchRoutes.post(
@@ -52,7 +61,7 @@ branchRoutes.post(
     const body = c.req.valid('json');
 
     const branch = await branchService.create(body, user.id);
-    return created(c, branch.toResponse());
+    return created(c, branch.toResponseForUser(getBranchUserContext(c)));
   }
 );
 
@@ -83,7 +92,7 @@ branchRoutes.get('/', zValidator('query', listBranchesQuerySchema), async (c) =>
 
   return paginated(
     c,
-    accessibleBranches.map((b) => b.toResponse()),
+    accessibleBranches.map((b) => b.toResponseForUser(getBranchUserContext(c))),
     {
       page: result.page,
       limit: result.limit,
@@ -103,7 +112,7 @@ branchRoutes.get('/me', requireAuth, async (c) => {
   const branches = await branchService.getByOwner(user.id, includeArchived);
   return success(
     c,
-    branches.map((b) => b.toResponse())
+    branches.map((b) => b.toResponseForUser(getBranchUserContext(c)))
   );
 });
 
@@ -116,7 +125,7 @@ branchRoutes.get('/reviews', requireAuth, async (c) => {
   const branches = await branchService.getByReviewer(user.id);
   return success(
     c,
-    branches.map((b) => b.toResponse())
+    branches.map((b) => b.toResponseForUser(getBranchUserContext(c)))
   );
 });
 
@@ -135,7 +144,7 @@ branchRoutes.get('/:id', zValidator('param', branchIdParamSchema), async (c) => 
   // Check access
   visibilityService.assertAccess(branch.toJSON(), context);
 
-  return success(c, branch.toResponse());
+  return success(c, branch.toResponseForUser(getBranchUserContext(c)));
 });
 
 /**
@@ -152,7 +161,7 @@ branchRoutes.patch(
     const body = c.req.valid('json');
 
     const branch = await branchService.update(id, body, user.id);
-    return success(c, branch.toResponse());
+    return success(c, branch.toResponseForUser(getBranchUserContext(c)));
   }
 );
 
@@ -379,11 +388,24 @@ branchRoutes.post(
     // Then transition to review state
     const result = await transitionService.executeTransition({
       branchId: id,
-      event: 'submit_for_review' as TransitionEventType,
+      event: TransitionEvent.SUBMIT_FOR_REVIEW,
       actorId: user.id,
       actorRoles: user.roles || [],
       reason,
     });
+
+    if (!result.success) {
+      throw new ValidationError(result.error || 'Failed to submit for review');
+    }
+
+    // Create review records for each assigned reviewer so they appear in the review queue
+    await Promise.all(
+      reviewerIds.map((reviewerId) =>
+        reviewService.create({ branchId: id, reviewerId }, user.id).catch(() => {
+          // Ignore duplicates — reviewer may already have an active review record
+        })
+      )
+    );
 
     return success(c, result);
   }
@@ -421,7 +443,7 @@ branchRoutes.patch(
       user.id
     );
 
-    return success(c, updated.toResponse());
+    return success(c, updated.toResponseForUser(getBranchUserContext(c)));
   }
 );
 
@@ -457,10 +479,14 @@ branchRoutes.post(
     // Execute publish transition
     const result = await transitionService.executeTransition({
       branchId: id,
-      event: 'PUBLISH' as TransitionEventType,
+      event: TransitionEvent.PUBLISH,
       actorId: user.id,
       actorRoles: user.roles || [],
     });
+
+    if (!result.success) {
+      throw new ValidationError(result.error || 'Failed to publish branch');
+    }
 
     return success(c, result);
   }
@@ -497,6 +523,10 @@ branchRoutes.post(
       reason,
       metadata,
     });
+
+    if (!result.success) {
+      throw new ValidationError(result.error || 'Transition failed');
+    }
 
     return success(c, result);
   }

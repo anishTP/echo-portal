@@ -234,6 +234,7 @@ export class VisibilityService {
     }
 
     const isOwner = branch.ownerId === userId;
+    const isCollaborator = branch.collaborators?.includes(userId || '') || false;
     const isReviewer = branch.reviewers?.includes(userId || '') || false;
     const isAdmin = roles.includes('administrator');
     const hasPublisherRole = roles.includes('publisher');
@@ -241,7 +242,7 @@ export class VisibilityService {
 
     return {
       canView: true,
-      canEdit: (isOwner || isAdmin) && branch.state === 'draft',
+      canEdit: (isOwner || isCollaborator || isAdmin) && branch.state === 'draft',
       canReview:
         (isReviewer || hasReviewerRole || isAdmin) && branch.state === 'review',
       canPublish:
