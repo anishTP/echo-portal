@@ -57,9 +57,9 @@ export const authMiddleware = createMiddleware<AuthEnv>(async (c: Context, next:
         if (user && user.isActive) {
           c.set('user', {
             id: user.id,
-            email: user.email, // Now properly populated from database
-            role: session.role,
-            roles: [session.role],
+            email: user.email,
+            role: (user.roles?.[0] as RoleType) || session.role,
+            roles: (user.roles as RoleType[]) || [session.role],
             isActive: user.isActive,
           });
           c.set('sessionId', session.id);
@@ -94,9 +94,9 @@ export const authMiddleware = createMiddleware<AuthEnv>(async (c: Context, next:
         if (user && user.isActive) {
           c.set('user', {
             id: user.id,
-            email: user.email, // Populated from database
-            role: session.role,
-            roles: [session.role],
+            email: user.email,
+            role: (user.roles?.[0] as RoleType) || session.role,
+            roles: (user.roles as RoleType[]) || [session.role],
             isActive: user.isActive,
           });
           c.set('sessionId', session.id);

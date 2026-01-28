@@ -1,7 +1,7 @@
 import { db } from '../../db/index.js';
 import { branches, type Branch, type NewBranch } from '../../db/schema/branches.js';
 import { branchStateTransitions } from '../../db/schema/branch-transitions.js';
-import { eq, desc, and, or, ilike, inArray, sql } from 'drizzle-orm';
+import { eq, desc, and, or, ilike, inArray, sql, arrayContains } from 'drizzle-orm';
 import { getGitOperations } from '../git/operations.js';
 import { orphanDetectionService } from './orphan-detection.js';
 import {
@@ -362,7 +362,7 @@ export class BranchService {
     const results = await db
       .select()
       .from(branches)
-      .where(sql`${reviewerId} = ANY(${branches.reviewers})`)
+      .where(arrayContains(branches.reviewers, [reviewerId]))
       .orderBy(desc(branches.updatedAt));
 
     return results.map(createBranchModel);

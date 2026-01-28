@@ -1,7 +1,7 @@
 import { db } from '../../db/index.js';
 import { branches, type Branch } from '../../db/schema/branches.js';
 import { users } from '../../db/schema/users.js';
-import { eq, and, or, sql, inArray } from 'drizzle-orm';
+import { eq, and, or, sql, inArray, arrayContains } from 'drizzle-orm';
 import { Visibility, type VisibilityType } from '@echo-portal/shared';
 import { ForbiddenError } from '../../api/utils/errors.js';
 
@@ -128,7 +128,7 @@ export class VisibilityService {
       conditions.push(eq(branches.ownerId, userId));
 
       // Assigned reviewers see the branch
-      conditions.push(sql`${userId} = ANY(${branches.reviewers})`);
+      conditions.push(arrayContains(branches.reviewers, [userId]));
 
       // Publishers see review/approved branches
       if (roles.includes('publisher')) {
