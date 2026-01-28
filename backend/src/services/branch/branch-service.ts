@@ -15,6 +15,7 @@ import {
 } from '../../models/branch.js';
 import { NotFoundError, ValidationError, ConflictError, ForbiddenError } from '../../api/utils/errors.js';
 import { BranchState, ActorType } from '@echo-portal/shared';
+import { contentInheritanceService } from '../content/content-inheritance-service.js';
 
 export interface BranchListOptions {
   ownerId?: string;
@@ -116,6 +117,26 @@ export class BranchService {
       reason: 'Branch created',
       metadata: { baseRef, baseCommit: gitResult.baseCommit },
     });
+
+    // Inherit content from main if branching from main
+    if (baseRef === 'main') {
+      const mainBranch = await this.getMainBranch();
+      if (mainBranch) {
+        const inheritanceResult = await contentInheritanceService.inheritContent(
+          mainBranch.id,
+          inserted.id,
+          gitResult.baseCommit,
+          ownerId
+        );
+        // Log inheritance result (errors are non-fatal)
+        if (inheritanceResult.errors.length > 0) {
+          console.warn(
+            `Content inheritance warnings for branch ${inserted.id}:`,
+            inheritanceResult.errors
+          );
+        }
+      }
+    }
 
     return createBranchModel(inserted);
   }
@@ -456,6 +477,32 @@ export class BranchService {
     }
 
     return createBranchModel(updated);
+  }
+
+  /**
+   * Get the canonical main branch (holds published content)
+   */
+  async getMainBranch(): Promise<BranchModel | null> {
+    const branch = await db.query.branches.findFirst({
+      where: eq(branches.slug, 'main'),
+    });
+
+    if (!branch) {
+      return null;
+    }
+
+    return createBranchModel(branch);
+  }
+
+  /**
+   * Get the canonical main branch, throwing if not found
+   */
+  async getMainBranchOrThrow(): Promise<BranchModel> {
+    const branch = await this.getMainBranch();
+    if (!branch) {
+      throw new NotFoundError('Main branch not initialized. Run database seed to create it.');
+    }
+    return branch;
   }
 
   /**

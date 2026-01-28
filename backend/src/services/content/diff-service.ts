@@ -14,14 +14,10 @@ async function getUserSummary(userId: string): Promise<UserSummary> {
 }
 
 /**
- * Line-based diff using longest common subsequence (LCS) approach.
- * Returns structured diff output with add/remove/unchanged segments.
+ * Build LCS table for two arrays of lines.
+ * Exported for use in three-way merge.
  */
-function computeLineDiff(oldText: string, newText: string): DiffChange[] {
-  const oldLines = oldText.split('\n');
-  const newLines = newText.split('\n');
-
-  // Build LCS table
+export function buildLcsTable(oldLines: string[], newLines: string[]): number[][] {
   const m = oldLines.length;
   const n = newLines.length;
   const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
@@ -35,6 +31,22 @@ function computeLineDiff(oldText: string, newText: string): DiffChange[] {
       }
     }
   }
+
+  return dp;
+}
+
+/**
+ * Line-based diff using longest common subsequence (LCS) approach.
+ * Returns structured diff output with add/remove/unchanged segments.
+ */
+export function computeLineDiff(oldText: string, newText: string): DiffChange[] {
+  const oldLines = oldText.split('\n');
+  const newLines = newText.split('\n');
+
+  // Build LCS table
+  const m = oldLines.length;
+  const n = newLines.length;
+  const dp = buildLcsTable(oldLines, newLines);
 
   // Backtrack to build diff
   const changes: DiffChange[] = [];

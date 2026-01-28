@@ -9,7 +9,7 @@ import {
   index,
   jsonb,
 } from 'drizzle-orm/pg-core';
-import { contentTypeEnum, visibilityEnum, actorTypeEnum } from './enums.js';
+import { contentTypeEnum, visibilityEnum, actorTypeEnum, mergeStateEnum, contentOperationTypeEnum, conflictResolutionEnum } from './enums.js';
 import { users } from './users.js';
 import { branches } from './branches.js';
 
@@ -35,6 +35,10 @@ export const contents = pgTable(
     publishedBy: uuid('published_by').references(() => users.id),
     publishedVersionId: uuid('published_version_id'),
     sourceContentId: uuid('source_content_id'),
+    // Fields for three-way merge support
+    baseVersionId: uuid('base_version_id'),  // Version at branch creation (for 3-way merge base)
+    mergeState: mergeStateEnum('merge_state').default('clean').notNull(),
+    conflictData: jsonb('conflict_data'),  // Stores conflict details if in conflict state
     createdBy: uuid('created_by')
       .notNull()
       .references(() => users.id),
@@ -125,3 +129,59 @@ export const contentReferences = pgTable(
 
 export type ContentReference = typeof contentReferences.$inferSelect;
 export type NewContentReference = typeof contentReferences.$inferInsert;
+
+// --- Content Snapshots (for tracking branch creation state) ---
+
+export const contentSnapshots = pgTable(
+  'content_snapshots',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    branchId: uuid('branch_id')
+      .notNull()
+      .references(() => branches.id),
+    commitRef: text('commit_ref').notNull(),
+    // Manifest maps slug -> {contentId, versionId} at snapshot time
+    contentManifest: jsonb('content_manifest').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('cs_branch_id_idx').on(table.branchId),
+    index('cs_created_at_idx').on(table.createdAt),
+  ]
+);
+
+export type ContentSnapshot = typeof contentSnapshots.$inferSelect;
+export type NewContentSnapshot = typeof contentSnapshots.$inferInsert;
+
+// --- Content Merge History (audit trail for merge/rebase operations) ---
+
+export const contentMergeHistory = pgTable(
+  'content_merge_history',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    contentId: uuid('content_id').references(() => contents.id),
+    operationType: contentOperationTypeEnum('operation_type').notNull(),
+    sourceBranchId: uuid('source_branch_id').references(() => branches.id),
+    targetBranchId: uuid('target_branch_id').references(() => branches.id),
+    baseVersionId: uuid('base_version_id').references(() => contentVersions.id),
+    sourceVersionId: uuid('source_version_id').references(() => contentVersions.id),
+    resultVersionId: uuid('result_version_id').references(() => contentVersions.id),
+    hadConflict: boolean('had_conflict').default(false).notNull(),
+    conflictResolution: conflictResolutionEnum('conflict_resolution'),
+    actorId: uuid('actor_id')
+      .notNull()
+      .references(() => users.id),
+    metadata: jsonb('metadata'),  // Additional context about the operation
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('cmh_content_id_idx').on(table.contentId),
+    index('cmh_source_branch_idx').on(table.sourceBranchId),
+    index('cmh_target_branch_idx').on(table.targetBranchId),
+    index('cmh_actor_id_idx').on(table.actorId),
+    index('cmh_created_at_idx').on(table.createdAt),
+  ]
+);
+
+export type ContentMergeHistory = typeof contentMergeHistory.$inferSelect;
+export type NewContentMergeHistory = typeof contentMergeHistory.$inferInsert;

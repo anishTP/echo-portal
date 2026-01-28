@@ -6,6 +6,8 @@ import { teamService } from '../../services/branch/team.js';
 import { transitionService } from '../../services/workflow/transitions.js';
 import { reviewService } from '../../services/review/review-service.js';
 import { diffService } from '../../services/git/diff.js';
+import { contentMergeService } from '../../services/content/content-merge-service.js';
+import { conflictResolutionService } from '../../services/content/conflict-resolution-service.js';
 import { requireAuth, type AuthEnv } from '../middleware/auth.js';
 import { success, created, paginated, noContent } from '../utils/responses.js';
 import { NotFoundError, ForbiddenError, ValidationError } from '../utils/errors.js';
@@ -613,6 +615,60 @@ branchRoutes.get(
     });
 
     return success(c, result);
+  }
+);
+
+/**
+ * GET /api/v1/branches/:id/merge-preview - Preview content merge conflicts
+ */
+branchRoutes.get(
+  '/:id/merge-preview',
+  requireAuth,
+  zValidator('param', branchIdParamSchema),
+  async (c) => {
+    const { id } = c.req.valid('param');
+    const context = getAccessContext(c);
+
+    // Check branch exists and user has access
+    const branch = await branchService.getById(id);
+    if (!branch) {
+      throw new NotFoundError('Branch', id);
+    }
+
+    visibilityService.assertAccess(branch.toJSON(), context);
+
+    // Get main branch for merge preview
+    const mainBranch = await branchService.getMainBranch();
+    if (!mainBranch) {
+      throw new ValidationError('Main branch not found');
+    }
+
+    const preview = await contentMergeService.detectConflicts(id, mainBranch.id);
+    return success(c, preview);
+  }
+);
+
+/**
+ * GET /api/v1/branches/:id/conflicts - Get all content conflicts for a branch
+ */
+branchRoutes.get(
+  '/:id/conflicts',
+  requireAuth,
+  zValidator('param', branchIdParamSchema),
+  async (c) => {
+    const { id } = c.req.valid('param');
+    const context = getAccessContext(c);
+
+    // Check branch exists and user has access
+    const branch = await branchService.getById(id);
+    if (!branch) {
+      throw new NotFoundError('Branch', id);
+    }
+
+    visibilityService.assertAccess(branch.toJSON(), context);
+
+    const conflicts = await conflictResolutionService.getConflicts(id);
+    return success(c, { conflicts, count: conflicts.length });
   }
 );
 

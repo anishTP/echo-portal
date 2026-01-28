@@ -14,6 +14,7 @@ import { publicRoutes } from './routes/public.js';
 import { usersRoutes } from './routes/users.js';
 import { contentRoutes } from './routes/contents.js';
 import { notificationRoutes } from './routes/notifications.js';
+import { rebaseRoutes } from './routes/rebase.js';
 
 // Create Hono app
 const app = new Hono();
@@ -63,6 +64,8 @@ api.get('/', (c) =>
       audit: '/api/v1/audit',
       public: '/api/v1/public',
       users: '/api/v1/users',
+      contents: '/api/v1/contents',
+      notifications: '/api/v1/notifications',
     },
   })
 );
@@ -77,6 +80,8 @@ api.route('/public', publicRoutes);
 api.route('/users', usersRoutes);
 api.route('/contents', contentRoutes);
 api.route('/notifications', notificationRoutes);
+// Rebase routes are mounted on branches path for convenience
+api.route('/branches', rebaseRoutes);
 
 app.route('/api/v1', api);
 

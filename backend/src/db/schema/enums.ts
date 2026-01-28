@@ -42,6 +42,15 @@ export const contentTypeEnum = pgEnum('content_type', ['guideline', 'asset', 'op
 // Audit outcome enum for FR-021
 export const auditOutcomeEnum = pgEnum('audit_outcome', ['success', 'failure', 'denied']);
 
+// Content merge state for three-way merge tracking
+export const mergeStateEnum = pgEnum('merge_state', ['clean', 'conflict', 'resolved']);
+
+// Content operation type for merge history tracking
+export const contentOperationTypeEnum = pgEnum('content_operation_type', ['inherit', 'merge', 'rebase']);
+
+// Conflict resolution strategy
+export const conflictResolutionEnum = pgEnum('conflict_resolution', ['auto', 'ours', 'theirs', 'manual']);
+
 // Note: Audit action is stored as text (not enum) for flexibility
 // Common action patterns:
 // - auth.login, auth.logout, auth.failed, auth.locked

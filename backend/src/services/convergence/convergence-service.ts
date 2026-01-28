@@ -28,6 +28,8 @@ import { conflictDetectionService } from './conflict-detection.js';
 import { lockingService } from './locking.js';
 import { mergeService } from './merge.js';
 import { transitionService } from '../workflow/transitions.js';
+import { contentMergeService } from '../content/content-merge-service.js';
+import { branchService } from '../branch/branch-service.js';
 
 export interface ConvergenceListOptions {
   branchId?: string;
@@ -190,22 +192,50 @@ export class ConvergenceService {
           : 'Branch has no changes to merge',
     });
 
-    // Check 3: No conflicts with target
+    // Check 3: No git conflicts with target
     const conflictResult = await conflictDetectionService.checkConflicts(
       branch.gitRef,
       branch.baseRef
     );
 
     results.push({
-      check: 'no_conflicts',
+      check: 'no_git_conflicts',
       passed: !conflictResult.hasConflicts,
       message: conflictResult.hasConflicts
-        ? `${conflictResult.conflicts.length} conflict(s) detected`
-        : 'No conflicts detected',
+        ? `${conflictResult.conflicts.length} git conflict(s) detected`
+        : 'No git conflicts detected',
     });
 
     if (conflictResult.hasConflicts) {
       conflicts.push(...conflictResult.conflicts);
+    }
+
+    // Check 4: No content merge conflicts
+    const mainBranch = await branchService.getMainBranch();
+    if (mainBranch) {
+      const contentMergePreview = await contentMergeService.detectConflicts(
+        branchId,
+        mainBranch.id
+      );
+
+      results.push({
+        check: 'no_content_conflicts',
+        passed: contentMergePreview.canMerge,
+        message: contentMergePreview.canMerge
+          ? 'No content conflicts detected'
+          : `${contentMergePreview.conflicts.length} content conflict(s) detected`,
+      });
+
+      if (!contentMergePreview.canMerge) {
+        // Add content conflicts to the list
+        for (const conflict of contentMergePreview.conflicts) {
+          conflicts.push({
+            path: conflict.slug,
+            type: 'content',
+            description: conflict.description,
+          });
+        }
+      }
     }
 
     return {
@@ -314,6 +344,35 @@ export class ConvergenceService {
           mergeCommit: mergeResult.mergeCommit,
         })
         .where(eq(convergenceOperations.id, id));
+
+      // Merge content into main branch
+      const mainBranch = await branchService.getMainBranch();
+      if (mainBranch) {
+        const contentMergeResult = await contentMergeService.mergeContentIntoMain(
+          operation.branchId,
+          mainBranch.id,
+          publisherId
+        );
+
+        if (!contentMergeResult.success) {
+          // Content merge failed - this shouldn't happen if validation passed
+          await db
+            .update(convergenceOperations)
+            .set({
+              conflictDetected: true,
+              conflictDetails: contentMergeResult.conflicts.map((c) => ({
+                path: c.slug,
+                type: 'content' as const,
+                description: c.description,
+              })),
+            })
+            .where(eq(convergenceOperations.id, id));
+
+          await lockingService.releaseLock(id, 'failed');
+          const updated = await this.getByIdOrThrow(id);
+          return updated;
+        }
+      }
 
       // Transition branch to published state
       await transitionService.executeTransition({
