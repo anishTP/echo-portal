@@ -128,7 +128,7 @@ export class VisibilityService {
       conditions.push(eq(branches.ownerId, userId));
 
       // Assigned reviewers see the branch
-      conditions.push(sql`${branches.reviewers} @> ARRAY[${userId}]::uuid[]`);
+      conditions.push(sql`${userId} = ANY(${branches.reviewers})`);
 
       // Publishers see review/approved branches
       if (roles.includes('publisher')) {

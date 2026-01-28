@@ -73,11 +73,37 @@ export const authMiddleware = createMiddleware<AuthEnv>(async (c: Context, next:
     }
   }
 
-  // Fallback: Bearer token for API access (backward compatibility)
+  // Fallback: Bearer token for API access
   const authHeader = c.req.header('Authorization');
 
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.slice(7);
+
+    // Dev token format: userId:email:roles (e.g. "uuid:email:role1,role2")
+    const devTokenParts = token.split(':');
+    if (devTokenParts.length === 3 && devTokenParts[0].includes('-')) {
+      const [devUserId, devEmail, devRolesStr] = devTokenParts;
+      const devRoles = devRolesStr.split(',').filter(Boolean) as RoleType[];
+
+      // Verify the user exists in the database
+      const [devUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, devUserId))
+        .limit(1);
+
+      if (devUser && devUser.isActive) {
+        c.set('user', {
+          id: devUser.id,
+          email: devUser.email,
+          role: (devUser.roles?.[0] as RoleType) || devRoles[0] || 'viewer',
+          roles: (devUser.roles as RoleType[]) || devRoles,
+          isActive: devUser.isActive,
+        });
+        c.set('sessionId', null);
+        return next();
+      }
+    }
 
     // Try validating as session token
     try {

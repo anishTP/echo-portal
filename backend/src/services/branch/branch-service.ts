@@ -362,7 +362,7 @@ export class BranchService {
     const results = await db
       .select()
       .from(branches)
-      .where(sql`${branches.reviewers} @> ARRAY[${reviewerId}]::uuid[]`)
+      .where(sql`${reviewerId} = ANY(${branches.reviewers})`)
       .orderBy(desc(branches.updatedAt));
 
     return results.map(createBranchModel);
