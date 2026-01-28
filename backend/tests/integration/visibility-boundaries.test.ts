@@ -14,8 +14,24 @@ vi.mock('../../src/db', () => {
   const mockUsers: any[] = [];
   const mockSessions: any[] = [];
 
+  // Track the current auth user resolved by validateSession so db.select() can return it
+  let _currentAuthUser: any = null;
+
   const mockDb = {
-    insert: vi.fn(),
+    select: vi.fn().mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockImplementation(() => {
+            return Promise.resolve(_currentAuthUser ? [_currentAuthUser] : []);
+          }),
+        }),
+      }),
+    }),
+    insert: vi.fn().mockReturnValue({
+      values: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([]),
+      }),
+    }),
     update: vi.fn().mockReturnValue({
       set: vi.fn().mockReturnValue({
         where: vi.fn().mockReturnValue({
@@ -41,11 +57,103 @@ vi.mock('../../src/db', () => {
     mockBranches,
     mockUsers,
     mockSessions,
+    _setCurrentAuthUser: (user: any) => { _currentAuthUser = user; },
   };
 });
 
-import { db, mockBranches, mockUsers, mockSessions } from '../../src/db';
+// Mock transition service at module level (vi.mock is hoisted, so cannot reference runtime variables)
+vi.mock('../../src/services/workflow/transitions', () => ({
+  transitionService: {
+    executeTransition: vi.fn().mockResolvedValue({
+      id: 'transition-id',
+      success: true,
+      branch: {
+        id: 'branch-1',
+        state: 'published',
+        publishedAt: new Date().toISOString(),
+      },
+    }),
+  },
+}));
+
+// Mock branch service to control getById/update/delete/addReviewers behavior
+// Uses real AppError classes so the error handler returns proper status codes.
+vi.mock('../../src/services/branch/branch-service', async () => {
+  const { ForbiddenError, NotFoundError } = await import('../../src/api/utils/errors.js');
+
+  const _mockBranchServiceState: { getByIdResult: any; updateResult: any } = {
+    getByIdResult: null,
+    updateResult: null,
+  };
+
+  const makeBranchLike = (data: any) => ({
+    ...data,
+    toJSON: () => data,
+    toResponseForUser: () => data,
+    canEdit: () => data.state === 'draft',
+    canSubmitForReview: () => data.state === 'draft',
+    canApprove: () => data.state === 'review',
+    canPublish: () => data.state === 'approved',
+    canArchive: () => data.state !== 'archived',
+    getValidTransitions: () => [],
+  });
+
+  return {
+    branchService: {
+      getById: vi.fn().mockImplementation(() => {
+        const result = _mockBranchServiceState.getByIdResult;
+        return Promise.resolve(result ? makeBranchLike(result) : null);
+      }),
+      update: vi.fn().mockImplementation((_id: string, input: any, actorId: string) => {
+        const result = _mockBranchServiceState.getByIdResult;
+        if (!result) {
+          throw new NotFoundError('Branch', _id);
+        }
+        // Admin-only fields (requiredApprovals) bypass ownership/state checks
+        // because the route handler already validates admin role
+        if (!('requiredApprovals' in input)) {
+          if (result.state !== 'draft') {
+            throw new ForbiddenError(
+              `Cannot update branch in '${result.state}' state. Only draft branches can be edited.`
+            );
+          }
+          if (result.ownerId !== actorId) {
+            throw new ForbiddenError('Only the branch owner can update this branch');
+          }
+        }
+        const updated = { ...result, ...input };
+        return Promise.resolve(makeBranchLike(updated));
+      }),
+      delete: vi.fn().mockImplementation((_id: string, actorId: string) => {
+        const result = _mockBranchServiceState.getByIdResult;
+        if (!result) throw new NotFoundError('Branch', _id);
+        if (result.ownerId !== actorId) {
+          throw new ForbiddenError('Only the branch owner can delete this branch');
+        }
+        return Promise.resolve();
+      }),
+      addReviewers: vi.fn().mockImplementation((_id: string, _reviewerIds: string[], actorId: string) => {
+        const result = _mockBranchServiceState.getByIdResult;
+        if (!result) throw new NotFoundError('Branch', _id);
+        if (result.ownerId !== actorId) {
+          throw new ForbiddenError('Only the branch owner can add reviewers');
+        }
+        return Promise.resolve(makeBranchLike(result));
+      }),
+      create: vi.fn(),
+      list: vi.fn(),
+      getByOwner: vi.fn(),
+      getByReviewer: vi.fn(),
+      removeReviewer: vi.fn(),
+      updateHeadCommit: vi.fn(),
+    },
+    _mockBranchServiceState,
+  };
+});
+
+import { db, mockBranches, mockUsers, mockSessions, _setCurrentAuthUser } from '../../src/db';
 import { validateSession } from '../../src/services/auth/session';
+import { _mockBranchServiceState } from '../../src/services/branch/branch-service';
 
 describe('Visibility Boundary Tests (T076)', () => {
   const UUID_ADMIN = '00000000-0000-4000-8000-000000000001';
@@ -117,6 +225,8 @@ describe('Visibility Boundary Tests (T076)', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    (_setCurrentAuthUser as any)(null);
+    _mockBranchServiceState.getByIdResult = null;
     mockBranches.length = 0;
     mockUsers.length = 0;
     mockSessions.length = 0;
@@ -125,51 +235,27 @@ describe('Visibility Boundary Tests (T076)', () => {
 
     // Mock session validation
     (validateSession as any).mockImplementation((token: string) => {
-      if (token === 'admin-token') {
+      const tokenUserMap: Record<string, { sessionId: string; userId: string; role: string; user: any }> = {
+        'admin-token': { sessionId: 'session-admin', userId: UUID_ADMIN, role: 'administrator', user: adminUser },
+        'owner-token': { sessionId: 'session-owner', userId: UUID_OWNER, role: 'contributor', user: ownerUser },
+        'collaborator-token': { sessionId: 'session-collaborator', userId: UUID_COLLABORATOR, role: 'contributor', user: collaboratorUser },
+        'reviewer-token': { sessionId: 'session-reviewer', userId: UUID_REVIEWER, role: 'reviewer', user: reviewerUser },
+        'other-token': { sessionId: 'session-other', userId: UUID_OTHER_USER, role: 'contributor', user: otherUser },
+      };
+
+      const mapping = tokenUserMap[token];
+      if (mapping) {
+        // Set the auth user so db.select() chain in auth middleware resolves correctly
+        (_setCurrentAuthUser as any)(mapping.user);
         return Promise.resolve({
-          id: 'session-admin',
-          userId: UUID_ADMIN,
-          token: 'admin-token',
-          role: 'administrator',
+          id: mapping.sessionId,
+          userId: mapping.userId,
+          token,
+          role: mapping.role,
           expiresAt: new Date(Date.now() + 86400000),
         });
       }
-      if (token === 'owner-token') {
-        return Promise.resolve({
-          id: 'session-owner',
-          userId: UUID_OWNER,
-          token: 'owner-token',
-          role: 'contributor',
-          expiresAt: new Date(Date.now() + 86400000),
-        });
-      }
-      if (token === 'collaborator-token') {
-        return Promise.resolve({
-          id: 'session-collaborator',
-          userId: UUID_COLLABORATOR,
-          token: 'collaborator-token',
-          role: 'contributor',
-          expiresAt: new Date(Date.now() + 86400000),
-        });
-      }
-      if (token === 'reviewer-token') {
-        return Promise.resolve({
-          id: 'session-reviewer',
-          userId: UUID_REVIEWER,
-          token: 'reviewer-token',
-          role: 'reviewer',
-          expiresAt: new Date(Date.now() + 86400000),
-        });
-      }
-      if (token === 'other-token') {
-        return Promise.resolve({
-          id: 'session-other',
-          userId: UUID_OTHER_USER,
-          token: 'other-token',
-          role: 'contributor',
-          expiresAt: new Date(Date.now() + 86400000),
-        });
-      }
+      (_setCurrentAuthUser as any)(null);
       return Promise.resolve(null);
     });
 
@@ -200,6 +286,7 @@ describe('Visibility Boundary Tests (T076)', () => {
       };
 
       mockBranches.push(branch);
+      _mockBranchServiceState.getByIdResult = branch;
       (db.query.branches.findFirst as any).mockResolvedValue(branch);
 
       const response = await app.request(`/api/v1/branches/${UUID_BRANCH}`, {
@@ -211,7 +298,7 @@ describe('Visibility Boundary Tests (T076)', () => {
 
       expect(response.status).toBe(200);
       const data = await response.json();
-      expect(data.id).toBe(UUID_BRANCH);
+      expect(data.data.id).toBe(UUID_BRANCH);
     });
 
     it('should deny collaborator from updating branch', async () => {
@@ -234,6 +321,7 @@ describe('Visibility Boundary Tests (T076)', () => {
       };
 
       mockBranches.push(branch);
+      _mockBranchServiceState.getByIdResult = branch;
       (db.query.branches.findFirst as any).mockResolvedValue(branch);
 
       const response = await app.request(`/api/v1/branches/${UUID_BRANCH}`, {
@@ -270,6 +358,7 @@ describe('Visibility Boundary Tests (T076)', () => {
       };
 
       mockBranches.push(branch);
+      _mockBranchServiceState.getByIdResult = branch;
       (db.query.branches.findFirst as any).mockResolvedValue(branch);
 
       const response = await app.request(`/api/v1/branches/${UUID_BRANCH}/reviewers`, {
@@ -306,6 +395,7 @@ describe('Visibility Boundary Tests (T076)', () => {
       };
 
       mockBranches.push(branch);
+      _mockBranchServiceState.getByIdResult = branch;
       (db.query.branches.findFirst as any).mockResolvedValue(branch);
 
       const response = await app.request(`/api/v1/branches/${UUID_BRANCH}`, {
@@ -343,6 +433,7 @@ describe('Visibility Boundary Tests (T076)', () => {
       };
 
       mockBranches.push(branch);
+      _mockBranchServiceState.getByIdResult = branch;
       (db.query.branches.findFirst as any).mockResolvedValue(branch);
 
       const response = await app.request(`/api/v1/branches/${UUID_BRANCH}`, {
@@ -354,7 +445,7 @@ describe('Visibility Boundary Tests (T076)', () => {
 
       expect(response.status).toBe(200);
       const data = await response.json();
-      expect(data.id).toBe(UUID_BRANCH);
+      expect(data.data.id).toBe(UUID_BRANCH);
     });
 
     it('should deny reviewer from updating branch metadata', async () => {
@@ -378,6 +469,7 @@ describe('Visibility Boundary Tests (T076)', () => {
       };
 
       mockBranches.push(branch);
+      _mockBranchServiceState.getByIdResult = branch;
       (db.query.branches.findFirst as any).mockResolvedValue(branch);
 
       const response = await app.request(`/api/v1/branches/${UUID_BRANCH}`, {
@@ -414,6 +506,7 @@ describe('Visibility Boundary Tests (T076)', () => {
       };
 
       mockBranches.push(branch);
+      _mockBranchServiceState.getByIdResult = branch;
       (db.query.branches.findFirst as any).mockResolvedValue(branch);
 
       const response = await app.request(`/api/v1/branches/${UUID_BRANCH}`, {
@@ -448,6 +541,7 @@ describe('Visibility Boundary Tests (T076)', () => {
       };
 
       mockBranches.push(branch);
+      _mockBranchServiceState.getByIdResult = branch;
       (db.query.branches.findFirst as any).mockResolvedValue(branch);
 
       const response = await app.request(`/api/v1/branches/${UUID_BRANCH}`, {
@@ -459,7 +553,7 @@ describe('Visibility Boundary Tests (T076)', () => {
 
       expect(response.status).toBe(200);
       const data = await response.json();
-      expect(data.id).toBe(UUID_BRANCH);
+      expect(data.data.id).toBe(UUID_BRANCH);
     });
 
     it('should allow admin to configure approval threshold', async () => {
@@ -482,18 +576,8 @@ describe('Visibility Boundary Tests (T076)', () => {
       };
 
       mockBranches.push(branch);
+      _mockBranchServiceState.getByIdResult = branch;
       (db.query.branches.findFirst as any).mockResolvedValue(branch);
-
-      // Mock update
-      (db.update as any).mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([
-              { ...branch, requiredApprovals: 3 },
-            ]),
-          }),
-        }),
-      });
 
       const response = await app.request(`/api/v1/branches/${UUID_BRANCH}/approval-threshold`, {
         method: 'PATCH',
@@ -506,7 +590,7 @@ describe('Visibility Boundary Tests (T076)', () => {
 
       expect(response.status).toBe(200);
       const data = await response.json();
-      expect(data.requiredApprovals).toBe(3);
+      expect(data.data.requiredApprovals).toBe(3);
     });
 
     it('should allow admin to publish approved branches', async () => {
@@ -529,18 +613,8 @@ describe('Visibility Boundary Tests (T076)', () => {
       };
 
       mockBranches.push(branch);
+      _mockBranchServiceState.getByIdResult = branch;
       (db.query.branches.findFirst as any).mockResolvedValue(branch);
-
-      // Mock transition service
-      vi.mock('../../src/services/workflow/transitions', () => ({
-        transitionService: {
-          executeTransition: vi.fn().mockResolvedValue({
-            id: 'transition-id',
-            success: true,
-            branch: { ...branch, state: BranchState.PUBLISHED },
-          }),
-        },
-      }));
 
       const response = await app.request(`/api/v1/branches/${UUID_BRANCH}/publish`, {
         method: 'POST',
@@ -574,6 +648,7 @@ describe('Visibility Boundary Tests (T076)', () => {
       };
 
       mockBranches.push(branch);
+      _mockBranchServiceState.getByIdResult = branch;
       (db.query.branches.findFirst as any).mockResolvedValue(branch);
 
       const response = await app.request(`/api/v1/branches/${UUID_BRANCH}`, {
@@ -585,7 +660,7 @@ describe('Visibility Boundary Tests (T076)', () => {
 
       expect(response.status).toBe(200);
       const data = await response.json();
-      expect(data.id).toBe(UUID_BRANCH);
+      expect(data.data.id).toBe(UUID_BRANCH);
     });
 
     it('should allow any authenticated user to view team visibility branch', async () => {
@@ -608,6 +683,7 @@ describe('Visibility Boundary Tests (T076)', () => {
       };
 
       mockBranches.push(branch);
+      _mockBranchServiceState.getByIdResult = branch;
       (db.query.branches.findFirst as any).mockResolvedValue(branch);
 
       const response = await app.request(`/api/v1/branches/${UUID_BRANCH}`, {
@@ -619,7 +695,7 @@ describe('Visibility Boundary Tests (T076)', () => {
 
       expect(response.status).toBe(200);
       const data = await response.json();
-      expect(data.id).toBe(UUID_BRANCH);
+      expect(data.data.id).toBe(UUID_BRANCH);
     });
 
     it('should deny unrelated user from viewing private branch', async () => {
@@ -642,6 +718,7 @@ describe('Visibility Boundary Tests (T076)', () => {
       };
 
       mockBranches.push(branch);
+      _mockBranchServiceState.getByIdResult = branch;
       (db.query.branches.findFirst as any).mockResolvedValue(branch);
 
       const response = await app.request(`/api/v1/branches/${UUID_BRANCH}`, {

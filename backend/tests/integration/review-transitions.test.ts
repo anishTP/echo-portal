@@ -73,6 +73,8 @@ import { transitionService } from '../../src/services/workflow/transitions';
 import { validateSession } from '../../src/services/auth/session';
 
 describe('Review State Transition Tests (T059)', () => {
+  let _currentAuthUser: any = null;
+
   // Use consistent UUIDs for testing
   const UUID_ADMIN = '00000000-0000-4000-8000-000000000001';
   const UUID_REVIEWER1 = '00000000-0000-4000-8000-000000000002';
@@ -186,6 +188,7 @@ describe('Review State Transition Tests (T059)', () => {
     // Mock session validation
     (validateSession as any).mockImplementation((token: string) => {
       if (token === 'reviewer-1-token') {
+        _currentAuthUser = reviewer1;
         return Promise.resolve({
           id: 'session-reviewer-1',
           userId: UUID_REVIEWER1,
@@ -195,6 +198,7 @@ describe('Review State Transition Tests (T059)', () => {
         });
       }
       if (token === 'reviewer-2-token') {
+        _currentAuthUser = reviewer2;
         return Promise.resolve({
           id: 'session-reviewer-2',
           userId: UUID_REVIEWER2,
@@ -204,6 +208,7 @@ describe('Review State Transition Tests (T059)', () => {
         });
       }
       if (token === 'reviewer-3-token') {
+        _currentAuthUser = reviewer3;
         return Promise.resolve({
           id: 'session-reviewer-3',
           userId: UUID_REVIEWER3,
@@ -212,7 +217,19 @@ describe('Review State Transition Tests (T059)', () => {
           expiresAt: new Date(Date.now() + 86400000),
         });
       }
+      _currentAuthUser = null;
       return Promise.resolve(null);
+    });
+
+    // Setup db.select to handle auth middleware user lookup
+    (db.select as any).mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockImplementation(() => {
+            return Promise.resolve(_currentAuthUser ? [_currentAuthUser] : []);
+          }),
+        }),
+      }),
     });
 
     // Mock session lookup
@@ -282,8 +299,8 @@ describe('Review State Transition Tests (T059)', () => {
 
       expect(response.status).toBe(200);
       const data = await response.json();
-      expect(data.status).toBe(ReviewStatus.COMPLETED);
-      expect(data.decision).toBe('approved');
+      expect(data.data.status).toBe(ReviewStatus.COMPLETED);
+      expect(data.data.decision).toBe('approved');
 
       // Verify transition was called
       expect(transitionService.executeTransition).toHaveBeenCalledWith(
@@ -676,7 +693,7 @@ describe('Review State Transition Tests (T059)', () => {
       // Should reject - review already completed
       expect(response.status).toBe(400);
       const data = await response.json();
-      expect(data.error).toContain('already completed');
+      expect(data.error.message).toContain('already completed');
     });
   });
 
@@ -719,7 +736,7 @@ describe('Review State Transition Tests (T059)', () => {
 
       expect(response.status).toBe(400);
       const data = await response.json();
-      expect(data.error).toContain('not in review state');
+      expect(data.error.message).toContain('not in review state');
     });
 
     it('should reject approval from non-assigned reviewer', async () => {

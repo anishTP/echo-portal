@@ -3,6 +3,10 @@ import { db } from '../../src/db/index';
 import { auditLogs } from '../../src/db/schema/audit-logs';
 import { sql } from 'drizzle-orm';
 
+// Skip all tests when no database is available
+const DATABASE_URL = process.env.DATABASE_URL;
+const describeWithDb = DATABASE_URL ? describe : describe.skip;
+
 /**
  * T083: Write audit partitioning tests (verify partitions created, queries span partitions correctly)
  *
@@ -19,7 +23,7 @@ import { sql } from 'drizzle-orm';
  * Note: These tests require a real PostgreSQL database with partitioning support.
  * They may be skipped in environments without database access.
  */
-describe('Audit Log Partitioning Tests (T083)', () => {
+describeWithDb('Audit Log Partitioning Tests (T083)', () => {
   const TEST_PARTITION_PREFIX = 'audit_logs_';
 
   beforeAll(async () => {

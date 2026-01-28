@@ -70,11 +70,52 @@ vi.mock('../../src/services/workflow/transitions', () => ({
   },
 }));
 
+// Mock branch service so approval-threshold route handler
+// bypasses the branchService.update() draft-only / ownership checks
+vi.mock('../../src/services/branch/branch-service', () => {
+  const _mockBranchServiceState: { getByIdResult: any; updateResult: any } = {
+    getByIdResult: null,
+    updateResult: null,
+  };
+
+  const makeBranchLike = (data: any) => ({
+    ...data,
+    toJSON: () => data,
+    toResponseForUser: () => data,
+  });
+
+  return {
+    branchService: {
+      getById: vi.fn().mockImplementation(() => {
+        const result = _mockBranchServiceState.getByIdResult;
+        return Promise.resolve(result ? makeBranchLike(result) : null);
+      }),
+      update: vi.fn().mockImplementation(() => {
+        const result = _mockBranchServiceState.updateResult;
+        return Promise.resolve(result ? makeBranchLike(result) : null);
+      }),
+      // Provide other methods as pass-throughs so other routes don't break
+      create: vi.fn(),
+      list: vi.fn(),
+      delete: vi.fn(),
+      addReviewers: vi.fn(),
+      removeReviewer: vi.fn(),
+      getByOwner: vi.fn(),
+      getByReviewer: vi.fn(),
+      updateHeadCommit: vi.fn(),
+    },
+    _mockBranchServiceState,
+  };
+});
+
 import { db, mockBranches, mockUsers, mockReviews, mockSessions } from '../../src/db';
 import { transitionService } from '../../src/services/workflow/transitions';
 import { validateSession } from '../../src/services/auth/session';
+import { branchService, _mockBranchServiceState } from '../../src/services/branch/branch-service';
 
 describe('Approval Threshold Tests (T058)', () => {
+  let _currentAuthUser: any = null;
+
   // Use consistent UUIDs for testing
   const UUID_ADMIN = '00000000-0000-4000-8000-000000000001';
   const UUID_REVIEWER1 = '00000000-0000-4000-8000-000000000002';
@@ -177,6 +218,8 @@ describe('Approval Threshold Tests (T058)', () => {
     mockUsers.length = 0;
     mockReviews.length = 0;
     mockSessions.length = 0;
+    _mockBranchServiceState.getByIdResult = null;
+    _mockBranchServiceState.updateResult = null;
 
     // Setup default users
     mockUsers.push(adminUser, reviewer1, reviewer2, branchOwner);
@@ -185,6 +228,7 @@ describe('Approval Threshold Tests (T058)', () => {
     // Mock session validation
     (validateSession as any).mockImplementation((token: string) => {
       if (token === 'admin-token') {
+        _currentAuthUser = adminUser;
         return Promise.resolve({
           id: 'session-admin',
           userId: UUID_ADMIN,
@@ -194,6 +238,7 @@ describe('Approval Threshold Tests (T058)', () => {
         });
       }
       if (token === 'reviewer-1-token') {
+        _currentAuthUser = reviewer1;
         return Promise.resolve({
           id: 'session-reviewer-1',
           userId: UUID_REVIEWER1,
@@ -203,6 +248,7 @@ describe('Approval Threshold Tests (T058)', () => {
         });
       }
       if (token === 'reviewer-2-token') {
+        _currentAuthUser = reviewer2;
         return Promise.resolve({
           id: 'session-reviewer-2',
           userId: UUID_REVIEWER2,
@@ -212,6 +258,7 @@ describe('Approval Threshold Tests (T058)', () => {
         });
       }
       if (token === 'contributor-token') {
+        _currentAuthUser = branchOwner;
         return Promise.resolve({
           id: 'session-contributor',
           userId: UUID_OWNER,
@@ -220,7 +267,19 @@ describe('Approval Threshold Tests (T058)', () => {
           expiresAt: new Date(Date.now() + 86400000),
         });
       }
+      _currentAuthUser = null;
       return Promise.resolve(null);
+    });
+
+    // Setup db.select to handle auth middleware user lookup
+    (db.select as any).mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockImplementation(() => {
+            return Promise.resolve(_currentAuthUser ? [_currentAuthUser] : []);
+          }),
+        }),
+      }),
     });
 
     // Mock session lookup
@@ -395,19 +454,9 @@ describe('Approval Threshold Tests (T058)', () => {
 
       mockBranches.push(branch);
 
-      // Mock branch lookup for branchService.getById
-      (db.query.branches.findFirst as any).mockResolvedValue(branch);
-
-      // Mock update
-      (db.update as any).mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([
-              { ...branch, requiredApprovals: 3 },
-            ]),
-          }),
-        }),
-      });
+      // Setup branchService mock to return branch data
+      _mockBranchServiceState.getByIdResult = branch;
+      _mockBranchServiceState.updateResult = { ...branch, requiredApprovals: 3 };
 
       const response = await app.request(`/api/v1/branches/${UUID_BRANCH_3}/approval-threshold`, {
         method: 'PATCH',
@@ -425,7 +474,7 @@ describe('Approval Threshold Tests (T058)', () => {
 
       expect(response.status).toBe(200);
       const data = await response.json();
-      expect(data.requiredApprovals).toBe(3);
+      expect(data.data.requiredApprovals).toBe(3);
     });
 
     it('should deny non-admin from configuring approval threshold', async () => {
@@ -464,7 +513,7 @@ describe('Approval Threshold Tests (T058)', () => {
 
       expect(response.status).toBe(403);
       const data = await response.json();
-      expect(data.error).toContain('Only administrators can configure approval thresholds');
+      expect(data.error.message).toContain('Only administrators can configure approval thresholds');
     });
 
     it('should validate threshold range (1-10)', async () => {

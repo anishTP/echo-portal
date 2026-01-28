@@ -20,6 +20,23 @@ vi.mock('../../src/db', () => {
   };
 });
 
+// Mock diff service at top level so it is properly hoisted
+vi.mock('../../src/services/git/diff', () => ({
+  diffService: {
+    getBranchDiff: vi.fn().mockResolvedValue({
+      files: [],
+      stats: { filesChanged: 0, additions: 0, deletions: 0 },
+    }),
+    getChangeSummary: vi.fn().mockResolvedValue({
+      added: [],
+      modified: [],
+      deleted: [],
+      total: 0,
+    }),
+  },
+  DiffService: vi.fn(),
+}));
+
 import { db, mockBranches } from '../../src/db';
 
 describe('Anonymous Access Tests (T075)', () => {
@@ -66,10 +83,10 @@ describe('Anonymous Access Tests (T075)', () => {
 
       expect(response.status).toBe(200);
       const data = await response.json();
-      expect(data.id).toBe(UUID_BRANCH_PUBLIC_PUBLISHED);
-      expect(data.name).toBe('public-published-branch');
-      expect(data.state).toBe(BranchState.PUBLISHED);
-      expect(data.visibility).toBe(Visibility.PUBLIC);
+      expect(data.data.id).toBe(UUID_BRANCH_PUBLIC_PUBLISHED);
+      expect(data.data.name).toBe('public-published-branch');
+      expect(data.data.state).toBe(BranchState.PUBLISHED);
+      expect(data.data.visibility).toBe(Visibility.PUBLIC);
     });
 
     it('should allow anonymous access to branch diff for public published branch', async () => {
@@ -93,16 +110,6 @@ describe('Anonymous Access Tests (T075)', () => {
 
       mockBranches.push(branch);
       (db.query.branches.findFirst as any).mockResolvedValue(branch);
-
-      // Mock diff service
-      vi.mock('../../src/services/git/diff', () => ({
-        diffService: {
-          getBranchDiff: vi.fn().mockResolvedValue({
-            files: [],
-            stats: { additions: 0, deletions: 0, changes: 0 },
-          }),
-        },
-      }));
 
       const response = await app.request(
         `/api/v1/public/branches/${UUID_BRANCH_PUBLIC_PUBLISHED}/diff`,

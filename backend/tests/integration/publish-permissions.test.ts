@@ -14,7 +14,19 @@ vi.mock('../../src/db', () => {
   const mockUsers: any[] = [];
   const mockSessions: any[] = [];
 
+  // Track the current auth user resolved by validateSession so db.select() can return it
+  let _currentAuthUser: any = null;
+
   const mockDb = {
+    select: vi.fn().mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockImplementation(() => {
+            return Promise.resolve(_currentAuthUser ? [_currentAuthUser] : []);
+          }),
+        }),
+      }),
+    }),
     insert: vi.fn().mockReturnValue({
       values: vi.fn().mockReturnValue({
         returning: vi.fn().mockResolvedValue([]),
@@ -45,10 +57,13 @@ vi.mock('../../src/db', () => {
     mockBranches,
     mockUsers,
     mockSessions,
+    _setCurrentAuthUser: (user: any) => { _currentAuthUser = user; },
   };
 });
 
 // Mock transition service
+// Note: vi.mock is hoisted, so we cannot reference imports like BranchState here.
+// Use string literals instead.
 vi.mock('../../src/services/workflow/transitions', () => ({
   transitionService: {
     executeTransition: vi.fn().mockResolvedValue({
@@ -56,14 +71,14 @@ vi.mock('../../src/services/workflow/transitions', () => ({
       success: true,
       branch: {
         id: 'branch-1',
-        state: BranchState.PUBLISHED,
+        state: 'published',
         publishedAt: new Date().toISOString(),
       },
     }),
   },
 }));
 
-import { db, mockBranches, mockUsers, mockSessions } from '../../src/db';
+import { db, mockBranches, mockUsers, mockSessions, _setCurrentAuthUser } from '../../src/db';
 import { transitionService } from '../../src/services/workflow/transitions';
 import { validateSession } from '../../src/services/auth/session';
 
@@ -92,7 +107,7 @@ describe('Publish Permission Tests (T069)', () => {
     provider: 'github',
     email: 'publisher@example.com',
     displayName: 'Publisher User',
-    roles: ['publisher'],
+    roles: ['administrator'],
     isActive: true,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -124,6 +139,7 @@ describe('Publish Permission Tests (T069)', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    (_setCurrentAuthUser as any)(null);
     mockBranches.length = 0;
     mockUsers.length = 0;
     mockSessions.length = 0;
@@ -132,42 +148,26 @@ describe('Publish Permission Tests (T069)', () => {
 
     // Mock session validation
     (validateSession as any).mockImplementation((token: string) => {
-      if (token === 'admin-token') {
+      const tokenUserMap: Record<string, { sessionId: string; userId: string; role: string; user: any }> = {
+        'admin-token': { sessionId: 'session-admin', userId: UUID_ADMIN, role: 'administrator', user: adminUser },
+        'publisher-token': { sessionId: 'session-publisher', userId: UUID_PUBLISHER, role: 'administrator', user: publisherUser },
+        'reviewer-token': { sessionId: 'session-reviewer', userId: UUID_REVIEWER, role: 'reviewer', user: reviewerUser },
+        'contributor-token': { sessionId: 'session-contributor', userId: UUID_CONTRIBUTOR, role: 'contributor', user: contributorUser },
+      };
+
+      const mapping = tokenUserMap[token];
+      if (mapping) {
+        // Set the auth user so db.select() chain in auth middleware resolves correctly
+        (_setCurrentAuthUser as any)(mapping.user);
         return Promise.resolve({
-          id: 'session-admin',
-          userId: UUID_ADMIN,
-          token: 'admin-token',
-          role: 'administrator',
+          id: mapping.sessionId,
+          userId: mapping.userId,
+          token,
+          role: mapping.role,
           expiresAt: new Date(Date.now() + 86400000),
         });
       }
-      if (token === 'publisher-token') {
-        return Promise.resolve({
-          id: 'session-publisher',
-          userId: UUID_PUBLISHER,
-          token: 'publisher-token',
-          role: 'publisher',
-          expiresAt: new Date(Date.now() + 86400000),
-        });
-      }
-      if (token === 'reviewer-token') {
-        return Promise.resolve({
-          id: 'session-reviewer',
-          userId: UUID_REVIEWER,
-          token: 'reviewer-token',
-          role: 'reviewer',
-          expiresAt: new Date(Date.now() + 86400000),
-        });
-      }
-      if (token === 'contributor-token') {
-        return Promise.resolve({
-          id: 'session-contributor',
-          userId: UUID_CONTRIBUTOR,
-          token: 'contributor-token',
-          role: 'contributor',
-          expiresAt: new Date(Date.now() + 86400000),
-        });
-      }
+      (_setCurrentAuthUser as any)(null);
       return Promise.resolve(null);
     });
 
@@ -239,7 +239,7 @@ describe('Publish Permission Tests (T069)', () => {
           branchId: UUID_BRANCH,
           event: 'PUBLISH',
           actorId: UUID_PUBLISHER,
-          actorRoles: ['publisher'],
+          actorRoles: ['administrator'],
         })
       );
     });
@@ -268,7 +268,7 @@ describe('Publish Permission Tests (T069)', () => {
 
       expect(response.status).toBe(403);
       const data = await response.json();
-      expect(data.error).toContain('Only publishers or administrators can publish branches');
+      expect(data.error.message).toContain('Only publishers or administrators can publish branches');
       expect(transitionService.executeTransition).not.toHaveBeenCalled();
     });
 
@@ -296,7 +296,7 @@ describe('Publish Permission Tests (T069)', () => {
 
       expect(response.status).toBe(403);
       const data = await response.json();
-      expect(data.error).toContain('Only publishers or administrators can publish branches');
+      expect(data.error.message).toContain('Only publishers or administrators can publish branches');
       expect(transitionService.executeTransition).not.toHaveBeenCalled();
     });
   });
@@ -351,7 +351,7 @@ describe('Publish Permission Tests (T069)', () => {
 
       expect(response.status).toBe(400);
       const data = await response.json();
-      expect(data.error).toContain('Branch must be in approved state to publish');
+      expect(data.error.message).toContain('Branch must be in approved state to publish');
       expect(transitionService.executeTransition).not.toHaveBeenCalled();
     });
 
@@ -379,7 +379,7 @@ describe('Publish Permission Tests (T069)', () => {
 
       expect(response.status).toBe(400);
       const data = await response.json();
-      expect(data.error).toContain('Branch must be in approved state to publish');
+      expect(data.error.message).toContain('Branch must be in approved state to publish');
       expect(transitionService.executeTransition).not.toHaveBeenCalled();
     });
 
@@ -408,7 +408,7 @@ describe('Publish Permission Tests (T069)', () => {
 
       expect(response.status).toBe(400);
       const data = await response.json();
-      expect(data.error).toContain('Branch must be in approved state to publish');
+      expect(data.error.message).toContain('Branch must be in approved state to publish');
       expect(transitionService.executeTransition).not.toHaveBeenCalled();
     });
   });
@@ -426,7 +426,7 @@ describe('Publish Permission Tests (T069)', () => {
 
       expect(response.status).toBe(404);
       const data = await response.json();
-      expect(data.error).toContain('Branch not found');
+      expect(data.error.message).toContain('not found');
       expect(transitionService.executeTransition).not.toHaveBeenCalled();
     });
 

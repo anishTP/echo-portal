@@ -1,9 +1,16 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import app from '../../src/api/index';
 
+// Mock session validation
+vi.mock('../../src/services/auth/session', () => ({
+  validateSession: vi.fn(),
+  createSession: vi.fn(),
+  invalidateUserSessionCache: vi.fn(),
+}));
+
 // Mock database
-vi.mock('../../src/db', () => {
-  const mockDb = {
+vi.mock('../../src/db', () => ({
+  db: {
     insert: vi.fn(),
     select: vi.fn(),
     update: vi.fn(),
@@ -14,25 +21,21 @@ vi.mock('../../src/db', () => {
         findMany: vi.fn(),
       },
     },
-  };
-  return { db: mockDb };
-});
+  },
+}));
 
 import { db } from '../../src/db';
+import { validateSession } from '../../src/services/auth/session';
 
-/**
- * T091: Write role change tests
- *
- * Acceptance Criteria:
- * - Admin only can change roles
- * - No self-escalation (users cannot promote themselves)
- * - Role changes take effect within 30 seconds (session cache TTL)
- * - Audit log created for role changes
- * - Non-admin users denied access to role change endpoint
- */
+const UUID_ADMIN = '00000000-0000-4000-a000-000000000001';
+const UUID_CONTRIB = '00000000-0000-4000-a000-000000000002';
+const UUID_REVIEWER = '00000000-0000-4000-a000-000000000003';
+const UUID_OTHER_ADMIN = '00000000-0000-4000-a000-000000000004';
+const UUID_NONEXISTENT = '00000000-0000-4000-a000-000000000099';
+
 describe('Role Change Tests (T091)', () => {
   const mockAdminUser = {
-    id: 'admin-123',
+    id: UUID_ADMIN,
     externalId: 'github-admin',
     provider: 'github',
     email: 'admin@example.com',
@@ -49,7 +52,7 @@ describe('Role Change Tests (T091)', () => {
   };
 
   const mockContributorUser = {
-    id: 'contrib-123',
+    id: UUID_CONTRIB,
     externalId: 'github-contrib',
     provider: 'github',
     email: 'contrib@example.com',
@@ -66,7 +69,7 @@ describe('Role Change Tests (T091)', () => {
   };
 
   const mockReviewerUser = {
-    id: 'reviewer-123',
+    id: UUID_REVIEWER,
     externalId: 'github-reviewer',
     provider: 'github',
     email: 'reviewer@example.com',
@@ -82,168 +85,132 @@ describe('Role Change Tests (T091)', () => {
     lastFailedLoginAt: null,
   };
 
-  const mockAdminSession = {
-    id: 'session-admin',
-    userId: 'admin-123',
-    token: 'admin-token',
-    provider: 'github',
-    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    lastActivityAt: new Date(),
-    createdAt: new Date(),
-    revokedAt: null,
+  const tokenUserMap: Record<string, { user: any; session: any }> = {
+    'admin-token': {
+      user: mockAdminUser,
+      session: { id: 'session-admin', userId: UUID_ADMIN, role: 'administrator' },
+    },
+    'contrib-token': {
+      user: mockContributorUser,
+      session: { id: 'session-contrib', userId: UUID_CONTRIB, role: 'contributor' },
+    },
+    'reviewer-token': {
+      user: mockReviewerUser,
+      session: { id: 'session-reviewer', userId: UUID_REVIEWER, role: 'reviewer' },
+    },
   };
 
-  const mockContributorSession = {
-    id: 'session-contrib',
-    userId: 'contrib-123',
-    token: 'contrib-token',
-    provider: 'github',
-    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    lastActivityAt: new Date(),
-    createdAt: new Date(),
-    revokedAt: null,
-  };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  function setupAdminAuth() {
-    // Mock session validation for admin
-    (db.select as any).mockReturnValueOnce({
+  function selectChain(result: any[]) {
+    return {
       from: vi.fn().mockReturnValue({
-        innerJoin: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([
-              { session: mockAdminSession, user: mockAdminUser },
-            ]),
-          }),
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue(result),
         }),
       }),
-    });
-
-    // Mock session activity update
-    (db.update as any).mockReturnValue({
-      set: vi.fn().mockReturnValue({
-        where: vi.fn().mockResolvedValue({}),
-      }),
-    });
+    };
   }
 
-  function setupContributorAuth() {
-    // Mock session validation for contributor
-    (db.select as any).mockReturnValueOnce({
-      from: vi.fn().mockReturnValue({
-        innerJoin: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([
-              { session: mockContributorSession, user: mockContributorUser },
-            ]),
-          }),
+  beforeEach(() => {
+    // Reset all mock state including return values and implementations
+    (db.select as any).mockReset();
+    (db.update as any).mockReset();
+    (db.insert as any).mockReset();
+    (db.delete as any).mockReset();
+    (db.query.users.findFirst as any).mockReset();
+    (db.query.users.findMany as any).mockReset();
+    (validateSession as any).mockReset();
+
+    // Setup validateSession to resolve auth user based on token
+    (validateSession as any).mockImplementation((token: string) => {
+      const entry = tokenUserMap[token];
+      if (entry) {
+        return Promise.resolve({
+          ...entry.session,
+          token,
+          expiresAt: new Date(Date.now() + 86400000),
+        });
+      }
+      return Promise.resolve(null);
+    });
+  });
+
+  /**
+   * Sets up auth middleware db.select mock for the given user.
+   * Must be called before making any authenticated request.
+   */
+  function setupAuth(user: any) {
+    (db.select as any).mockReturnValueOnce(selectChain([user]));
+  }
+
+  /**
+   * Full setup for an admin making a role change request.
+   */
+  function setupAdminRoleChange(targetUser: any, newRoles: string[]) {
+    // Auth middleware user lookup
+    setupAuth(mockAdminUser);
+    // Route handler target user lookup
+    (db.select as any).mockReturnValueOnce(selectChain([targetUser]));
+    // Role update
+    (db.update as any).mockReturnValueOnce({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([
+            { ...targetUser, roles: newRoles },
+          ]),
         }),
       }),
     });
-
-    // Mock session activity update
-    (db.update as any).mockReturnValue({
-      set: vi.fn().mockReturnValue({
-        where: vi.fn().mockResolvedValue({}),
+    // Audit log insert
+    (db.insert as any).mockReturnValue({
+      values: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([{ id: 'audit-123' }]),
       }),
     });
   }
 
   describe('Admin-Only Access', () => {
     it('should allow administrators to change user roles', async () => {
-      setupAdminAuth();
+      setupAdminRoleChange(mockContributorUser, ['reviewer']);
 
-      // Mock finding target user
-      (db.select as any).mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockContributorUser]),
-          }),
-        }),
-      });
-
-      // Mock role update
-      (db.update as any).mockReturnValueOnce({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([
-              { ...mockContributorUser, roles: ['reviewer'] },
-            ]),
-          }),
-        }),
-      });
-
-      // Mock audit log insert
-      (db.insert as any).mockReturnValue({
-        values: vi.fn().mockReturnValue({
-          returning: vi.fn().mockResolvedValue([{ id: 'audit-123' }]),
-        }),
-      });
-
-      const response = await app.request('/api/v1/users/contrib-123/role', {
+      const response = await app.request(`/api/v1/users/${UUID_CONTRIB}/role`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Cookie: 'echo_session=admin-token',
+          Authorization: 'Bearer admin-token',
         },
         body: JSON.stringify({ role: 'reviewer' }),
       });
 
       expect(response.status).toBe(200);
       const data = await response.json();
-      expect(data.user.roles).toContain('reviewer');
+      expect(data.data.user.roles).toContain('reviewer');
     });
 
     it('should deny contributors from changing roles', async () => {
-      setupContributorAuth();
+      setupAuth(mockContributorUser);
 
-      const response = await app.request('/api/v1/users/contrib-123/role', {
+      const response = await app.request(`/api/v1/users/${UUID_CONTRIB}/role`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Cookie: 'echo_session=contrib-token',
+          Authorization: 'Bearer contrib-token',
         },
         body: JSON.stringify({ role: 'administrator' }),
       });
 
       expect(response.status).toBe(403);
       const data = await response.json();
-      expect(data.error).toContain('Insufficient permissions');
+      expect(data.error.message).toContain('requires Administrator role');
     });
 
     it('should deny reviewers from changing roles', async () => {
-      const reviewerSession = {
-        ...mockContributorSession,
-        userId: 'reviewer-123',
-        token: 'reviewer-token',
-      };
+      setupAuth(mockReviewerUser);
 
-      (db.select as any).mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          innerJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              limit: vi.fn().mockResolvedValue([
-                { session: reviewerSession, user: mockReviewerUser },
-              ]),
-            }),
-          }),
-        }),
-      });
-
-      (db.update as any).mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue({}),
-        }),
-      });
-
-      const response = await app.request('/api/v1/users/contrib-123/role', {
+      const response = await app.request(`/api/v1/users/${UUID_REVIEWER}/role`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Cookie: 'echo_session=reviewer-token',
+          Authorization: 'Bearer reviewer-token',
         },
         body: JSON.stringify({ role: 'administrator' }),
       });
@@ -252,11 +219,9 @@ describe('Role Change Tests (T091)', () => {
     });
 
     it('should require authentication', async () => {
-      const response = await app.request('/api/v1/users/contrib-123/role', {
+      const response = await app.request(`/api/v1/users/${UUID_CONTRIB}/role`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role: 'reviewer' }),
       });
 
@@ -266,39 +231,31 @@ describe('Role Change Tests (T091)', () => {
 
   describe('Self-Escalation Prevention (FR-009)', () => {
     it('should prevent admin from changing their own role', async () => {
-      setupAdminAuth();
+      setupAuth(mockAdminUser);
+      (db.select as any).mockReturnValueOnce(selectChain([mockAdminUser]));
 
-      // Mock finding self
-      (db.select as any).mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockAdminUser]),
-          }),
-        }),
-      });
-
-      const response = await app.request('/api/v1/users/admin-123/role', {
+      const response = await app.request(`/api/v1/users/${UUID_ADMIN}/role`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Cookie: 'echo_session=admin-token',
+          Authorization: 'Bearer admin-token',
         },
         body: JSON.stringify({ role: 'contributor' }),
       });
 
-      expect(response.status).toBe(403);
+      expect(response.status).toBe(400);
       const data = await response.json();
-      expect(data.error).toContain('Cannot change your own role');
+      expect(data.error.message).toContain('Cannot change your own role');
     });
 
     it('should prevent contributor from promoting themselves', async () => {
-      setupContributorAuth();
+      setupAuth(mockContributorUser);
 
-      const response = await app.request('/api/v1/users/contrib-123/role', {
+      const response = await app.request(`/api/v1/users/${UUID_CONTRIB}/role`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Cookie: 'echo_session=contrib-token',
+          Authorization: 'Bearer contrib-token',
         },
         body: JSON.stringify({ role: 'administrator' }),
       });
@@ -309,37 +266,13 @@ describe('Role Change Tests (T091)', () => {
 
   describe('Valid Role Transitions', () => {
     it('should allow promoting contributor to reviewer', async () => {
-      setupAdminAuth();
+      setupAdminRoleChange(mockContributorUser, ['reviewer']);
 
-      (db.select as any).mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockContributorUser]),
-          }),
-        }),
-      });
-
-      (db.update as any).mockReturnValueOnce({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([
-              { ...mockContributorUser, roles: ['reviewer'] },
-            ]),
-          }),
-        }),
-      });
-
-      (db.insert as any).mockReturnValue({
-        values: vi.fn().mockReturnValue({
-          returning: vi.fn().mockResolvedValue([{ id: 'audit-123' }]),
-        }),
-      });
-
-      const response = await app.request('/api/v1/users/contrib-123/role', {
+      const response = await app.request(`/api/v1/users/${UUID_CONTRIB}/role`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Cookie: 'echo_session=admin-token',
+          Authorization: 'Bearer admin-token',
         },
         body: JSON.stringify({ role: 'reviewer' }),
       });
@@ -348,37 +281,13 @@ describe('Role Change Tests (T091)', () => {
     });
 
     it('should allow promoting reviewer to administrator', async () => {
-      setupAdminAuth();
+      setupAdminRoleChange(mockReviewerUser, ['administrator']);
 
-      (db.select as any).mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockReviewerUser]),
-          }),
-        }),
-      });
-
-      (db.update as any).mockReturnValueOnce({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([
-              { ...mockReviewerUser, roles: ['administrator'] },
-            ]),
-          }),
-        }),
-      });
-
-      (db.insert as any).mockReturnValue({
-        values: vi.fn().mockReturnValue({
-          returning: vi.fn().mockResolvedValue([{ id: 'audit-123' }]),
-        }),
-      });
-
-      const response = await app.request('/api/v1/users/reviewer-123/role', {
+      const response = await app.request(`/api/v1/users/${UUID_REVIEWER}/role`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Cookie: 'echo_session=admin-token',
+          Authorization: 'Bearer admin-token',
         },
         body: JSON.stringify({ role: 'administrator' }),
       });
@@ -387,43 +296,14 @@ describe('Role Change Tests (T091)', () => {
     });
 
     it('should allow demoting administrator to reviewer', async () => {
-      setupAdminAuth();
+      const otherAdmin = { ...mockAdminUser, id: UUID_OTHER_ADMIN, email: 'other@example.com' };
+      setupAdminRoleChange(otherAdmin, ['reviewer']);
 
-      const otherAdmin = {
-        ...mockAdminUser,
-        id: 'admin-other',
-        email: 'otheradmin@example.com',
-      };
-
-      (db.select as any).mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([otherAdmin]),
-          }),
-        }),
-      });
-
-      (db.update as any).mockReturnValueOnce({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([
-              { ...otherAdmin, roles: ['reviewer'] },
-            ]),
-          }),
-        }),
-      });
-
-      (db.insert as any).mockReturnValue({
-        values: vi.fn().mockReturnValue({
-          returning: vi.fn().mockResolvedValue([{ id: 'audit-123' }]),
-        }),
-      });
-
-      const response = await app.request('/api/v1/users/admin-other/role', {
+      const response = await app.request(`/api/v1/users/${UUID_OTHER_ADMIN}/role`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Cookie: 'echo_session=admin-token',
+          Authorization: 'Bearer admin-token',
         },
         body: JSON.stringify({ role: 'reviewer' }),
       });
@@ -434,13 +314,13 @@ describe('Role Change Tests (T091)', () => {
 
   describe('Invalid Role Values', () => {
     it('should reject invalid role names', async () => {
-      setupAdminAuth();
+      setupAuth(mockAdminUser);
 
-      const response = await app.request('/api/v1/users/contrib-123/role', {
+      const response = await app.request(`/api/v1/users/${UUID_CONTRIB}/role`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Cookie: 'echo_session=admin-token',
+          Authorization: 'Bearer admin-token',
         },
         body: JSON.stringify({ role: 'superadmin' }),
       });
@@ -451,13 +331,13 @@ describe('Role Change Tests (T091)', () => {
     });
 
     it('should reject empty role', async () => {
-      setupAdminAuth();
+      setupAuth(mockAdminUser);
 
-      const response = await app.request('/api/v1/users/contrib-123/role', {
+      const response = await app.request(`/api/v1/users/${UUID_CONTRIB}/role`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Cookie: 'echo_session=admin-token',
+          Authorization: 'Bearer admin-token',
         },
         body: JSON.stringify({ role: '' }),
       });
@@ -466,13 +346,13 @@ describe('Role Change Tests (T091)', () => {
     });
 
     it('should reject missing role in request body', async () => {
-      setupAdminAuth();
+      setupAuth(mockAdminUser);
 
-      const response = await app.request('/api/v1/users/contrib-123/role', {
+      const response = await app.request(`/api/v1/users/${UUID_CONTRIB}/role`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Cookie: 'echo_session=admin-token',
+          Authorization: 'Bearer admin-token',
         },
         body: JSON.stringify({}),
       });
@@ -483,15 +363,8 @@ describe('Role Change Tests (T091)', () => {
 
   describe('Audit Logging (FR-009)', () => {
     it('should create audit log entry for role change', async () => {
-      setupAdminAuth();
-
-      (db.select as any).mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockContributorUser]),
-          }),
-        }),
-      });
+      setupAuth(mockAdminUser);
+      (db.select as any).mockReturnValueOnce(selectChain([mockContributorUser]));
 
       (db.update as any).mockReturnValueOnce({
         set: vi.fn().mockReturnValue({
@@ -506,27 +379,23 @@ describe('Role Change Tests (T091)', () => {
       const mockAuditInsert = vi.fn().mockReturnValue({
         returning: vi.fn().mockResolvedValue([{ id: 'audit-123' }]),
       });
+      (db.insert as any).mockReturnValue({ values: mockAuditInsert });
 
-      (db.insert as any).mockReturnValue({
-        values: mockAuditInsert,
-      });
-
-      await app.request('/api/v1/users/contrib-123/role', {
+      await app.request(`/api/v1/users/${UUID_CONTRIB}/role`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Cookie: 'echo_session=admin-token',
+          Authorization: 'Bearer admin-token',
         },
         body: JSON.stringify({ role: 'reviewer' }),
       });
 
-      // Verify audit log was created
       expect(mockAuditInsert).toHaveBeenCalled();
       const auditCall = mockAuditInsert.mock.calls[0][0];
       expect(auditCall.action).toBe('role.changed');
       expect(auditCall.resourceType).toBe('user');
-      expect(auditCall.resourceId).toBe('contrib-123');
-      expect(auditCall.initiatingUserId).toBe('admin-123');
+      expect(auditCall.resourceId).toBe(UUID_CONTRIB);
+      expect(auditCall.initiatingUserId).toBe(UUID_ADMIN);
       expect(auditCall.metadata).toMatchObject({
         oldRole: 'contributor',
         newRole: 'reviewer',
@@ -536,95 +405,53 @@ describe('Role Change Tests (T091)', () => {
 
   describe('Session Cache Propagation (SC-007)', () => {
     it('should invalidate session cache after role change', async () => {
-      setupAdminAuth();
+      setupAdminRoleChange(mockContributorUser, ['reviewer']);
 
-      (db.select as any).mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockContributorUser]),
-          }),
-        }),
-      });
-
-      (db.update as any).mockReturnValueOnce({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([
-              { ...mockContributorUser, roles: ['reviewer'] },
-            ]),
-          }),
-        }),
-      });
-
-      (db.insert as any).mockReturnValue({
-        values: vi.fn().mockReturnValue({
-          returning: vi.fn().mockResolvedValue([{ id: 'audit-123' }]),
-        }),
-      });
-
-      const response = await app.request('/api/v1/users/contrib-123/role', {
+      const response = await app.request(`/api/v1/users/${UUID_CONTRIB}/role`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Cookie: 'echo_session=admin-token',
+          Authorization: 'Bearer admin-token',
         },
         body: JSON.stringify({ role: 'reviewer' }),
       });
 
       expect(response.status).toBe(200);
-
-      // Role change should take effect within 30 seconds (session cache TTL)
-      // This is enforced by the session service clearing the cache
     });
   });
 
   describe('Edge Cases', () => {
     it('should return 404 for non-existent user', async () => {
-      setupAdminAuth();
+      setupAuth(mockAdminUser);
+      (db.select as any).mockReturnValueOnce(selectChain([]));
 
-      (db.select as any).mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
-
-      const response = await app.request('/api/v1/users/nonexistent-user/role', {
+      const response = await app.request(`/api/v1/users/${UUID_NONEXISTENT}/role`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Cookie: 'echo_session=admin-token',
+          Authorization: 'Bearer admin-token',
         },
         body: JSON.stringify({ role: 'reviewer' }),
       });
 
       expect(response.status).toBe(404);
       const data = await response.json();
-      expect(data.error).toContain('not found');
+      expect(data.error.message).toContain('not found');
     });
 
     it('should handle role change to same role gracefully', async () => {
-      setupAdminAuth();
+      setupAuth(mockAdminUser);
+      (db.select as any).mockReturnValueOnce(selectChain([mockContributorUser]));
 
-      (db.select as any).mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockContributorUser]),
-          }),
-        }),
-      });
-
-      const response = await app.request('/api/v1/users/contrib-123/role', {
+      const response = await app.request(`/api/v1/users/${UUID_CONTRIB}/role`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Cookie: 'echo_session=admin-token',
+          Authorization: 'Bearer admin-token',
         },
         body: JSON.stringify({ role: 'contributor' }),
       });
 
-      // Should either succeed with no change or return 400
       expect([200, 400]).toContain(response.status);
     });
   });

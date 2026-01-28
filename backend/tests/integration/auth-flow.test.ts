@@ -36,10 +36,14 @@ vi.mock('../../src/db', () => {
 
 import { db } from '../../src/db';
 import { getAuthorizationURL, validateCallback } from '../../src/services/auth/oauth';
+import { invalidateUserSessionCache } from '../../src/services/auth/session';
 
 describe('Auth Flow Integration Tests (T029)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Clear session cache to prevent cache hits from previous tests
+    invalidateUserSessionCache('user-123');
+    invalidateUserSessionCache('user-new');
   });
 
   describe('OAuth Login Initiation (T033)', () => {
@@ -113,7 +117,17 @@ describe('Auth Flow Integration Tests (T029)', () => {
         revokedAt: null,
       };
 
-      // Mock finding existing user
+      // Capture the state from the login endpoint
+      let capturedState: string = '';
+      (getAuthorizationURL as any).mockImplementation((_provider: string, state: string, _codeVerifier: string) => {
+        capturedState = state;
+        return Promise.resolve(new URL(`https://github.com/login/oauth/authorize?state=${state}`));
+      });
+
+      // Call login to populate oauthStates
+      await app.request('/api/v1/auth/login/github');
+
+      // 1. checkAccountLockout: lookup user by email
       (db.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
@@ -122,14 +136,30 @@ describe('Auth Flow Integration Tests (T029)', () => {
         }),
       });
 
-      // Mock creating session
+      // 2. checkAccountLockout: lookup recent failed login attempts (no .limit())
+      (db.select as any).mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([]),
+        }),
+      });
+
+      // 3. findOrCreateUser: lookup by externalId + provider
+      (db.select as any).mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([mockUser]),
+          }),
+        }),
+      });
+
+      // 4. createSession (session.ts): db.insert(sessions).values().returning()
       (db.insert as any).mockReturnValueOnce({
         values: vi.fn().mockReturnValue({
           returning: vi.fn().mockResolvedValue([mockSession]),
         }),
       });
 
-      // Mock fetching user for session
+      // 5. createSession (session.ts): fetch user for role info
       (db.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
@@ -138,26 +168,21 @@ describe('Auth Flow Integration Tests (T029)', () => {
         }),
       });
 
-      // Mock login attempt tracking
-      (db.insert as any).mockReturnValue({
-        values: vi.fn().mockResolvedValue({}),
-      });
-
-      // Mock user update for login tracking
-      (db.update as any).mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue({}),
-        }),
-      });
-
-      // Mock audit log insert
+      // Fallback mocks for remaining insert/update calls
+      // (recordLoginAttempt inserts, updates user, logAudit inserts)
       (db.insert as any).mockReturnValue({
         values: vi.fn().mockReturnValue({
           returning: vi.fn().mockResolvedValue([{ id: 'audit-123' }]),
         }),
       });
 
-      const response = await app.request('/api/v1/auth/callback/github?code=test-code&state=test-state');
+      (db.update as any).mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue({}),
+        }),
+      });
+
+      const response = await app.request(`/api/v1/auth/callback/github?code=test-code&state=${capturedState}`);
 
       expect(response.status).toBe(302); // Redirect
       expect(response.headers.get('location')).toContain('auth/callback?success=true');
@@ -165,23 +190,15 @@ describe('Auth Flow Integration Tests (T029)', () => {
     });
 
     it('should create new user on first OAuth login', async () => {
-      // Mock no existing user
-      (db.select as any).mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
-          }),
-        }),
+      // Capture the state from the login endpoint
+      let capturedState: string = '';
+      (getAuthorizationURL as any).mockImplementation((_provider: string, state: string, _codeVerifier: string) => {
+        capturedState = state;
+        return Promise.resolve(new URL(`https://github.com/login/oauth/authorize?state=${state}`));
       });
 
-      // Mock no user by email
-      (db.select as any).mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
+      // Call login to populate oauthStates
+      await app.request('/api/v1/auth/login/github');
 
       const newUser = {
         id: 'user-new',
@@ -199,14 +216,55 @@ describe('Auth Flow Integration Tests (T029)', () => {
         lastFailedLoginAt: null,
       };
 
-      // Mock creating new user
+      // 1. checkAccountLockout: lookup user by email (no user yet)
+      (db.select as any).mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+
+      // 2. checkAccountLockout: lookup recent failed login attempts (no .limit())
+      (db.select as any).mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([]),
+        }),
+      });
+
+      // 3. findOrCreateUser: lookup by externalId + provider (not found)
+      (db.select as any).mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+
+      // 4. findOrCreateUser: lookup by email (not found)
+      (db.select as any).mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+
+      // 5. findOrCreateUser: insert new user
       (db.insert as any).mockReturnValueOnce({
         values: vi.fn().mockReturnValue({
           returning: vi.fn().mockResolvedValue([newUser]),
         }),
       });
 
-      // Mock creating session
+      // 6. findOrCreateUser: logAudit (user.created)
+      (db.insert as any).mockReturnValueOnce({
+        values: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([{ id: 'audit-user-created' }]),
+        }),
+      });
+
+      // 7. createSession (session.ts): insert session
       (db.insert as any).mockReturnValueOnce({
         values: vi.fn().mockReturnValue({
           returning: vi.fn().mockResolvedValue([
@@ -224,7 +282,7 @@ describe('Auth Flow Integration Tests (T029)', () => {
         }),
       });
 
-      // Mock fetching user for session
+      // 8. createSession (session.ts): fetch user for role info
       (db.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
@@ -233,9 +291,12 @@ describe('Auth Flow Integration Tests (T029)', () => {
         }),
       });
 
-      // Mock remaining inserts/updates
+      // Fallback mocks for remaining insert/update calls
+      // (recordLoginAttempt inserts, updates user, logAudit inserts)
       (db.insert as any).mockReturnValue({
-        values: vi.fn().mockResolvedValue({}),
+        values: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([{ id: 'audit-123' }]),
+        }),
       });
       (db.update as any).mockReturnValue({
         set: vi.fn().mockReturnValue({
@@ -243,7 +304,7 @@ describe('Auth Flow Integration Tests (T029)', () => {
         }),
       });
 
-      const response = await app.request('/api/v1/auth/callback/github?code=test-code&state=test-state');
+      const response = await app.request(`/api/v1/auth/callback/github?code=test-code&state=${capturedState}`);
 
       expect(response.status).toBe(302);
       expect(response.headers.get('location')).toContain('success=true');
@@ -282,7 +343,7 @@ describe('Auth Flow Integration Tests (T029)', () => {
         revokedAt: null,
       };
 
-      // Mock session validation
+      // 1. validateSession (session.ts): innerJoin query
       (db.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           innerJoin: vi.fn().mockReturnValue({
@@ -298,14 +359,23 @@ describe('Auth Flow Integration Tests (T029)', () => {
         }),
       });
 
-      // Mock session activity update
+      // Mock session activity update (updateSessionActivity in session.ts)
       (db.update as any).mockReturnValue({
         set: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue({}),
         }),
       });
 
-      // Mock fetching full user details
+      // 2. authMiddleware: fetch full user details after validateSession
+      (db.select as any).mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([mockUser]),
+          }),
+        }),
+      });
+
+      // 3. /me route handler: fetch full user details
       (db.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
@@ -342,7 +412,7 @@ describe('Auth Flow Integration Tests (T029)', () => {
       const mockSession = {
         id: 'session-123',
         userId: 'user-123',
-        token: 'valid-token',
+        token: 'logout-token',
         provider: 'github',
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
         lastActivityAt: new Date(),
@@ -352,12 +422,14 @@ describe('Auth Flow Integration Tests (T029)', () => {
 
       const mockUser = {
         id: 'user-123',
+        email: 'test@example.com',
         roles: ['contributor'],
+        isActive: true,
         lockedUntil: null,
       };
 
-      // Mock session validation
-      (db.select as any).mockReturnValue({
+      // Mock session validation (validateSession innerJoin query)
+      (db.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           innerJoin: vi.fn().mockReturnValue({
             where: vi.fn().mockReturnValue({
@@ -372,19 +444,28 @@ describe('Auth Flow Integration Tests (T029)', () => {
         }),
       });
 
-      // Mock session activity update
-      (db.update as any).mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue({}),
+      // Mock auth middleware user lookup (after validateSession)
+      (db.select as any).mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([mockUser]),
+          }),
         }),
       });
 
-      // Mock session fetch for revocation
-      (db.select as any).mockReturnValue({
+      // Mock session fetch for revocation (revokeSession looks up session by id)
+      (db.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
             limit: vi.fn().mockResolvedValue([mockSession]),
           }),
+        }),
+      });
+
+      // Mock session activity update
+      (db.update as any).mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue({}),
         }),
       });
 
@@ -403,7 +484,7 @@ describe('Auth Flow Integration Tests (T029)', () => {
       const response = await app.request('/api/v1/auth/logout', {
         method: 'POST',
         headers: {
-          Cookie: 'echo_session=valid-token',
+          Cookie: 'echo_session=logout-token',
         },
       });
 
@@ -416,12 +497,20 @@ describe('Auth Flow Integration Tests (T029)', () => {
 
   describe('Session Management (T037, T038)', () => {
     it('should list all active sessions for user', async () => {
+      const mockUser = {
+        id: 'user-123',
+        email: 'test@example.com',
+        roles: ['contributor'],
+        isActive: true,
+        lockedUntil: null,
+      };
+
       const mockSessions = [
         {
           session: {
             id: 'session-1',
             userId: 'user-123',
-            token: 'token-1',
+            token: 'list-sessions-token',
             provider: 'github',
             expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
             ipAddress: '192.168.1.1',
@@ -430,11 +519,7 @@ describe('Auth Flow Integration Tests (T029)', () => {
             createdAt: new Date(),
             revokedAt: null,
           },
-          user: {
-            id: 'user-123',
-            roles: ['contributor'],
-            lockedUntil: null,
-          },
+          user: mockUser,
         },
         {
           session: {
@@ -449,21 +534,26 @@ describe('Auth Flow Integration Tests (T029)', () => {
             createdAt: new Date(),
             revokedAt: null,
           },
-          user: {
-            id: 'user-123',
-            roles: ['contributor'],
-            lockedUntil: null,
-          },
+          user: mockUser,
         },
       ];
 
-      // Mock auth middleware session validation
+      // Mock auth middleware session validation (validateSession innerJoin query)
       (db.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           innerJoin: vi.fn().mockReturnValue({
             where: vi.fn().mockReturnValue({
               limit: vi.fn().mockResolvedValue([mockSessions[0]]),
             }),
+          }),
+        }),
+      });
+
+      // Mock auth middleware user lookup (after validateSession)
+      (db.select as any).mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([mockUser]),
           }),
         }),
       });
@@ -489,7 +579,7 @@ describe('Auth Flow Integration Tests (T029)', () => {
       const response = await app.request('/api/v1/auth/sessions', {
         method: 'GET',
         headers: {
-          Cookie: 'echo_session=token-1',
+          Cookie: 'echo_session=list-sessions-token',
         },
       });
 
@@ -504,7 +594,7 @@ describe('Auth Flow Integration Tests (T029)', () => {
       const mockSession = {
         id: 'session-current',
         userId: 'user-123',
-        token: 'token-current',
+        token: 'revoke-token-current',
         provider: 'github',
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
         lastActivityAt: new Date(),
@@ -514,17 +604,28 @@ describe('Auth Flow Integration Tests (T029)', () => {
 
       const mockUser = {
         id: 'user-123',
+        email: 'test@example.com',
         roles: ['contributor'],
+        isActive: true,
         lockedUntil: null,
       };
 
-      // Mock auth middleware
+      // Mock auth middleware session validation (validateSession innerJoin query)
       (db.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           innerJoin: vi.fn().mockReturnValue({
             where: vi.fn().mockReturnValue({
               limit: vi.fn().mockResolvedValue([{ session: mockSession, user: mockUser }]),
             }),
+          }),
+        }),
+      });
+
+      // Mock auth middleware user lookup (after validateSession)
+      (db.select as any).mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([mockUser]),
           }),
         }),
       });
@@ -553,8 +654,8 @@ describe('Auth Flow Integration Tests (T029)', () => {
         }),
       });
 
-      // Mock session fetch for revocation
-      (db.select as any).mockReturnValue({
+      // Mock session fetch for revocation (revokeSession looks up session by id)
+      (db.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
             limit: vi.fn().mockResolvedValue([{ ...mockSession, id: 'session-to-revoke' }]),
@@ -577,7 +678,7 @@ describe('Auth Flow Integration Tests (T029)', () => {
       const response = await app.request('/api/v1/auth/sessions/session-to-revoke', {
         method: 'DELETE',
         headers: {
-          Cookie: 'echo_session=token-current',
+          Cookie: 'echo_session=revoke-token-current',
         },
       });
 
@@ -591,7 +692,7 @@ describe('Auth Flow Integration Tests (T029)', () => {
       const mockSession = {
         id: 'session-current',
         userId: 'user-123',
-        token: 'token-current',
+        token: 'notfound-token-current',
         provider: 'github',
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
         lastActivityAt: new Date(),
@@ -601,17 +702,28 @@ describe('Auth Flow Integration Tests (T029)', () => {
 
       const mockUser = {
         id: 'user-123',
+        email: 'test@example.com',
         roles: ['contributor'],
+        isActive: true,
         lockedUntil: null,
       };
 
-      // Mock auth middleware
+      // Mock auth middleware session validation (validateSession innerJoin query)
       (db.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           innerJoin: vi.fn().mockReturnValue({
             where: vi.fn().mockReturnValue({
               limit: vi.fn().mockResolvedValue([{ session: mockSession, user: mockUser }]),
             }),
+          }),
+        }),
+      });
+
+      // Mock auth middleware user lookup (after validateSession)
+      (db.select as any).mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([mockUser]),
           }),
         }),
       });
@@ -637,7 +749,7 @@ describe('Auth Flow Integration Tests (T029)', () => {
       const response = await app.request('/api/v1/auth/sessions/nonexistent-session', {
         method: 'DELETE',
         headers: {
-          Cookie: 'echo_session=token-current',
+          Cookie: 'echo_session=notfound-token-current',
         },
       });
 
@@ -649,6 +761,13 @@ describe('Auth Flow Integration Tests (T029)', () => {
 
   describe('Complete Authentication Flow', () => {
     it('should complete full flow: login -> callback -> me -> logout', async () => {
+      // Capture the state from the login endpoint
+      let capturedState: string = '';
+      (getAuthorizationURL as any).mockImplementation((_provider: string, state: string, _codeVerifier: string) => {
+        capturedState = state;
+        return Promise.resolve(new URL(`https://github.com/login/oauth/authorize?state=${state}`));
+      });
+
       // Step 1: Initiate login
       const loginResponse = await app.request('/api/v1/auth/login/github');
       expect(loginResponse.status).toBe(200);
@@ -704,7 +823,7 @@ describe('Auth Flow Integration Tests (T029)', () => {
         }),
       });
 
-      const callbackResponse = await app.request('/api/v1/auth/callback/github?code=test-code&state=test-state');
+      const callbackResponse = await app.request(`/api/v1/auth/callback/github?code=test-code&state=${capturedState}`);
       expect(callbackResponse.status).toBe(302);
 
       // Step 3: Get current user

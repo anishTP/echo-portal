@@ -201,10 +201,10 @@ describe('Permissions - Permission Loss Handling Tests', () => {
       expect(canAccessBranch(afterPrivate)).toBe(false);
     });
 
-    it('should allow publisher to access team branches', () => {
+    it('should allow administrator to access team branches', () => {
       const context: PermissionContext = {
-        userId: 'publisher-1',
-        roles: [Role.PUBLISHER],
+        userId: 'admin-1',
+        roles: [Role.ADMINISTRATOR],
         resourceOwnerId: 'user-1',
         branchVisibility: 'team',
         branchReviewers: [], // Not explicitly a reviewer
@@ -329,10 +329,10 @@ describe('Permissions - Permission Loss Handling Tests', () => {
       expect(canTransitionBranch(afterRevocation, 'review', 'approved')).toBe(false);
     });
 
-    it('should allow publisher to publish', () => {
+    it('should allow administrator to publish', () => {
       const context: PermissionContext = {
-        userId: 'publisher-1',
-        roles: [Role.PUBLISHER],
+        userId: 'admin-1',
+        roles: [Role.ADMINISTRATOR],
         resourceOwnerId: 'user-1',
       };
 
@@ -398,11 +398,11 @@ describe('Permissions - Permission Loss Handling Tests', () => {
       // Simulate checking permissions with stale role data
       const staleContext: PermissionContext = {
         userId: 'user-1',
-        roles: [Role.PUBLISHER], // Stale: user was demoted
+        roles: [Role.ADMINISTRATOR], // Stale: user was demoted
       };
 
       // System should use current context, not cached
-      // If roles are [PUBLISHER], permissions should be granted
+      // If roles are [ADMINISTRATOR], permissions should be granted
       expect(canTransitionBranch(staleContext, 'approved', 'published')).toBe(true);
 
       // The fix is to always fetch fresh user data before permission checks

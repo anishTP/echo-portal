@@ -20,7 +20,7 @@ import { Role } from '@echo-portal/shared';
  */
 describe('Security Audit - RBAC Compliance', () => {
   describe('Role Hierarchy Validation', () => {
-    const roles = [Role.CONTRIBUTOR, Role.REVIEWER, Role.PUBLISHER, Role.ADMINISTRATOR];
+    const roles = [Role.CONTRIBUTOR, Role.REVIEWER, Role.ADMINISTRATOR];
 
     it('should enforce role hierarchy - contributor has minimal permissions', () => {
       const context: PermissionContext = {
@@ -62,22 +62,20 @@ describe('Security Audit - RBAC Compliance', () => {
       expect(hasPermission(context, 'admin:override')).toBe(false);
     });
 
-    it('should enforce role hierarchy - publisher extends reviewer', () => {
+    it('should enforce role hierarchy - administrator extends reviewer', () => {
       const context: PermissionContext = {
         userId: 'user-1',
-        roles: [Role.PUBLISHER],
+        roles: [Role.ADMINISTRATOR],
       };
 
-      // Publishers CAN do everything reviewers can
+      // Administrators CAN do everything reviewers can
       expect(hasPermission(context, 'branch:create')).toBe(true);
       expect(hasPermission(context, 'review:approve')).toBe(true);
 
-      // Plus convergence
+      // Plus convergence and admin capabilities
       expect(hasPermission(context, 'convergence:initiate')).toBe(true);
-
-      // But CANNOT
-      expect(hasPermission(context, 'admin:override')).toBe(false);
-      expect(hasPermission(context, 'audit:view_all')).toBe(false);
+      expect(hasPermission(context, 'admin:override')).toBe(true);
+      expect(hasPermission(context, 'audit:view_all')).toBe(true);
     });
 
     it('should enforce role hierarchy - administrator has all permissions', () => {
@@ -224,16 +222,16 @@ describe('Security Audit - RBAC Compliance', () => {
       expect(canAccessBranch(nonTeamMember)).toBe(false);
     });
 
-    it('should enforce team visibility - publishers can access', () => {
-      const publisher: PermissionContext = {
-        userId: 'publisher-1',
-        roles: [Role.PUBLISHER],
+    it('should enforce team visibility - administrators can access', () => {
+      const administrator: PermissionContext = {
+        userId: 'admin-1',
+        roles: [Role.ADMINISTRATOR],
         resourceOwnerId: 'user-1',
         branchVisibility: 'team',
         branchReviewers: [], // Not explicitly assigned
       };
 
-      expect(canAccessBranch(publisher)).toBe(true);
+      expect(canAccessBranch(administrator)).toBe(true);
     });
 
     it('should enforce public visibility - anyone can access', () => {
@@ -333,17 +331,17 @@ describe('Security Audit - RBAC Compliance', () => {
     });
 
     it('should use highest privilege for transitions with multiple roles', () => {
-      const contributorPublisher: PermissionContext = {
+      const contributorAdmin: PermissionContext = {
         userId: 'user-1',
-        roles: [Role.CONTRIBUTOR, Role.PUBLISHER],
+        roles: [Role.CONTRIBUTOR, Role.ADMINISTRATOR],
         resourceOwnerId: 'other-user',
       };
 
-      // Can approve (publisher includes reviewer capability)
-      expect(canTransitionBranch(contributorPublisher, 'review', 'approved')).toBe(true);
+      // Can approve (administrator includes reviewer capability)
+      expect(canTransitionBranch(contributorAdmin, 'review', 'approved')).toBe(true);
 
       // Can publish
-      expect(canTransitionBranch(contributorPublisher, 'approved', 'published')).toBe(true);
+      expect(canTransitionBranch(contributorAdmin, 'approved', 'published')).toBe(true);
     });
   });
 
@@ -433,7 +431,7 @@ describe('Security Audit - RBAC Compliance', () => {
         'audit:view_all',
       ];
 
-      const roles = [Role.CONTRIBUTOR, Role.REVIEWER, Role.PUBLISHER, Role.ADMINISTRATOR];
+      const roles = [Role.CONTRIBUTOR, Role.REVIEWER, Role.ADMINISTRATOR];
 
       for (const role of roles) {
         matrix[role] = {};
@@ -448,7 +446,7 @@ describe('Security Audit - RBAC Compliance', () => {
       expect(matrix[Role.CONTRIBUTOR]['review:approve']).toBe(false);
       expect(matrix[Role.REVIEWER]['review:approve']).toBe(true);
       expect(matrix[Role.REVIEWER]['convergence:initiate']).toBe(false);
-      expect(matrix[Role.PUBLISHER]['convergence:initiate']).toBe(true);
+      expect(matrix[Role.ADMINISTRATOR]['convergence:initiate']).toBe(true);
       expect(matrix[Role.ADMINISTRATOR]['admin:override']).toBe(true);
 
       // Log for audit documentation
@@ -473,8 +471,8 @@ describe('Security Audit - RBAC Compliance', () => {
           roles: [Role.CONTRIBUTOR],
         };
 
-        // Contributors don't have user:update_role permission
-        expect(hasPermission(contributor, 'user:update_role')).toBe(false);
+        // Contributors don't have admin:change_roles permission
+        expect(hasPermission(contributor, 'admin:change_roles')).toBe(false);
         expect(hasPermission(contributor, 'admin:manage_users')).toBe(false);
       });
 
@@ -496,7 +494,7 @@ describe('Security Audit - RBAC Compliance', () => {
 
         // Reviewers don't have admin permissions
         expect(hasPermission(reviewer, 'admin:manage_users')).toBe(false);
-        expect(hasPermission(reviewer, 'user:update_role')).toBe(false);
+        expect(hasPermission(reviewer, 'admin:change_roles')).toBe(false);
       });
 
       it('should prevent even administrators from changing their own role', () => {
@@ -536,22 +534,19 @@ describe('Security Audit - RBAC Compliance', () => {
         expect(hasPermission(reviewer, 'admin:manage_users')).toBe(false);
         expect(hasPermission(reviewer, 'convergence:initiate')).toBe(false);
 
-        // Reviewers can view audit logs but not all admin features
-        expect(hasPermission(reviewer, 'audit:view_all')).toBe(true);
+        // Reviewers cannot view all audit logs - that's admin-only
+        expect(hasPermission(reviewer, 'audit:view_all')).toBe(false);
       });
 
-      it('should prevent publisher from changing user roles', () => {
-        const publisher: PermissionContext = {
+      it('should prevent reviewer from changing user roles', () => {
+        const reviewer: PermissionContext = {
           userId: 'user-1',
-          roles: [Role.PUBLISHER],
+          roles: [Role.REVIEWER],
         };
 
-        // Publishers don't have user management permissions
-        expect(hasPermission(publisher, 'admin:manage_users')).toBe(false);
-        expect(hasPermission(publisher, 'user:update_role')).toBe(false);
-
-        // Publishers can initiate convergence but not manage users
-        expect(hasPermission(publisher, 'convergence:initiate')).toBe(true);
+        // Reviewers don't have user management permissions
+        expect(hasPermission(reviewer, 'admin:manage_users')).toBe(false);
+        expect(hasPermission(reviewer, 'admin:change_roles')).toBe(false);
       });
     });
 
@@ -665,7 +660,7 @@ describe('Security Audit - RBAC Compliance', () => {
         };
 
         expect(hasPermission(admin, 'admin:manage_users')).toBe(true);
-        expect(hasPermission(admin, 'user:update_role')).toBe(true);
+        expect(hasPermission(admin, 'admin:change_roles')).toBe(true);
       });
 
       it('should allow reviewers to perform review actions', () => {
@@ -678,13 +673,13 @@ describe('Security Audit - RBAC Compliance', () => {
         expect(hasPermission(reviewer, 'review:request_changes')).toBe(true);
       });
 
-      it('should allow publishers to initiate convergence', () => {
-        const publisher: PermissionContext = {
-          userId: 'publisher-1',
-          roles: [Role.PUBLISHER],
+      it('should allow administrators to initiate convergence', () => {
+        const admin: PermissionContext = {
+          userId: 'admin-1',
+          roles: [Role.ADMINISTRATOR],
         };
 
-        expect(hasPermission(publisher, 'convergence:initiate')).toBe(true);
+        expect(hasPermission(admin, 'convergence:initiate')).toBe(true);
       });
     });
 

@@ -38,15 +38,28 @@ vi.mock('../../src/db', () => ({
 import { db } from '../../src/db';
 
 describe('OAuth Graceful Degradation Tests (T031)', () => {
+  /**
+   * Helper: call the login endpoint to populate the oauthStates map and return the captured state.
+   */
+  async function getOAuthState(provider: string = 'github'): Promise<string> {
+    let capturedState = '';
+    (getAuthorizationURL as any).mockImplementation((_provider: string, state: string, _codeVerifier: string) => {
+      capturedState = state;
+      return Promise.resolve(new URL(`https://github.com/login/oauth/authorize?state=${state}`));
+    });
+    await app.request(`/api/v1/auth/login/${provider}`);
+    return capturedState;
+  }
+
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     // Reset circuit breakers before each test
     resetCircuitBreaker('github');
     resetCircuitBreaker('google');
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   describe('Provider Unavailability Handling (FR-005c)', () => {
@@ -86,8 +99,9 @@ describe('OAuth Graceful Degradation Tests (T031)', () => {
         lockedUntil: null,
       };
 
-      // Mock session validation (existing session works)
-      (db.select as any).mockReturnValue({
+      // Mock db.select calls in order:
+      // 1. validateSession: db.select({session, user}).from(sessions).innerJoin(users, ...).where(...).limit(1)
+      (db.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           innerJoin: vi.fn().mockReturnValue({
             where: vi.fn().mockReturnValue({
@@ -97,19 +111,34 @@ describe('OAuth Graceful Degradation Tests (T031)', () => {
         }),
       });
 
+      // 2. authMiddleware: db.select().from(users).where(eq(users.id, session.userId)).limit(1)
+      (db.select as any).mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([{ ...mockUser, isActive: true }]),
+          }),
+        }),
+      });
+
+      // 3. /auth/me route: db.select().from(users).where(eq(users.id, authUser.id)).limit(1)
+      (db.select as any).mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([{
+              ...mockUser,
+              isActive: true,
+              avatarUrl: null,
+              createdAt: new Date(),
+              lastLoginAt: null,
+            }]),
+          }),
+        }),
+      });
+
       // Mock session activity update
       (db.update as any).mockReturnValue({
         set: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue({}),
-        }),
-      });
-
-      // Mock full user details fetch
-      (db.select as any).mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockUser]),
-          }),
         }),
       });
 
@@ -271,12 +300,29 @@ describe('OAuth Graceful Degradation Tests (T031)', () => {
     });
 
     it('should redirect to error page with appropriate message on callback failure', async () => {
+      const state = await getOAuthState();
+
       // Mock callback failure due to provider unavailability
       (validateCallback as any).mockRejectedValueOnce(
         new OAuthProviderUnavailableError('github', 60000)
       );
 
-      const response = await app.request('/api/v1/auth/callback/github?code=test&state=test');
+      // Mock remaining db operations for recordLoginAttempt
+      (db.insert as any).mockReturnValue({
+        values: vi.fn().mockResolvedValue({}),
+      });
+      (db.select as any).mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([]),
+        }),
+      });
+      (db.update as any).mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue({}),
+        }),
+      });
+
+      const response = await app.request(`/api/v1/auth/callback/github?code=test&state=${state}`);
 
       expect(response.status).toBe(302);
       const location = response.headers.get('location');
@@ -332,11 +378,28 @@ describe('OAuth Graceful Degradation Tests (T031)', () => {
 
   describe('Callback Degradation Scenarios', () => {
     it('should handle provider failure during callback gracefully', async () => {
+      const state = await getOAuthState();
+
       (validateCallback as any).mockRejectedValueOnce(
         new OAuthProviderUnavailableError('github', 30000)
       );
 
-      const response = await app.request('/api/v1/auth/callback/github?code=test-code&state=test-state');
+      // Mock remaining db operations for recordLoginAttempt
+      (db.insert as any).mockReturnValue({
+        values: vi.fn().mockResolvedValue({}),
+      });
+      (db.select as any).mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([]),
+        }),
+      });
+      (db.update as any).mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue({}),
+        }),
+      });
+
+      const response = await app.request(`/api/v1/auth/callback/github?code=test-code&state=${state}`);
 
       // Should redirect to frontend with error
       expect(response.status).toBe(302);
@@ -345,17 +408,31 @@ describe('OAuth Graceful Degradation Tests (T031)', () => {
     });
 
     it('should not create partial user account on callback provider failure', async () => {
+      const state = await getOAuthState();
+
       (validateCallback as any).mockRejectedValueOnce(
         new OAuthProviderUnavailableError('github', 30000)
       );
 
       // Mock no user inserts should happen
-      const insertMock = vi.fn();
+      const insertMock = vi.fn().mockResolvedValue({});
       (db.insert as any).mockReturnValue({
         values: insertMock,
       });
 
-      await app.request('/api/v1/auth/callback/github?code=test-code&state=test-state');
+      // Mock remaining db operations for recordLoginAttempt
+      (db.select as any).mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([]),
+        }),
+      });
+      (db.update as any).mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue({}),
+        }),
+      });
+
+      await app.request(`/api/v1/auth/callback/github?code=test-code&state=${state}`);
 
       // Should not create user if provider failed
       // (Login attempt might be logged, but not user creation)

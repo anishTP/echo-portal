@@ -29,15 +29,45 @@ vi.mock('../../src/db', () => {
 });
 
 import { db } from '../../src/db';
-import { validateCallback } from '../../src/services/auth/oauth';
+import { getAuthorizationURL, validateCallback } from '../../src/services/auth/oauth';
 
 describe('Login Lockout Integration Tests (T030)', () => {
+  /**
+   * Helper: call the login endpoint to populate the oauthStates map and return the captured state.
+   */
+  async function getOAuthState(): Promise<string> {
+    let capturedState = '';
+    (getAuthorizationURL as any).mockImplementation((_provider: string, state: string, _codeVerifier: string) => {
+      capturedState = state;
+      return Promise.resolve(new URL(`https://github.com/login/oauth/authorize?state=${state}`));
+    });
+    await app.request('/api/v1/auth/login/github');
+    return capturedState;
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reset mock implementations to prevent leaking between tests
+    // (clearAllMocks only clears call history, not mockReturnValue)
+    (db.select as any).mockReset();
+    (db.insert as any).mockReset();
+    (db.update as any).mockReset();
+    (db.delete as any).mockReset();
+    // Restore default OAuth mocks (cleared by mockReset on the module-level mocks)
+    (getAuthorizationURL as any).mockResolvedValue(
+      new URL('https://github.com/login/oauth/authorize?state=test')
+    );
+    (validateCallback as any).mockResolvedValue({
+      id: 'github-123',
+      email: 'test@example.com',
+      name: 'Test User',
+      avatarUrl: 'https://avatars.githubusercontent.com/u/123',
+    });
   });
 
   describe('Account Lockout after Failed Attempts (FR-005a)', () => {
     it('should lock account after 5 failed login attempts', async () => {
+      const state = await getOAuthState();
       const email = 'lockout-test@example.com';
       const now = Date.now();
       const cutoff = new Date(now - 60 * 60 * 1000); // 1 hour ago
@@ -108,7 +138,7 @@ describe('Login Lockout Integration Tests (T030)', () => {
         }),
       });
 
-      const response = await app.request('/api/v1/auth/callback/github?code=bad-code&state=test-state');
+      const response = await app.request(`/api/v1/auth/callback/github?code=bad-code&state=${state}`);
 
       // Should redirect to error page
       expect(response.status).toBe(302);
@@ -116,6 +146,7 @@ describe('Login Lockout Integration Tests (T030)', () => {
     });
 
     it('should return lockout error when account is locked', async () => {
+      const state = await getOAuthState();
       const email = 'locked@example.com';
       const lockedUntil = new Date(Date.now() + 10 * 60 * 1000); // Locked for 10 more minutes
 
@@ -127,7 +158,15 @@ describe('Login Lockout Integration Tests (T030)', () => {
         lastFailedLoginAt: new Date(Date.now() - 5 * 60 * 1000),
       };
 
-      // Mock user lookup - account is locked
+      // Override validateCallback to return the locked user's email
+      (validateCallback as any).mockResolvedValueOnce({
+        id: 'github-locked',
+        email,
+        name: 'Locked User',
+        avatarUrl: 'https://avatars.githubusercontent.com/u/locked',
+      });
+
+      // Mock checkAccountLockout: db.select().from(users).where(...).limit(1) -> locked user
       (db.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
@@ -136,19 +175,26 @@ describe('Login Lockout Integration Tests (T030)', () => {
         }),
       });
 
-      // Mock failed attempts query
+      // recordLoginAttempt: db.insert(loginAttempts).values({...})
+      (db.insert as any).mockReturnValue({
+        values: vi.fn().mockResolvedValue({}),
+      });
+
+      // recordLoginAttempt: db.select().from(loginAttempts).where(...) (no .limit())
       (db.select as any).mockReturnValue({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue([]),
         }),
       });
 
-      // Mock login attempt insert
-      (db.insert as any).mockReturnValue({
-        values: vi.fn().mockResolvedValue({}),
+      // recordLoginAttempt: db.update(users).set({...}).where(...)
+      (db.update as any).mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue({}),
+        }),
       });
 
-      const response = await app.request('/api/v1/auth/callback/github?code=test-code&state=test-state');
+      const response = await app.request(`/api/v1/auth/callback/github?code=test-code&state=${state}`);
 
       expect(response.status).toBe(423); // Locked
       const data = await response.json();
@@ -159,6 +205,7 @@ describe('Login Lockout Integration Tests (T030)', () => {
     });
 
     it('should clear lockout after 15 minutes', async () => {
+      const state = await getOAuthState();
       const email = 'unlock-test@example.com';
       const lockedUntil = new Date(Date.now() - 1000); // Lockout expired 1 second ago
 
@@ -178,7 +225,15 @@ describe('Login Lockout Integration Tests (T030)', () => {
         lastLoginAt: null,
       };
 
-      // Mock user lookup - lockout expired
+      // Override validateCallback to return matching email
+      (validateCallback as any).mockResolvedValueOnce({
+        id: 'github-123',
+        email,
+        name: 'Unlock Test',
+        avatarUrl: 'https://avatars.githubusercontent.com/u/123',
+      });
+
+      // 1) checkAccountLockout: db.select().from(users).where(...).limit(1) -> user with expired lockout
       (db.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
@@ -187,7 +242,14 @@ describe('Login Lockout Integration Tests (T030)', () => {
         }),
       });
 
-      // Mock finding user by external ID
+      // 2) checkAccountLockout: db.select().from(loginAttempts).where(...) (no .limit())
+      (db.select as any).mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([]),
+        }),
+      });
+
+      // 3) findOrCreateUser: db.select().from(users).where(and(eq(externalId), eq(provider))).limit(1)
       (db.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
@@ -196,7 +258,7 @@ describe('Login Lockout Integration Tests (T030)', () => {
         }),
       });
 
-      // Mock session creation
+      // 4) createSession: db.insert(sessions).values({...}).returning()
       (db.insert as any).mockReturnValueOnce({
         values: vi.fn().mockReturnValue({
           returning: vi.fn().mockResolvedValue([
@@ -214,7 +276,7 @@ describe('Login Lockout Integration Tests (T030)', () => {
         }),
       });
 
-      // Mock fetching user for session
+      // 5) createSession: db.select().from(users).where(eq(users.id, userId)).limit(1)
       (db.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
@@ -223,18 +285,21 @@ describe('Login Lockout Integration Tests (T030)', () => {
         }),
       });
 
-      // Mock remaining operations
+      // Mock remaining db.insert calls (recordLoginAttempt + logAudit)
       (db.insert as any).mockReturnValue({
-        values: vi.fn().mockResolvedValue({}),
+        values: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([{ id: 'audit-123' }]),
+        }),
       });
 
+      // Mock db.update for recordLoginAttempt (reset failed count on success)
       (db.update as any).mockReturnValue({
         set: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue({}),
         }),
       });
 
-      const response = await app.request('/api/v1/auth/callback/github?code=test-code&state=test-state');
+      const response = await app.request(`/api/v1/auth/callback/github?code=test-code&state=${state}`);
 
       expect(response.status).toBe(302);
       expect(response.headers.get('location')).toContain('success=true');
@@ -245,6 +310,7 @@ describe('Login Lockout Integration Tests (T030)', () => {
 
   describe('Failed Login Attempt Tracking (FR-005b)', () => {
     it('should log all failed authentication attempts', async () => {
+      const state = await getOAuthState();
       const email = 'track-test@example.com';
 
       // Mock no existing user
@@ -265,7 +331,7 @@ describe('Login Lockout Integration Tests (T030)', () => {
       // Simulate OAuth failure
       (validateCallback as any).mockRejectedValueOnce(new Error('OAuth failed'));
 
-      await app.request('/api/v1/auth/callback/github?code=bad-code&state=test-state');
+      await app.request(`/api/v1/auth/callback/github?code=bad-code&state=${state}`);
 
       // Verify login attempt was logged
       expect(db.insert).toHaveBeenCalled();
@@ -273,6 +339,7 @@ describe('Login Lockout Integration Tests (T030)', () => {
     });
 
     it('should log successful authentication attempts', async () => {
+      const state = await getOAuthState();
       const email = 'success-test@example.com';
 
       const mockUser = {
@@ -349,13 +416,14 @@ describe('Login Lockout Integration Tests (T030)', () => {
         }),
       });
 
-      await app.request('/api/v1/auth/callback/github?code=good-code&state=test-state');
+      await app.request(`/api/v1/auth/callback/github?code=good-code&state=${state}`);
 
       // Verify successful login attempt was logged
       expect(db.insert).toHaveBeenCalled();
     });
 
     it('should track IP address and user agent in login attempts', async () => {
+      const state = await getOAuthState();
       const email = 'tracking-test@example.com';
       const ipAddress = '203.0.113.42';
       const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)';
@@ -378,7 +446,7 @@ describe('Login Lockout Integration Tests (T030)', () => {
       // Simulate OAuth failure
       (validateCallback as any).mockRejectedValueOnce(new Error('OAuth failed'));
 
-      await app.request('/api/v1/auth/callback/github?code=bad-code&state=test-state', {
+      await app.request(`/api/v1/auth/callback/github?code=bad-code&state=${state}`, {
         headers: {
           'X-Forwarded-For': ipAddress,
           'User-Agent': userAgent,
@@ -392,6 +460,7 @@ describe('Login Lockout Integration Tests (T030)', () => {
 
   describe('Lockout Window and Thresholds', () => {
     it('should only count failed attempts within 1-hour window', async () => {
+      const state = await getOAuthState();
       const email = 'window-test@example.com';
       const now = Date.now();
 
@@ -467,7 +536,7 @@ describe('Login Lockout Integration Tests (T030)', () => {
       // Simulate OAuth failure (4th attempt in window)
       (validateCallback as any).mockRejectedValueOnce(new Error('OAuth failed'));
 
-      const response = await app.request('/api/v1/auth/callback/github?code=bad-code&state=test-state');
+      const response = await app.request(`/api/v1/auth/callback/github?code=bad-code&state=${state}`);
 
       // Should NOT be locked yet (only 4 attempts in window, need 5)
       expect(response.status).toBe(302);
@@ -477,6 +546,7 @@ describe('Login Lockout Integration Tests (T030)', () => {
     });
 
     it('should reset failed count on successful login', async () => {
+      const state = await getOAuthState();
       const email = 'reset-test@example.com';
 
       const mockUser = {
@@ -495,7 +565,7 @@ describe('Login Lockout Integration Tests (T030)', () => {
         lastLoginAt: null,
       };
 
-      // Mock no lockout
+      // 1) checkAccountLockout: db.select().from(users).where(...).limit(1) -> no user
       (db.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
@@ -504,7 +574,14 @@ describe('Login Lockout Integration Tests (T030)', () => {
         }),
       });
 
-      // Mock user lookup
+      // 2) checkAccountLockout: db.select().from(loginAttempts).where(...) (no .limit())
+      (db.select as any).mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([]),
+        }),
+      });
+
+      // 3) findOrCreateUser: db.select().from(users).where(and(eq(externalId), eq(provider))).limit(1)
       (db.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
@@ -513,7 +590,7 @@ describe('Login Lockout Integration Tests (T030)', () => {
         }),
       });
 
-      // Mock session creation
+      // 4) createSession: db.insert(sessions).values({...}).returning()
       (db.insert as any).mockReturnValueOnce({
         values: vi.fn().mockReturnValue({
           returning: vi.fn().mockResolvedValue([
@@ -531,7 +608,7 @@ describe('Login Lockout Integration Tests (T030)', () => {
         }),
       });
 
-      // Mock fetching user for session
+      // 5) createSession: db.select().from(users).where(eq(users.id, userId)).limit(1)
       (db.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
@@ -540,11 +617,14 @@ describe('Login Lockout Integration Tests (T030)', () => {
         }),
       });
 
-      // Mock remaining operations
+      // Mock remaining db.insert calls (recordLoginAttempt + logAudit)
       (db.insert as any).mockReturnValue({
-        values: vi.fn().mockResolvedValue({}),
+        values: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([{ id: 'audit-123' }]),
+        }),
       });
 
+      // Mock db.update for recordLoginAttempt (reset failed count on success)
       const updateMock = vi.fn().mockResolvedValue({});
       (db.update as any).mockReturnValue({
         set: vi.fn().mockReturnValue({
@@ -552,7 +632,7 @@ describe('Login Lockout Integration Tests (T030)', () => {
         }),
       });
 
-      await app.request('/api/v1/auth/callback/github?code=good-code&state=test-state');
+      await app.request(`/api/v1/auth/callback/github?code=good-code&state=${state}`);
 
       // Verify failed count was reset
       expect(db.update).toHaveBeenCalled();
@@ -562,6 +642,7 @@ describe('Login Lockout Integration Tests (T030)', () => {
 
   describe('Audit Logging for Lockouts (FR-020)', () => {
     it('should log account lockout event to audit trail', async () => {
+      const state = await getOAuthState();
       const email = 'audit-lockout@example.com';
       const now = Date.now();
 
@@ -610,7 +691,7 @@ describe('Login Lockout Integration Tests (T030)', () => {
       // Simulate 5th failed attempt
       (validateCallback as any).mockRejectedValueOnce(new Error('OAuth failed'));
 
-      await app.request('/api/v1/auth/callback/github?code=bad-code&state=test-state');
+      await app.request(`/api/v1/auth/callback/github?code=bad-code&state=${state}`);
 
       // Verify audit log was created
       expect(db.insert).toHaveBeenCalled();

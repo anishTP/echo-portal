@@ -209,12 +209,22 @@ describe('Session Service - Unit Tests (T028)', () => {
         lockedUntil: null,
       };
 
-      (db.select as any).mockReturnValue({
+      // First call: validateSession (uses innerJoin)
+      (db.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           innerJoin: vi.fn().mockReturnValue({
             where: vi.fn().mockReturnValue({
               limit: vi.fn().mockResolvedValue([{ session: mockSession, user: mockUser }]),
             }),
+          }),
+        }),
+      });
+
+      // Second call: revokeSession looks up session by id (no innerJoin)
+      (db.select as any).mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([mockSession]),
           }),
         }),
       });
@@ -230,9 +240,9 @@ describe('Session Service - Unit Tests (T028)', () => {
     });
 
     it('should return null for locked user account', async () => {
-      const token = 'valid-token';
+      const token = 'locked-user-token';
       const mockSession = {
-        id: 'session-123',
+        id: 'session-locked',
         userId: 'user-123',
         token,
         provider: 'github',

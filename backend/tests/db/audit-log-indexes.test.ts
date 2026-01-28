@@ -11,7 +11,11 @@ import { describe, it, expect } from 'vitest';
 import { db } from '../../src/db/index.js';
 import { sql } from 'drizzle-orm';
 
-describe('T101: Audit Log Index Performance (SC-006)', () => {
+// Skip all tests when no database is available
+const DATABASE_URL = process.env.DATABASE_URL;
+const describeWithDb = DATABASE_URL ? describe : describe.skip;
+
+describeWithDb('T101: Audit Log Index Performance (SC-006)', () => {
   describe('Index existence validation', () => {
     it('verifies all required indexes exist', async () => {
       const result = await db.execute(sql`

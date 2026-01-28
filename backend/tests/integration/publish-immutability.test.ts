@@ -16,6 +16,7 @@ vi.mock('../../src/db', () => {
 
   const mockDb = {
     insert: vi.fn(),
+    select: vi.fn(),
     update: vi.fn().mockReturnValue({
       set: vi.fn().mockReturnValue({
         where: vi.fn().mockReturnValue({
@@ -49,6 +50,8 @@ import { db, mockBranches, mockUsers, mockSessions } from '../../src/db';
 import { validateSession } from '../../src/services/auth/session';
 
 describe('Immutability Enforcement Tests (T070)', () => {
+  let _currentAuthUser: any = null;
+
   const UUID_OWNER = '00000000-0000-4000-8000-000000000001';
   const UUID_REVIEWER = '00000000-0000-4000-8000-000000000002';
   const UUID_COLLABORATOR = '00000000-0000-4000-8000-000000000003';
@@ -77,6 +80,7 @@ describe('Immutability Enforcement Tests (T070)', () => {
     // Mock session validation
     (validateSession as any).mockImplementation((token: string) => {
       if (token === 'owner-token') {
+        _currentAuthUser = ownerUser;
         return Promise.resolve({
           id: 'session-owner',
           userId: UUID_OWNER,
@@ -85,7 +89,19 @@ describe('Immutability Enforcement Tests (T070)', () => {
           expiresAt: new Date(Date.now() + 86400000),
         });
       }
+      _currentAuthUser = null;
       return Promise.resolve(null);
+    });
+
+    // Setup db.select to handle auth middleware user lookup
+    (db.select as any).mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockImplementation(() => {
+            return Promise.resolve(_currentAuthUser ? [_currentAuthUser] : []);
+          }),
+        }),
+      }),
     });
 
     (db.query.users.findFirst as any).mockImplementation(({ where }: any) => {
@@ -158,8 +174,8 @@ describe('Immutability Enforcement Tests (T070)', () => {
 
       expect(response.status).toBe(403);
       const data = await response.json();
-      expect(data.error).toContain('Cannot update branch');
-      expect(data.error).toContain('published');
+      expect(data.error.message).toContain('Cannot update branch');
+      expect(data.error.message).toContain('published');
     });
 
     it('should prevent updating branch name on published branch', async () => {
@@ -311,7 +327,7 @@ describe('Immutability Enforcement Tests (T070)', () => {
 
       expect(response.status).toBe(403);
       const data = await response.json();
-      expect(data.error).toContain('Cannot modify reviewers on a published branch');
+      expect(data.error.message).toContain('Cannot modify reviewers on a published branch');
     });
 
     it('should prevent removing reviewers from published branch', async () => {
@@ -342,7 +358,7 @@ describe('Immutability Enforcement Tests (T070)', () => {
 
       expect(response.status).toBe(403);
       const data = await response.json();
-      expect(data.error).toContain('Cannot modify reviewers on a published branch');
+      expect(data.error.message).toContain('Cannot modify reviewers on a published branch');
     });
   });
 
@@ -429,7 +445,7 @@ describe('Immutability Enforcement Tests (T070)', () => {
 
       expect(response.status).toBe(403);
       const data = await response.json();
-      expect(data.error).toContain('Cannot modify collaborators on a published branch');
+      expect(data.error.message).toContain('Cannot modify collaborators on a published branch');
     });
 
     it('should prevent removing collaborators from published branch', async () => {
@@ -461,7 +477,7 @@ describe('Immutability Enforcement Tests (T070)', () => {
 
       expect(response.status).toBe(403);
       const data = await response.json();
-      expect(data.error).toContain('Cannot modify collaborators on a published branch');
+      expect(data.error.message).toContain('Cannot modify collaborators on a published branch');
     });
   });
 
@@ -523,7 +539,7 @@ describe('Immutability Enforcement Tests (T070)', () => {
 
       expect(response.status).toBe(403);
       const data = await response.json();
-      expect(data.error).toContain('Cannot delete branch');
+      expect(data.error.message).toContain('Cannot delete branch');
     });
   });
 
@@ -554,7 +570,7 @@ describe('Immutability Enforcement Tests (T070)', () => {
 
       expect(response.status).toBe(403);
       const data = await response.json();
-      expect(data.error).toContain('Cannot update branch');
+      expect(data.error.message).toContain('Cannot update branch');
     });
 
     it('should enforce immutability for approved state branches', async () => {
@@ -583,7 +599,7 @@ describe('Immutability Enforcement Tests (T070)', () => {
 
       expect(response.status).toBe(403);
       const data = await response.json();
-      expect(data.error).toContain('Cannot update branch');
+      expect(data.error.message).toContain('Cannot update branch');
     });
   });
 });
