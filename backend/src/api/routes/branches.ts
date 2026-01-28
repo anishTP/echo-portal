@@ -242,6 +242,20 @@ branchRoutes.post(
     const { reviewerIds } = c.req.valid('json');
 
     await branchService.addReviewers(id, reviewerIds, user.id);
+
+    // If branch is already in review state, create review records so
+    // newly added reviewers appear in the review queue immediately
+    const branch = await branchService.getById(id);
+    if (branch && branch.state === 'review') {
+      await Promise.all(
+        reviewerIds.map((reviewerId) =>
+          reviewService.create({ branchId: id, reviewerId }, user.id).catch(() => {
+            // Ignore duplicates — reviewer may already have an active review record
+          })
+        )
+      );
+    }
+
     const reviewers = await teamService.getBranchReviewers(id);
     return success(c, reviewers);
   }
@@ -398,9 +412,12 @@ branchRoutes.post(
       throw new ValidationError(result.error || 'Failed to submit for review');
     }
 
-    // Create review records for each assigned reviewer so they appear in the review queue
+    // Create review records for ALL reviewers on the branch (not just the
+    // ones in this request) so pre-existing reviewers also appear in the queue
+    const updatedBranch = await branchService.getById(id);
+    const allReviewerIds = updatedBranch?.reviewers ?? reviewerIds;
     await Promise.all(
-      reviewerIds.map((reviewerId) =>
+      allReviewerIds.map((reviewerId) =>
         reviewService.create({ branchId: id, reviewerId }, user.id).catch(() => {
           // Ignore duplicates — reviewer may already have an active review record
         })
