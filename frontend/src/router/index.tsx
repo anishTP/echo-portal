@@ -4,6 +4,8 @@ import ErrorBoundary from '../components/common/ErrorBoundary';
 import { AppHeader } from '../components/layout';
 
 // Lazy load pages for code splitting
+const Library = lazy(() => import('../pages/Library'));
+const ContentView = lazy(() => import('../pages/ContentView'));
 const Dashboard = lazy(() => import('../pages/Dashboard'));
 const BranchWorkspace = lazy(() => import('../pages/BranchWorkspace'));
 const PublishConfirm = lazy(() => import('../pages/PublishConfirm'));
@@ -46,7 +48,15 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Dashboard />,
+        element: <Library />,
+      },
+      {
+        path: 'library',
+        element: <Library />,
+      },
+      {
+        path: 'library/:slug',
+        element: <ContentView />,
       },
       {
         path: 'dashboard',

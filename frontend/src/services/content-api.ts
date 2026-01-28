@@ -52,18 +52,25 @@ export const contentApi = {
   listPublished(params?: {
     contentType?: string;
     category?: string;
+    search?: string;
     page?: number;
     limit?: number;
   }): Promise<PaginatedResult<ContentSummary>> {
     const searchParams = new URLSearchParams();
     if (params?.contentType) searchParams.set('contentType', params.contentType);
     if (params?.category) searchParams.set('category', params.category);
+    if (params?.search) searchParams.set('q', params.search);
     if (params?.page) searchParams.set('page', String(params.page));
     if (params?.limit) searchParams.set('limit', String(params.limit));
     const qs = searchParams.toString();
     return api.getPaginated<ContentSummary>(
       `/contents/published${qs ? `?${qs}` : ''}`
     );
+  },
+
+  /** Get published content by slug */
+  getBySlug(slug: string): Promise<ContentDetail> {
+    return api.get<ContentDetail>(`/contents/published/${encodeURIComponent(slug)}`);
   },
 
   /** Search content */

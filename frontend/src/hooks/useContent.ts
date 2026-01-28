@@ -12,6 +12,8 @@ export const contentKeys = {
   detail: (id: string) => [...contentKeys.details(), id] as const,
   published: (filters?: Record<string, string>) =>
     [...contentKeys.all, 'published', filters] as const,
+  publishedBySlug: (slug: string) =>
+    [...contentKeys.all, 'published', 'slug', slug] as const,
   search: (q: string, filters?: Record<string, string>) =>
     [...contentKeys.all, 'search', q, filters] as const,
 };

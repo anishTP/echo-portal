@@ -476,4 +476,32 @@ export const contentService = {
       .set({ archivedAt: new Date() })
       .where(eq(schema.contents.branchId, branchId));
   },
+
+  /**
+   * Get published content by slug.
+   */
+  async getPublishedBySlug(slug: string): Promise<ContentDetail | null> {
+    const content = await db.query.contents.findFirst({
+      where: and(
+        eq(schema.contents.slug, slug),
+        eq(schema.contents.isPublished, true),
+        eq(schema.contents.visibility, 'public')
+      ),
+    });
+    if (!content) return null;
+
+    let version = null;
+    let authorSummary = null;
+    if (content.currentVersionId) {
+      version = await db.query.contentVersions.findFirst({
+        where: eq(schema.contentVersions.id, content.currentVersionId),
+      });
+      if (version) {
+        authorSummary = await getUserSummary(version.authorId);
+      }
+    }
+
+    const createdBySummary = await getUserSummary(content.createdBy);
+    return formatContentResponse(content, version ?? null, authorSummary, createdBySummary);
+  },
 };

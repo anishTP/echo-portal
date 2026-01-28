@@ -4,15 +4,17 @@ import { contentService } from '../../services/content/content-service.js';
 import { versionService } from '../../services/content/version-service.js';
 import { diffService } from '../../services/content/diff-service.js';
 import { referenceService } from '../../services/content/reference-service.js';
+import { conflictResolutionService } from '../../services/content/conflict-resolution-service.js';
 import { requireAuth, type AuthEnv } from '../middleware/auth.js';
 import { success, created, paginated, getPagination } from '../utils/responses.js';
 import { branchService } from '../../services/branch/branch-service.js';
-import { ForbiddenError } from '../utils/errors.js';
+import { ForbiddenError, NotFoundError, ValidationError } from '../utils/errors.js';
 import {
   createContentBodySchema,
   updateContentBodySchema,
   revertContentBodySchema,
   contentIdParamSchema,
+  contentSlugParamSchema,
   versionIdParamSchema,
   listContentsQuerySchema,
   listPublishedQuerySchema,
@@ -124,6 +126,24 @@ contentRoutes.get(
       total: result.total,
       hasMore: (query.page - 1) * query.limit + result.items.length < result.total,
     });
+  }
+);
+
+/**
+ * GET /api/v1/contents/published/:slug - Get published content by slug
+ */
+contentRoutes.get(
+  '/published/:slug',
+  zValidator('param', contentSlugParamSchema),
+  async (c) => {
+    const { slug } = c.req.valid('param');
+
+    const content = await contentService.getPublishedBySlug(slug);
+    if (!content) {
+      return c.json({ error: { code: 'NOT_FOUND', message: 'Content not found' } }, 404);
+    }
+
+    return success(c, content);
   }
 );
 
@@ -388,6 +408,87 @@ contentRoutes.get(
 
     const references = await referenceService.getReferencedBy(contentId);
     return success(c, references);
+  }
+);
+
+/**
+ * GET /api/v1/contents/:contentId/conflict - Get conflict details for content in conflict state
+ */
+contentRoutes.get(
+  '/:contentId/conflict',
+  requireAuth,
+  zValidator('param', contentIdParamSchema),
+  async (c) => {
+    const { contentId } = c.req.valid('param');
+
+    const preview = await conflictResolutionService.getResolutionPreview(contentId);
+    if (!preview) {
+      return c.json({ error: { code: 'NOT_IN_CONFLICT', message: 'Content is not in conflict state' } }, 400);
+    }
+
+    return success(c, preview);
+  }
+);
+
+// Schema for resolve conflict request
+import { z } from 'zod';
+const resolveConflictBodySchema = z.object({
+  resolution: z.enum(['ours', 'theirs', 'manual']),
+  mergedBody: z.string().optional(),
+  mergedMetadata: z.object({
+    title: z.string().optional(),
+    category: z.string().nullable().optional(),
+    tags: z.array(z.string()).optional(),
+    description: z.string().nullable().optional(),
+  }).optional(),
+  changeDescription: z.string().optional(),
+});
+
+/**
+ * POST /api/v1/contents/:contentId/resolve-conflict - Resolve a content conflict
+ */
+contentRoutes.post(
+  '/:contentId/resolve-conflict',
+  requireAuth,
+  zValidator('param', contentIdParamSchema),
+  zValidator('json', resolveConflictBodySchema),
+  async (c) => {
+    const user = c.get('user')!;
+    const { contentId } = c.req.valid('param');
+    const body = c.req.valid('json');
+
+    // Get content to check permissions
+    const content = await contentService.getById(contentId);
+    if (!content) {
+      throw new NotFoundError('Content', contentId);
+    }
+
+    // Check user has permission to resolve conflicts
+    await assertCanEditBranchContent(content.branchId, user);
+
+    // Validate manual resolution has body
+    if (body.resolution === 'manual' && !body.mergedBody) {
+      throw new ValidationError('Manual resolution requires mergedBody');
+    }
+
+    const result = await conflictResolutionService.resolveConflict(
+      {
+        contentId,
+        resolution: body.resolution,
+        mergedBody: body.mergedBody,
+        mergedMetadata: body.mergedMetadata,
+        changeDescription: body.changeDescription,
+      },
+      user.id
+    );
+
+    if (!result.success) {
+      return c.json({ error: { code: 'RESOLUTION_FAILED', message: result.error } }, 400);
+    }
+
+    // Return updated content
+    const updatedContent = await contentService.getById(contentId);
+    return success(c, updatedContent);
   }
 );
 

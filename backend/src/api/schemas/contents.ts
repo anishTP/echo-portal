@@ -66,6 +66,15 @@ export const contentIdParamSchema = z.object({
 export type ContentIdParam = z.infer<typeof contentIdParamSchema>;
 
 /**
+ * Schema for content slug parameter
+ */
+export const contentSlugParamSchema = z.object({
+  slug: z.string().min(1).max(600),
+});
+
+export type ContentSlugParam = z.infer<typeof contentSlugParamSchema>;
+
+/**
  * Schema for version ID parameter
  */
 export const versionIdParamSchema = z.object({

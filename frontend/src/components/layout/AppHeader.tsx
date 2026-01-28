@@ -1,9 +1,17 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { LoginButton, LogoutButton, RoleBadge } from '../auth';
 
 export function AppHeader() {
   const { user, isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
+
+  const isActive = (path: string) => {
+    if (path === '/') {
+      return location.pathname === '/' || location.pathname.startsWith('/library');
+    }
+    return location.pathname.startsWith(path);
+  };
 
   return (
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white shadow-sm">
@@ -18,17 +26,27 @@ export function AppHeader() {
               <span className="text-xl font-bold text-gray-900">Echo Portal</span>
             </Link>
 
-            {/* Navigation (only for authenticated users) */}
-            {isAuthenticated && (
-              <nav className="hidden md:flex items-center gap-6">
+            {/* Navigation */}
+            <nav className="hidden md:flex items-center gap-6">
+              <Link
+                to="/"
+                className={`text-sm font-medium transition-colors ${
+                  isActive('/') ? 'text-blue-600' : 'text-gray-700 hover:text-gray-900'
+                }`}
+              >
+                Library
+              </Link>
+              {isAuthenticated && (
                 <Link
                   to="/dashboard"
-                  className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
+                  className={`text-sm font-medium transition-colors ${
+                    isActive('/dashboard') ? 'text-blue-600' : 'text-gray-700 hover:text-gray-900'
+                  }`}
                 >
                   Dashboard
                 </Link>
-              </nav>
-            )}
+              )}
+            </nav>
           </div>
 
           {/* Auth State */}
