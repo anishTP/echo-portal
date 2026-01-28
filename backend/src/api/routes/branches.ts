@@ -144,7 +144,14 @@ branchRoutes.get('/:id', zValidator('param', branchIdParamSchema), async (c) => 
   // Check access
   visibilityService.assertAccess(branch.toJSON(), context);
 
-  return success(c, branch.toResponseForUser(getBranchUserContext(c)));
+  const response = branch.toResponseForUser(getBranchUserContext(c));
+
+  // Embed review records from the reviews table so the branch page
+  // shows the same review data as the review queue (single source of truth)
+  const branchReviews = await reviewService.getByBranch(id);
+  response.reviews = branchReviews.map((r) => r.toResponse());
+
+  return success(c, response);
 });
 
 /**
@@ -418,8 +425,12 @@ branchRoutes.post(
     const allReviewerIds = updatedBranch?.reviewers ?? reviewerIds;
     await Promise.all(
       allReviewerIds.map((reviewerId) =>
-        reviewService.create({ branchId: id, reviewerId }, user.id).catch(() => {
-          // Ignore duplicates — reviewer may already have an active review record
+        reviewService.create({ branchId: id, reviewerId }, user.id).catch((err) => {
+          // Only ignore duplicate/conflict errors — not permission or other failures
+          if (err?.code === 'CONFLICT' || err?.message?.includes('already exists')) {
+            return; // Duplicate review record, safe to ignore
+          }
+          console.error(`[submit-for-review] Failed to create review for reviewer ${reviewerId}:`, err);
         })
       )
     );

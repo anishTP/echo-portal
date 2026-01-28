@@ -264,7 +264,7 @@ export class ReviewService {
 
     // Check review can be completed
     if (!review.canComplete()) {
-      throw new ValidationError(`Cannot complete review in '${review.status}' status`);
+      throw new ValidationError(`Review already completed in '${review.status}' status`);
     }
 
     // Get the branch
@@ -274,6 +274,13 @@ export class ReviewService {
 
     if (!branch) {
       throw new NotFoundError('Branch', review.branchId);
+    }
+
+    // Check branch is in review state
+    if (branch.state !== BranchState.REVIEW) {
+      throw new ValidationError(
+        `Branch is not in review state (current state: '${branch.state}')`
+      );
     }
 
     // Update the review

@@ -55,6 +55,11 @@ export class VisibilityService {
       return { canAccess: true };
     }
 
+    // Collaborators have access
+    if (branch.collaborators && branch.collaborators.includes(userId)) {
+      return { canAccess: true };
+    }
+
     // Publishers can access branches in review/approved state
     if (
       roles.includes('publisher') &&
@@ -63,23 +68,9 @@ export class VisibilityService {
       return { canAccess: true };
     }
 
-    // Reviewers (role) can access branches in review state
-    if (roles.includes('reviewer') && branch.state === 'review') {
-      return { canAccess: true };
-    }
-
-    // Team visibility
+    // Team visibility - accessible to all authenticated users
     if (branch.visibility === Visibility.TEAM) {
-      // In a full implementation, this would check team membership
-      // For now, allow team visibility for authenticated users with reviewer/publisher roles
-      if (roles.includes('reviewer') || roles.includes('publisher')) {
-        return { canAccess: true };
-      }
-
-      return {
-        canAccess: false,
-        reason: 'You do not have access to this team branch',
-      };
+      return { canAccess: true };
     }
 
     // Private branches are only accessible to owner and explicit reviewers
@@ -246,7 +237,7 @@ export class VisibilityService {
       canReview:
         (isReviewer || hasReviewerRole || isAdmin) && branch.state === 'review',
       canPublish:
-        (hasPublisherRole || isAdmin) && branch.state === 'approved',
+        (isOwner || hasPublisherRole || isAdmin) && branch.state === 'approved',
       canDelete: (isOwner || isAdmin) && branch.state === 'draft',
       canChangeVisibility: (isOwner || isAdmin) && branch.state === 'draft',
     };
