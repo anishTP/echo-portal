@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { usePublishBranch } from '../../hooks/useBranch';
-import { useAuth } from '../../context/AuthContext';
 import type { BranchResponse } from '../../services/branchService';
 
 interface PublishButtonProps {
@@ -9,14 +8,10 @@ interface PublishButtonProps {
 }
 
 export function PublishButton({ branch, onPublishSuccess }: PublishButtonProps) {
-  const { user } = useAuth();
   const publishMutation = usePublishBranch();
   const [showConfirm, setShowConfirm] = useState(false);
 
-  // Check if user has publisher or admin role
-  const hasPublishRole = user?.roles?.includes('publisher') || user?.roles?.includes('administrator');
-
-  // Check if branch can be published (must be in approved state)
+  // Check if branch can be published (must be in approved state and user has permission)
   const canPublish = branch.state === 'approved' && branch.permissions?.canPublish !== false;
 
   const handlePublish = async () => {
@@ -28,11 +23,6 @@ export function PublishButton({ branch, onPublishSuccess }: PublishButtonProps) 
       // Error is handled by the mutation hook
     }
   };
-
-  // Don't show button if user doesn't have permission
-  if (!hasPublishRole) {
-    return null;
-  }
 
   // Don't show button if branch is already published
   if (branch.state === 'published') {

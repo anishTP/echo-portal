@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { branchService } from '../../services/branchService';
 import { api } from '../../services/api';
+import { invalidateWorkflowQueries } from '../../hooks/queryKeys';
 import type { TeamMember } from './TeamMemberPicker';
 
 interface SubmitForReviewButtonProps {
@@ -32,9 +33,7 @@ export function SubmitForReviewButton({
       return branchService.submitForReview(branchId, reviewerIds, reason || undefined);
     },
     onSuccess: () => {
-      // Invalidate branch queries to refresh state
-      queryClient.invalidateQueries({ queryKey: ['branch', branchId] });
-      queryClient.invalidateQueries({ queryKey: ['branches'] });
+      invalidateWorkflowQueries(queryClient, branchId);
       setShowModal(false);
       setReason('');
       onSuccess?.();

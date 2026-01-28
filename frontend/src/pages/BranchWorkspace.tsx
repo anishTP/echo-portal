@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useBranch, useUpdateBranch } from '../hooks/useBranch';
 import { BranchDetail } from '../components/branch/BranchDetail';
+import { BranchReviewSection } from '../components/review/BranchReviewSection';
 import { ContentList, ContentEditor, VersionHistory, VersionDiff } from '../components/content';
 import { AccessDenied } from '../components/common/AccessDenied';
 import { useContentList, useContent } from '../hooks/useContent';
+import { useAuth } from '../context/AuthContext';
 import type { BranchUpdateInput, VisibilityType, ContentSummary } from '@echo-portal/shared';
 
 type ContentView =
@@ -15,6 +17,7 @@ type ContentView =
 
 export default function BranchWorkspace() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const { data: branch, isLoading, error } = useBranch(id);
   const updateBranch = useUpdateBranch();
 
@@ -251,6 +254,17 @@ export default function BranchWorkspace() {
           </div>
         ) : (
           <BranchDetail branch={branch} onEdit={handleStartEdit} />
+        )}
+
+        {/* Review Section — shown for reviewers or when reviews exist */}
+        {!isEditing && user?.id && (
+          branch.reviewers?.includes(user.id) || (branch.reviews && branch.reviews.length > 0)
+        ) && (
+          <BranchReviewSection
+            reviews={branch.reviews || []}
+            currentUserId={user.id}
+            branchState={branch.state}
+          />
         )}
 
         {/* Content Workspace */}

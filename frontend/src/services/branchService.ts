@@ -1,5 +1,6 @@
 import { api } from './api';
 import type { Branch, BranchCreateInput, BranchUpdateInput } from '@echo-portal/shared';
+import type { ReviewResponse } from './reviewService';
 
 export interface BranchResponse extends Branch {
   permissions: {
@@ -10,6 +11,8 @@ export interface BranchResponse extends Branch {
     canArchive: boolean;
     validTransitions: string[];
   };
+  /** Review records from the reviews table, embedded in the branch response */
+  reviews?: ReviewResponse[];
 }
 
 export interface BranchListParams {

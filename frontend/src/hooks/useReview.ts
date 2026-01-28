@@ -5,22 +5,10 @@ import {
 } from '../services/reviewService';
 import { useWorkflowStore } from '../stores/workflowStore';
 import { useUIStore } from '../stores/index';
-import { branchKeys } from './useBranch';
+import { reviewKeys, invalidateWorkflowQueries } from './queryKeys';
 
-// Query keys
-export const reviewKeys = {
-  all: ['reviews'] as const,
-  lists: () => [...reviewKeys.all, 'list'] as const,
-  list: (params: ReviewListParams) => [...reviewKeys.lists(), params] as const,
-  details: () => [...reviewKeys.all, 'detail'] as const,
-  detail: (id: string) => [...reviewKeys.details(), id] as const,
-  myReviews: () => [...reviewKeys.all, 'my'] as const,
-  branchReviews: (branchId: string) =>
-    [...reviewKeys.all, 'branch', branchId] as const,
-  branchStats: (branchId: string) =>
-    [...reviewKeys.all, 'branch', branchId, 'stats'] as const,
-  comments: (id: string) => [...reviewKeys.all, id, 'comments'] as const,
-};
+// Re-export for existing consumers
+export { reviewKeys } from './queryKeys';
 
 /**
  * Hook to fetch a single review by ID
@@ -119,18 +107,7 @@ export function useRequestReview() {
       reviewService.create(branchId, reviewerId),
     onSuccess: (review) => {
       addReview(review);
-
-      // Invalidate related queries
-      queryClient.invalidateQueries({
-        queryKey: reviewKeys.branchReviews(review.branchId),
-      });
-      queryClient.invalidateQueries({
-        queryKey: reviewKeys.branchStats(review.branchId),
-      });
-      queryClient.invalidateQueries({ queryKey: reviewKeys.myReviews() });
-      queryClient.invalidateQueries({
-        queryKey: branchKeys.detail(review.branchId),
-      });
+      invalidateWorkflowQueries(queryClient, review.branchId);
 
       addNotification({
         type: 'success',
@@ -161,9 +138,7 @@ export function useStartReview() {
     onSuccess: (review) => {
       updateReview(review);
       queryClient.setQueryData(reviewKeys.detail(review.id), review);
-      queryClient.invalidateQueries({
-        queryKey: reviewKeys.branchReviews(review.branchId),
-      });
+      invalidateWorkflowQueries(queryClient, review.branchId);
 
       addNotification({
         type: 'success',
@@ -198,18 +173,7 @@ export function useApproveReview() {
     onSuccess: (review) => {
       updateReview(review);
       queryClient.setQueryData(reviewKeys.detail(review.id), review);
-
-      // Invalidate related queries
-      queryClient.invalidateQueries({
-        queryKey: reviewKeys.branchReviews(review.branchId),
-      });
-      queryClient.invalidateQueries({
-        queryKey: reviewKeys.branchStats(review.branchId),
-      });
-      queryClient.invalidateQueries({
-        queryKey: branchKeys.detail(review.branchId),
-      });
-      queryClient.invalidateQueries({ queryKey: branchKeys.lists() });
+      invalidateWorkflowQueries(queryClient, review.branchId);
 
       addNotification({
         type: 'success',
@@ -247,18 +211,7 @@ export function useRequestChanges() {
     onSuccess: (review) => {
       updateReview(review);
       queryClient.setQueryData(reviewKeys.detail(review.id), review);
-
-      // Invalidate related queries
-      queryClient.invalidateQueries({
-        queryKey: reviewKeys.branchReviews(review.branchId),
-      });
-      queryClient.invalidateQueries({
-        queryKey: reviewKeys.branchStats(review.branchId),
-      });
-      queryClient.invalidateQueries({
-        queryKey: branchKeys.detail(review.branchId),
-      });
-      queryClient.invalidateQueries({ queryKey: branchKeys.lists() });
+      invalidateWorkflowQueries(queryClient, review.branchId);
 
       addNotification({
         type: 'success',
@@ -293,9 +246,7 @@ export function useCancelReview() {
     onSuccess: (review) => {
       removeReview(review.id);
       queryClient.removeQueries({ queryKey: reviewKeys.detail(review.id) });
-      queryClient.invalidateQueries({
-        queryKey: reviewKeys.branchReviews(review.branchId),
-      });
+      invalidateWorkflowQueries(queryClient, review.branchId);
 
       addNotification({
         type: 'success',

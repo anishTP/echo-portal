@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useMyBranches, useReviewBranches } from '../hooks/useBranch';
 import { BranchList, BranchCreate } from '../components/branch';
@@ -106,14 +105,8 @@ export default function Dashboard() {
               {/* Review Queue Section */}
               {reviewBranches.length > 0 && (
                 <section>
-                  <div className="mb-4 flex items-center justify-between">
+                  <div className="mb-4">
                     <h2 className="text-xl font-semibold text-gray-900">Branches to Review</h2>
-                    <Link
-                      to="/reviews"
-                      className="text-sm text-blue-600 hover:text-blue-800"
-                    >
-                      View all
-                    </Link>
                   </div>
                   <BranchList
                     branches={reviewBranches.slice(0, 5)}

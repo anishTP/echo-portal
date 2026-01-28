@@ -25,7 +25,7 @@ export function ReviewActions({ review, onSuccess }: ReviewActionsProps) {
     setLocalError(null);
     try {
       await approveMutation.mutateAsync({
-        reviewId: review.id,
+        id: review.id,
         reason: reason.trim() || undefined,
       });
       setMode('idle');
@@ -45,7 +45,7 @@ export function ReviewActions({ review, onSuccess }: ReviewActionsProps) {
     setLocalError(null);
     try {
       await requestChangesMutation.mutateAsync({
-        reviewId: review.id,
+        id: review.id,
         reason: reason.trim(),
       });
       setMode('idle');

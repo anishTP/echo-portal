@@ -6,7 +6,6 @@ import { AppHeader } from '../components/layout';
 // Lazy load pages for code splitting
 const Dashboard = lazy(() => import('../pages/Dashboard'));
 const BranchWorkspace = lazy(() => import('../pages/BranchWorkspace'));
-const ReviewQueue = lazy(() => import('../pages/ReviewQueue'));
 const PublishConfirm = lazy(() => import('../pages/PublishConfirm'));
 const AuthCallback = lazy(() => import('../pages/AuthCallback'));
 const AuditLog = lazy(() => import('../pages/AuditLog'));
@@ -62,11 +61,6 @@ const router = createBrowserRouter([
       {
         path: 'branches/:id',
         element: <BranchWorkspace />,
-      },
-      // Review routes (Phase 4 - US2)
-      {
-        path: 'reviews',
-        element: <ReviewQueue />,
       },
       // Publish routes (Phase 5 - US3)
       {
