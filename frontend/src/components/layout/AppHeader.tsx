@@ -125,8 +125,8 @@ export function AppHeader() {
                     Dev Login
                   </Button>
                 )}
-                <LoginButton provider="github" size="sm" />
-                <LoginButton provider="google" size="sm" />
+                <LoginButton provider="github" size="1" />
+                <LoginButton provider="google" size="1" />
               </div>
             )}
           </div>

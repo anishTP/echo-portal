@@ -4,9 +4,8 @@ import { useAuth } from '../../context/AuthContext';
 
 type RadixButtonProps = ComponentPropsWithoutRef<typeof Button>;
 
-interface LoginButtonProps extends Omit<RadixButtonProps, 'size' | 'children'> {
+interface LoginButtonProps extends Omit<RadixButtonProps, 'children'> {
   provider: 'github' | 'google';
-  size?: 'sm' | 'md' | 'lg';
   fullWidth?: boolean;
 }
 
@@ -70,15 +69,9 @@ const providerConfig = {
   },
 };
 
-const sizeMap = {
-  sm: '1' as const,
-  md: '2' as const,
-  lg: '3' as const,
-};
-
 export function LoginButton({
   provider,
-  size = 'md',
+  size = '2',
   fullWidth = false,
   variant: variantOverride,
   color: colorOverride,
@@ -114,7 +107,7 @@ export function LoginButton({
       variant={variantOverride ?? defaultVariant}
       color={colorOverride ?? defaultColor}
       highContrast={highContrastOverride ?? defaultHighContrast}
-      size={sizeMap[size]}
+      size={size}
       style={{ ...(fullWidth ? { width: '100%' } : {}), ...style }}
     >
       {isLoading ? <LoadingSpinner /> : config.icon}
