@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { Button } from '@radix-ui/themes';
 import {
   SearchBar,
   ContentTypeFilter,
@@ -127,12 +128,13 @@ export default function Library() {
 
             {/* Active filter count */}
             {(type !== 'all' || category || search) && (
-              <button
+              <Button
+                variant="ghost"
+                size="2"
                 onClick={() => updateParams({ type: null, category: null, q: null, page: null })}
-                className="text-sm text-blue-600 hover:text-blue-800"
               >
                 Clear filters
-              </button>
+              </Button>
             )}
           </div>
         </div>

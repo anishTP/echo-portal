@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Button } from '@radix-ui/themes';
 import type { AuditEntryWithActor } from '@echo-portal/shared';
 
 interface AuditLogViewerProps {
@@ -107,12 +108,9 @@ export function AuditLogViewer({
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-medium text-gray-900">Filters</h3>
           {Object.keys(filters).length > 0 && (
-            <button
-              onClick={resetFilters}
-              className="text-sm text-blue-600 hover:text-blue-700"
-            >
+            <Button variant="ghost" size="2" onClick={resetFilters}>
               Clear all
-            </button>
+            </Button>
           )}
         </div>
 
@@ -277,9 +275,9 @@ export function AuditLogViewer({
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                        <button className="text-blue-600 hover:text-blue-900">
+                        <Button variant="ghost" size="1">
                           {expandedEntry === entry.id ? '−' : '+'}
-                        </button>
+                        </Button>
                       </td>
                     </tr>
                     {expandedEntry === entry.id && (
@@ -345,20 +343,22 @@ export function AuditLogViewer({
         {(totalPages > 1 || hasMore) && (
           <div className="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
             <div className="flex-1 flex justify-between sm:hidden">
-              <button
+              <Button
+                variant="outline"
+                size="2"
                 onClick={() => onPageChange?.(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Previous
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="outline"
+                size="2"
                 onClick={() => onPageChange?.(currentPage + 1)}
                 disabled={!hasMore && currentPage === totalPages}
-                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next
-              </button>
+              </Button>
             </div>
             <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
               <div>
@@ -367,26 +367,23 @@ export function AuditLogViewer({
                   <span className="font-medium">{totalPages}</span>
                 </p>
               </div>
-              <div>
-                <nav
-                  className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
-                  aria-label="Pagination"
-                >
-                  <button
+              <div className="flex gap-1">
+                  <Button
+                    variant="outline"
+                    size="2"
                     onClick={() => onPageChange?.(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Previous
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="2"
                     onClick={() => onPageChange?.(currentPage + 1)}
                     disabled={!hasMore && currentPage === totalPages}
-                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Next
-                  </button>
-                </nav>
+                  </Button>
               </div>
             </div>
           </div>

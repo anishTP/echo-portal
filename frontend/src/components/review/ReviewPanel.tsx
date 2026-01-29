@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Button } from '@radix-ui/themes';
 import { ApprovalActions } from './ApprovalActions';
 import { ReviewComments } from './ReviewComments';
 import type { ReviewStatusType, ReviewDecisionType } from '@echo-portal/shared';
@@ -111,13 +112,14 @@ export function ReviewPanel({
           </div>
 
           {review.permissions.canCancel && onCancel && (
-            <button
+            <Button
+              variant="ghost"
+              size="2"
               onClick={() => onCancel(review.id)}
               disabled={isSubmitting}
-              className="text-sm text-gray-500 hover:text-gray-700"
             >
               Cancel Review
-            </button>
+            </Button>
           )}
         </div>
 

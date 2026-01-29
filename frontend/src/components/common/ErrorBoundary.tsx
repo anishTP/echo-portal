@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from 'react';
+import { Button } from '@radix-ui/themes';
 
 interface Props {
   children?: ReactNode;
@@ -53,12 +54,9 @@ class ErrorBoundary extends Component<Props, State> {
                   </pre>
                 </details>
               )}
-              <button
-                onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-              >
+              <Button size="2" onClick={() => window.location.reload()}>
                 Refresh Page
-              </button>
+              </Button>
             </div>
           </div>
         </div>

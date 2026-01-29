@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { Button } from '@radix-ui/themes';
 import { useAuth } from '../context/AuthContext';
 import { RoleDisplayNames } from '@echo-portal/shared';
 import { RoleChangeDialog } from '../components/users';
@@ -333,22 +334,26 @@ export default function UserManagement() {
                             {formatDate(u.lastLoginAt)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <button
-                              className="text-blue-600 hover:text-blue-900 mr-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                            <Button
+                              variant="ghost"
+                              size="2"
                               onClick={() => handleOpenRoleDialog(u)}
                               disabled={user?.id === u.id}
                               title={user?.id === u.id ? 'Cannot change your own role' : 'Change user role'}
+                              className="mr-4"
                             >
                               Change Role
-                            </button>
+                            </Button>
                             {!u.isActive && (
-                              <button
-                                className="text-green-600 hover:text-green-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                              <Button
+                                variant="ghost"
+                                size="2"
+                                color="green"
                                 onClick={() => handleUnlockUser(u.id)}
                                 disabled={unlockingUserId === u.id}
                               >
                                 {unlockingUserId === u.id ? 'Unlocking...' : 'Unlock'}
-                              </button>
+                              </Button>
                             )}
                           </td>
                         </tr>

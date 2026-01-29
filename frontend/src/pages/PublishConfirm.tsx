@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Button } from '@radix-ui/themes';
 import { useAuth } from '../context/AuthContext';
 import { useBranch } from '../hooks/useBranch';
 import {
@@ -156,13 +157,14 @@ export default function PublishConfirm() {
               <h2 className="text-lg font-semibold text-gray-900">
                 Pre-Publish Validation
               </h2>
-              <button
+              <Button
+                variant="ghost"
+                size="2"
                 onClick={() => refetchValidation()}
                 disabled={loadingValidation}
-                className="text-sm text-blue-600 hover:text-blue-800"
               >
                 {loadingValidation ? 'Checking...' : 'Re-check'}
-              </button>
+              </Button>
             </div>
 
             {loadingValidation ? (
@@ -205,24 +207,14 @@ export default function PublishConfirm() {
             >
               Cancel
             </Link>
-            <button
+            <Button
+              color="purple"
+              size="2"
               onClick={handlePublish}
               disabled={!canPublish || isPublishing}
-              className={`rounded-md px-6 py-3 text-sm font-medium text-white ${
-                canPublish && !isPublishing
-                  ? 'bg-purple-600 hover:bg-purple-700'
-                  : 'cursor-not-allowed bg-gray-400'
-              }`}
             >
-              {isPublishing ? (
-                <span className="flex items-center gap-2">
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  Publishing...
-                </span>
-              ) : (
-                'Publish to Main'
-              )}
-            </button>
+              {isPublishing ? 'Publishing...' : 'Publish to Main'}
+            </Button>
           </div>
 
           {/* Help Text */}
