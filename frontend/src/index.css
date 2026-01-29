@@ -1,4 +1,11 @@
+/* Radix Themes - must be imported before Tailwind */
+@import "@radix-ui/themes/styles.css";
+
+/* Tailwind CSS */
 @import "tailwindcss";
+
+/* Monaco Editor theme bridge - maps Radix tokens to VS Code variables */
+@import "./styles/monaco-bridge.css";
 
 /* Base styles */
 body {
