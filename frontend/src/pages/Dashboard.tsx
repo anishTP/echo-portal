@@ -54,7 +54,7 @@ export default function Dashboard() {
             <section>
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">My Branches</h2>
-                <Button onClick={() => setShowCreateModal(true)}>
+                <Button size="2" onClick={() => setShowCreateModal(true)}>
                   New Branch
                 </Button>
               </div>

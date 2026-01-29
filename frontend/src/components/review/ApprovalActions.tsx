@@ -54,6 +54,7 @@ export function ApprovalActions({
       <div className="flex gap-3">
         <Button
           color="green"
+          size="2"
           onClick={() => setMode('approve')}
           disabled={isSubmitting}
           style={{ flex: 1 }}
@@ -62,6 +63,7 @@ export function ApprovalActions({
         </Button>
         <Button
           color="orange"
+          size="2"
           onClick={() => setMode('changes')}
           disabled={isSubmitting}
           style={{ flex: 1 }}
@@ -99,6 +101,7 @@ export function ApprovalActions({
       <div className="flex gap-3">
         <Button
           variant="outline"
+          size="2"
           onClick={handleCancel}
           disabled={isSubmitting}
           style={{ flex: 1 }}
@@ -107,6 +110,7 @@ export function ApprovalActions({
         </Button>
         <Button
           color={mode === 'approve' ? 'green' : 'orange'}
+          size="2"
           onClick={mode === 'approve' ? handleApprove : handleRequestChanges}
           disabled={isSubmitting}
           style={{ flex: 1 }}

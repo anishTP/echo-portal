@@ -65,7 +65,7 @@ export function VersionHistory({ contentId, onSelectDiff, isReadOnly }: VersionH
           Version History ({data?.total ?? 0})
         </h3>
         {selectedVersions.length === 2 && (
-          <Button size="1" onClick={handleCompare}>
+          <Button size="2" onClick={handleCompare}>
             Compare Selected
           </Button>
         )}
@@ -142,7 +142,7 @@ const VersionEntry = memo(function VersionEntry({
           </div>
         </div>
         {onRevert && (
-          <Button variant="ghost" size="1" onClick={onRevert}>
+          <Button variant="ghost" size="2" onClick={onRevert}>
             Revert
           </Button>
         )}

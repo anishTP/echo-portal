@@ -79,7 +79,7 @@ function ErrorState({ onRetry }: { onRetry?: () => void }) {
         Something went wrong while loading the content library.
       </p>
       {onRetry && (
-        <Button color="red" onClick={onRetry} className="mt-4">
+        <Button color="red" size="2" onClick={onRetry} className="mt-4">
           Try Again
         </Button>
       )}

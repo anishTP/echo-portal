@@ -238,10 +238,10 @@ export default function BranchWorkspace() {
             </div>
 
             <div className="mt-6 flex justify-end gap-3">
-              <Button variant="outline" onClick={handleCancelEdit}>
+              <Button variant="outline" size="2" onClick={handleCancelEdit}>
                 Cancel
               </Button>
-              <Button onClick={handleSaveEdit} disabled={updateBranch.isPending}>
+              <Button size="2" onClick={handleSaveEdit} disabled={updateBranch.isPending}>
                 {updateBranch.isPending ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>
@@ -268,12 +268,12 @@ export default function BranchWorkspace() {
               <h3 className="text-lg font-semibold text-gray-900">Content</h3>
               <div className="flex gap-2">
                 {contentView.mode !== 'list' && (
-                  <Button variant="outline" size="1" onClick={handleBackToList}>
+                  <Button variant="outline" size="2" onClick={handleBackToList}>
                     Back to list
                   </Button>
                 )}
                 {contentView.mode === 'list' && canEdit && (
-                  <Button size="1" onClick={handleCreateContent}>
+                  <Button size="2" onClick={handleCreateContent}>
                     New Content
                   </Button>
                 )}

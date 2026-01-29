@@ -79,6 +79,7 @@ export function ReviewActions({ review, onSuccess }: ReviewActionsProps) {
         <div className="flex gap-3">
           <Button
             color="green"
+            size="2"
             onClick={() => setMode('approve')}
             disabled={isSubmitting || !canApprove}
             style={{ flex: 1 }}
@@ -87,6 +88,7 @@ export function ReviewActions({ review, onSuccess }: ReviewActionsProps) {
           </Button>
           <Button
             color="orange"
+            size="2"
             onClick={() => setMode('changes')}
             disabled={isSubmitting || !canRequestChanges}
             style={{ flex: 1 }}
@@ -134,6 +136,7 @@ export function ReviewActions({ review, onSuccess }: ReviewActionsProps) {
         <div className="flex gap-3">
           <Button
             variant="outline"
+            size="2"
             onClick={handleCancel}
             disabled={isSubmitting}
             style={{ flex: 1 }}
@@ -142,6 +145,7 @@ export function ReviewActions({ review, onSuccess }: ReviewActionsProps) {
           </Button>
           <Button
             color={mode === 'approve' ? 'green' : 'orange'}
+            size="2"
             onClick={mode === 'approve' ? handleApprove : handleRequestChanges}
             disabled={isSubmitting}
             style={{ flex: 1 }}

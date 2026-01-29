@@ -130,12 +130,13 @@ export function ReviewComments({
             <Button
               type="button"
               variant="outline"
+              size="2"
               onClick={onToggleCommentForm}
               disabled={isSubmitting}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" size="2" disabled={isSubmitting}>
               {isSubmitting ? 'Posting...' : 'Post Comment'}
             </Button>
           </div>

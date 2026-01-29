@@ -119,6 +119,7 @@ export function AccessDenied({
           <div className="mt-6">
             <Button
               color="red"
+              size="2"
               onClick={() => window.history.back()}
               style={{ width: '100%' }}
             >
