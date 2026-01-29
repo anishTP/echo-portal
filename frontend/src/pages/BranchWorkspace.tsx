@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Button } from '@radix-ui/themes';
+import { Button, TextField, TextArea, Select, Callout } from '@radix-ui/themes';
 import { useBranch, useUpdateBranch } from '../hooks/useBranch';
 import { BranchDetail } from '../components/branch/BranchDetail';
 import { BranchReviewSection } from '../components/review/BranchReviewSection';
@@ -83,18 +83,25 @@ export default function BranchWorkspace() {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="mx-auto max-w-4xl px-4 py-8">
-          <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
-            <h2 className="text-lg font-semibold text-red-800">Branch Not Found</h2>
-            <p className="mt-2 text-red-600">
-              {error instanceof Error ? error.message : 'The requested branch could not be found.'}
-            </p>
-            <Link
-              to="/dashboard"
-              className="mt-4 inline-block rounded-md bg-red-100 px-4 py-2 text-sm font-medium text-red-800 hover:bg-red-200"
-            >
-              Return to Dashboard
-            </Link>
-          </div>
+          <Callout.Root color="red" size="2">
+            <Callout.Icon>
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </Callout.Icon>
+            <Callout.Text>
+              <strong>Branch Not Found</strong>
+              <p className="mt-1">
+                {error instanceof Error ? error.message : 'The requested branch could not be found.'}
+              </p>
+              <Link
+                to="/dashboard"
+                className="mt-2 inline-block text-sm font-medium underline"
+              >
+                Return to Dashboard
+              </Link>
+            </Callout.Text>
+          </Callout.Root>
         </div>
       </div>
     );
@@ -188,52 +195,53 @@ export default function BranchWorkspace() {
 
             <div className="space-y-4">
               <div>
-                <label htmlFor="edit-name" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="edit-name" className="block text-sm font-medium text-gray-700 mb-1">
                   Name
                 </label>
-                <input
-                  type="text"
+                <TextField.Root
                   id="edit-name"
                   value={editForm.name || ''}
                   onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  size="2"
                 />
               </div>
 
               <div>
-                <label htmlFor="edit-description" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="edit-description" className="block text-sm font-medium text-gray-700 mb-1">
                   Description
                 </label>
-                <textarea
+                <TextArea
                   id="edit-description"
                   rows={3}
                   value={editForm.description || ''}
                   onChange={(e) =>
                     setEditForm((prev) => ({ ...prev, description: e.target.value }))
                   }
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  size="2"
                 />
               </div>
 
               <div>
-                <label htmlFor="edit-visibility" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="edit-visibility" className="block text-sm font-medium text-gray-700 mb-1">
                   Visibility
                 </label>
-                <select
-                  id="edit-visibility"
+                <Select.Root
                   value={editForm.visibility || 'private'}
-                  onChange={(e) =>
+                  onValueChange={(value) =>
                     setEditForm((prev) => ({
                       ...prev,
-                      visibility: e.target.value as VisibilityType,
+                      visibility: value as VisibilityType,
                     }))
                   }
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  size="2"
                 >
-                  <option value="private">Private</option>
-                  <option value="team">Team</option>
-                  <option value="public">Public</option>
-                </select>
+                  <Select.Trigger style={{ width: '100%' }} />
+                  <Select.Content>
+                    <Select.Item value="private">Private</Select.Item>
+                    <Select.Item value="team">Team</Select.Item>
+                    <Select.Item value="public">Public</Select.Item>
+                  </Select.Content>
+                </Select.Root>
               </div>
             </div>
 
@@ -326,18 +334,25 @@ export default function BranchWorkspace() {
                   </div>
                 </div>
               ) : (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
-                  <p className="text-red-600">Content not found</p>
-                  <Button
-                    variant="ghost"
-                    size="2"
-                    color="red"
-                    onClick={handleBackToList}
-                    className="mt-2"
-                  >
-                    Return to list
-                  </Button>
-                </div>
+                <Callout.Root color="red" size="2">
+                  <Callout.Icon>
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </Callout.Icon>
+                  <Callout.Text>
+                    Content not found
+                    <Button
+                      variant="ghost"
+                      size="1"
+                      color="red"
+                      onClick={handleBackToList}
+                      className="ml-2"
+                    >
+                      Return to list
+                    </Button>
+                  </Callout.Text>
+                </Callout.Root>
               )
             )}
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button } from '@radix-ui/themes';
+import { Button, Badge } from '@radix-ui/themes';
 import { ApprovalActions } from './ApprovalActions';
 import { ReviewComments } from './ReviewComments';
 import type { ReviewStatusType, ReviewDecisionType } from '@echo-portal/shared';
@@ -42,11 +42,11 @@ interface ReviewPanelProps {
   isSubmitting?: boolean;
 }
 
-const statusColors: Record<ReviewStatusType, string> = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  in_progress: 'bg-blue-100 text-blue-800',
-  completed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-gray-100 text-gray-800',
+const statusBadgeColors: Record<ReviewStatusType, 'yellow' | 'blue' | 'green' | 'gray'> = {
+  pending: 'yellow',
+  in_progress: 'blue',
+  completed: 'green',
+  cancelled: 'gray',
 };
 
 const statusLabels: Record<ReviewStatusType, string> = {
@@ -56,9 +56,9 @@ const statusLabels: Record<ReviewStatusType, string> = {
   cancelled: 'Cancelled',
 };
 
-const decisionColors: Record<ReviewDecisionType, string> = {
-  approved: 'bg-green-100 text-green-800',
-  changes_requested: 'bg-orange-100 text-orange-800',
+const decisionBadgeColors: Record<ReviewDecisionType, 'green' | 'orange'> = {
+  approved: 'green',
+  changes_requested: 'orange',
 };
 
 const decisionLabels: Record<ReviewDecisionType, string> = {
@@ -97,17 +97,13 @@ export function ReviewPanel({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <h3 className="font-medium text-gray-900">Review</h3>
-            <span
-              className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[review.status]}`}
-            >
+            <Badge color={statusBadgeColors[review.status]} variant="soft" radius="full" size="1">
               {statusLabels[review.status]}
-            </span>
+            </Badge>
             {review.decision && (
-              <span
-                className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${decisionColors[review.decision]}`}
-              >
+              <Badge color={decisionBadgeColors[review.decision]} variant="soft" radius="full" size="1">
                 {decisionLabels[review.decision]}
-              </span>
+              </Badge>
             )}
           </div>
 

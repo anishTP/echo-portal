@@ -1,5 +1,5 @@
 import { useState, memo } from 'react';
-import { IconButton } from '@radix-ui/themes';
+import { IconButton, Badge } from '@radix-ui/themes';
 
 export interface DiffLine {
   type: 'context' | 'addition' | 'deletion';
@@ -30,11 +30,11 @@ interface DiffViewerProps {
   defaultExpanded?: boolean;
 }
 
-const statusColors: Record<FileDiff['status'], string> = {
-  added: 'bg-green-100 text-green-800',
-  modified: 'bg-yellow-100 text-yellow-800',
-  deleted: 'bg-red-100 text-red-800',
-  renamed: 'bg-blue-100 text-blue-800',
+const statusBadgeColors: Record<FileDiff['status'], 'green' | 'yellow' | 'red' | 'blue'> = {
+  added: 'green',
+  modified: 'yellow',
+  deleted: 'red',
+  renamed: 'blue',
 };
 
 const statusLabels: Record<FileDiff['status'], string> = {
@@ -70,11 +70,9 @@ export const DiffViewer = memo(function DiffViewer({ file, defaultExpanded = tru
               />
             </svg>
           </IconButton>
-          <span
-            className={`rounded px-2 py-0.5 text-xs font-medium ${statusColors[file.status]}`}
-          >
+          <Badge color={statusBadgeColors[file.status]} variant="soft" size="1">
             {statusLabels[file.status]}
-          </span>
+          </Badge>
           <span className="font-mono text-sm text-gray-900">{file.path}</span>
           {file.oldPath && file.status === 'renamed' && (
             <span className="text-sm text-gray-500">

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dialog, Button, Flex } from '@radix-ui/themes';
+import { Dialog, Button, Flex, Badge } from '@radix-ui/themes';
 import { LifecycleStatus } from './LifecycleStatus';
 import { VisibilitySelector } from './VisibilitySelector';
 import { TeamMemberPicker } from './TeamMemberPicker';
@@ -129,12 +129,9 @@ export function BranchDetail({ branch, onEdit }: BranchDetailProps) {
           <h3 className="text-sm font-medium text-gray-700">Labels</h3>
           <div className="mt-2 flex flex-wrap gap-2">
             {branch.labels.map((label) => (
-              <span
-                key={label}
-                className="rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-800"
-              >
+              <Badge key={label} color="blue" variant="soft" radius="full">
                 {label}
-              </span>
+              </Badge>
             ))}
           </div>
         </div>
@@ -201,29 +198,19 @@ export function BranchDetail({ branch, onEdit }: BranchDetailProps) {
         <h3 className="font-medium text-gray-900">Available Actions</h3>
         <div className="mt-3 flex flex-wrap gap-2">
           {permissions.canEdit && (
-            <span className="rounded bg-green-100 px-2 py-1 text-xs text-green-800">
-              Can Edit
-            </span>
+            <Badge color="green" variant="soft" size="1">Can Edit</Badge>
           )}
           {permissions.canSubmitForReview && (
-            <span className="rounded bg-yellow-100 px-2 py-1 text-xs text-yellow-800">
-              Can Submit for Review
-            </span>
+            <Badge color="yellow" variant="soft" size="1">Can Submit for Review</Badge>
           )}
           {permissions.canApprove && (
-            <span className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-800">
-              Can Approve
-            </span>
+            <Badge color="blue" variant="soft" size="1">Can Approve</Badge>
           )}
           {permissions.canPublish && (
-            <span className="rounded bg-purple-100 px-2 py-1 text-xs text-purple-800">
-              Can Publish
-            </span>
+            <Badge color="purple" variant="soft" size="1">Can Publish</Badge>
           )}
           {permissions.canArchive && (
-            <span className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-800">
-              Can Archive
-            </span>
+            <Badge color="gray" variant="soft" size="1">Can Archive</Badge>
           )}
         </div>
       </div>

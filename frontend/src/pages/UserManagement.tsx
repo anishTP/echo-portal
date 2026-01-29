@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Button } from '@radix-ui/themes';
+import { Button, Badge, Callout, Spinner } from '@radix-ui/themes';
 import { useAuth } from '../context/AuthContext';
 import { RoleDisplayNames } from '@echo-portal/shared';
 import { RoleChangeDialog } from '../components/users';
@@ -107,36 +107,28 @@ export default function UserManagement() {
   };
 
   // Get status badge
-  const getStatusBadge = (user: User) => {
-    if (!user.isActive) {
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-          Inactive
-        </span>
-      );
+  const getStatusBadge = (u: User) => {
+    if (!u.isActive) {
+      return <Badge color="red" variant="soft" radius="full" size="1">Inactive</Badge>;
     }
-    return (
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-        Active
-      </span>
-    );
+    return <Badge color="green" variant="soft" radius="full" size="1">Active</Badge>;
   };
 
   // Get role badge
   const getRoleBadge = (roles: string[]) => {
     const primaryRole = roles[0] || 'viewer';
-    const colors = {
-      viewer: 'bg-gray-100 text-gray-800',
-      contributor: 'bg-blue-100 text-blue-800',
-      reviewer: 'bg-purple-100 text-purple-800',
-      administrator: 'bg-red-100 text-red-800',
+    const badgeColors: Record<string, 'gray' | 'blue' | 'purple' | 'red'> = {
+      viewer: 'gray',
+      contributor: 'blue',
+      reviewer: 'purple',
+      administrator: 'red',
     };
-    const colorClass = colors[primaryRole as keyof typeof colors] || colors.viewer;
+    const color = badgeColors[primaryRole] || 'gray';
 
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClass}`}>
+      <Badge color={color} variant="soft" radius="full" size="1">
         {RoleDisplayNames[primaryRole] || primaryRole}
-      </span>
+      </Badge>
     );
   };
 
@@ -225,26 +217,18 @@ export default function UserManagement() {
         <div className="px-4 py-6 sm:px-0">
           {/* Error Message */}
           {error && (
-            <div className="mb-4 rounded-md bg-red-50 p-4">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg
-                    className="h-5 w-5 text-red-400"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-red-800">{error}</p>
-                </div>
-              </div>
-            </div>
+            <Callout.Root color="red" size="2" className="mb-4">
+              <Callout.Icon>
+                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </Callout.Icon>
+              <Callout.Text>{error}</Callout.Text>
+            </Callout.Root>
           )}
 
           {/* User List */}
@@ -256,7 +240,7 @@ export default function UserManagement() {
 
               {isLoading ? (
                 <div className="text-center py-12">
-                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <Spinner size="3" />
                   <p className="mt-2 text-sm text-gray-500">Loading users...</p>
                 </div>
               ) : users.length === 0 ? (
