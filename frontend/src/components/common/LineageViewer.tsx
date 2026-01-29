@@ -1,5 +1,5 @@
 import { useMemo, memo } from 'react';
-import { Button } from '@radix-ui/themes';
+import { Button, Badge } from '@radix-ui/themes';
 
 export interface LineageEvent {
   id: string;
@@ -51,12 +51,12 @@ interface LineageViewerProps {
   onBranchClick?: (branchId: string) => void;
 }
 
-const stateColors: Record<string, { bg: string; text: string; border: string }> = {
-  draft: { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-300' },
-  review: { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-300' },
-  approved: { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-300' },
-  published: { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-300' },
-  archived: { bg: 'bg-gray-100', text: 'text-gray-500', border: 'border-gray-200' },
+const stateColors: Record<string, { color: 'gray' | 'yellow' | 'blue' | 'green'; border: string }> = {
+  draft: { color: 'gray', border: 'var(--gray-7)' },
+  review: { color: 'yellow', border: 'var(--yellow-7)' },
+  approved: { color: 'blue', border: 'var(--blue-7)' },
+  published: { color: 'green', border: 'var(--green-7)' },
+  archived: { color: 'gray', border: 'var(--gray-6)' },
 };
 
 const relationshipLabels: Record<string, string> = {
@@ -88,7 +88,7 @@ export const LineageViewer = memo(function LineageViewer({
     });
   };
 
-  const getStateColor = (state: string) => {
+  const getStateColor = (state: string): { color: 'gray' | 'yellow' | 'blue' | 'green'; border: string } => {
     return stateColors[state] || stateColors.draft;
   };
 
@@ -115,17 +115,15 @@ export const LineageViewer = memo(function LineageViewer({
   return (
     <div className="space-y-6">
       {/* Branch Header */}
-      <div className={`rounded-lg border-2 ${currentStateColor.border} p-4`}>
+      <div className="rounded-lg p-4" style={{ border: `2px solid ${currentStateColor.border}` }}>
         <div className="flex items-start justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">{lineage.branch.name}</h3>
-            <p className="mt-1 text-sm text-gray-500">/{lineage.branch.slug}</p>
+            <h3 className="text-lg font-semibold" style={{ color: 'var(--gray-12)' }}>{lineage.branch.name}</h3>
+            <p className="mt-1 text-sm" style={{ color: 'var(--gray-11)' }}>/{lineage.branch.slug}</p>
           </div>
-          <span
-            className={`rounded-full px-3 py-1 text-sm font-medium ${currentStateColor.bg} ${currentStateColor.text}`}
-          >
+          <Badge color={currentStateColor.color} variant="soft" size="2" radius="full">
             {lineage.branch.state}
-          </span>
+          </Badge>
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
@@ -178,14 +176,14 @@ export const LineageViewer = memo(function LineageViewer({
                 <div key={event.id} className="relative flex items-start gap-4 pl-8">
                   {/* Timeline dot */}
                   <div
-                    className={`absolute left-0 h-6 w-6 rounded-full border-2 ${
-                      toStateColor
-                        ? `${toStateColor.bg} ${toStateColor.border}`
-                        : 'border-gray-300 bg-white'
-                    } flex items-center justify-center`}
+                    className="absolute left-0 h-6 w-6 rounded-full flex items-center justify-center"
+                    style={{
+                      backgroundColor: toStateColor ? `var(--${toStateColor.color}-3)` : 'var(--color-background)',
+                      border: `2px solid ${toStateColor ? toStateColor.border : 'var(--gray-7)'}`,
+                    }}
                   >
                     {index === timelineEvents.length - 1 && (
-                      <div className="h-2 w-2 rounded-full bg-current" />
+                      <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'currentColor' }} />
                     )}
                   </div>
 
@@ -193,34 +191,34 @@ export const LineageViewer = memo(function LineageViewer({
                     <div className="flex items-center gap-2">
                       {event.fromState && event.toState ? (
                         <>
-                          <span className={`rounded px-2 py-0.5 text-xs ${getStateColor(event.fromState).bg} ${getStateColor(event.fromState).text}`}>
+                          <Badge color={getStateColor(event.fromState).color} variant="soft" size="1">
                             {event.fromState}
-                          </span>
-                          <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          </Badge>
+                          <svg className="h-4 w-4" style={{ color: 'var(--gray-9)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                           </svg>
-                          <span className={`rounded px-2 py-0.5 text-xs ${getStateColor(event.toState).bg} ${getStateColor(event.toState).text}`}>
+                          <Badge color={getStateColor(event.toState).color} variant="soft" size="1">
                             {event.toState}
-                          </span>
+                          </Badge>
                         </>
                       ) : (
-                        <span className="text-sm font-medium text-gray-900">
+                        <span className="text-sm font-medium" style={{ color: 'var(--gray-12)' }}>
                           {event.action.replace(/_/g, ' ')}
                         </span>
                       )}
                     </div>
 
                     {event.actor && (
-                      <p className="mt-1 text-xs text-gray-500">
+                      <p className="mt-1 text-xs" style={{ color: 'var(--gray-11)' }}>
                         by {event.actor.displayName}
                       </p>
                     )}
 
                     {event.reason && (
-                      <p className="mt-1 text-xs italic text-gray-500">"{event.reason}"</p>
+                      <p className="mt-1 text-xs italic" style={{ color: 'var(--gray-11)' }}>"{event.reason}"</p>
                     )}
 
-                    <p className="mt-1 text-xs text-gray-400">{formatDate(event.timestamp)}</p>
+                    <p className="mt-1 text-xs" style={{ color: 'var(--gray-10)' }}>{formatDate(event.timestamp)}</p>
                   </div>
                 </div>
               );

@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button } from '@radix-ui/themes';
+import { Button, Select } from '@radix-ui/themes';
 import {
   SearchBar,
   ContentTypeFilter,
@@ -62,8 +62,8 @@ export default function Library() {
   );
 
   const handleCategoryChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      updateParams({ category: e.target.value, page: null });
+    (value: string) => {
+      updateParams({ category: value === 'all' ? null : value, page: null });
     },
     [updateParams]
   );
@@ -112,18 +112,20 @@ export default function Library() {
             <ContentTypeFilter value={type} onChange={handleTypeChange} />
 
             {categories.length > 0 && (
-              <select
-                value={category}
-                onChange={handleCategoryChange}
-                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              <Select.Root
+                value={category || 'all'}
+                onValueChange={handleCategoryChange}
               >
-                <option value="">All Categories</option>
-                {categories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
+                <Select.Trigger placeholder="All Categories" />
+                <Select.Content>
+                  <Select.Item value="all">All Categories</Select.Item>
+                  {categories.map((cat) => (
+                    <Select.Item key={cat} value={cat}>
+                      {cat}
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Root>
             )}
 
             {/* Active filter count */}

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Button } from '@radix-ui/themes';
+import { Button, TextArea, TextField, Callout } from '@radix-ui/themes';
+import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
 import type { ReviewComment } from './ReviewPanel';
 
 interface ReviewCommentsProps {
@@ -79,48 +80,52 @@ export function ReviewComments({
       {showCommentForm && canAddComment && (
         <form onSubmit={handleSubmit} className="space-y-3 rounded-lg bg-gray-50 p-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Comment <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-[var(--gray-12)]">
+              Comment <span className="text-[var(--red-9)]">*</span>
             </label>
-            <textarea
+            <TextArea
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Write your comment..."
               rows={3}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              style={{ marginTop: '4px' }}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-[var(--gray-12)]">
                 File Path (optional)
               </label>
-              <input
-                type="text"
+              <TextField.Root
                 value={path}
                 onChange={(e) => setPath(e.target.value)}
                 placeholder="src/components/..."
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                style={{ marginTop: '4px' }}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-[var(--gray-12)]">
                 Line Number (optional)
               </label>
-              <input
+              <TextField.Root
                 type="number"
                 value={line}
                 onChange={(e) => setLine(e.target.value)}
                 placeholder="42"
-                min="1"
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                min={1}
+                style={{ marginTop: '4px' }}
               />
             </div>
           </div>
 
           {error && (
-            <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>
+            <Callout.Root color="red" size="1">
+              <Callout.Icon>
+                <ExclamationTriangleIcon />
+              </Callout.Icon>
+              <Callout.Text>{error}</Callout.Text>
+            </Callout.Root>
           )}
 
           <div className="flex justify-end gap-3">

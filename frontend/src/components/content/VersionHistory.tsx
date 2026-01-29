@@ -1,5 +1,5 @@
 import { useState, memo, useCallback } from 'react';
-import { Button } from '@radix-ui/themes';
+import { Button, Badge } from '@radix-ui/themes';
 import { useVersionHistory, useRevertContent } from '../../hooks/useVersionHistory';
 import type { ContentVersionSummary } from '@echo-portal/shared';
 
@@ -121,16 +121,16 @@ const VersionEntry = memo(function VersionEntry({
           />
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-900">{formattedDate}</span>
+              <span className="text-sm font-medium" style={{ color: 'var(--gray-12)' }}>{formattedDate}</span>
               {isLatest && (
-                <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+                <Badge color="green" variant="soft" size="1" radius="full">
                   Current
-                </span>
+                </Badge>
               )}
               {version.isRevert && (
-                <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800">
+                <Badge color="yellow" variant="soft" size="1" radius="full">
                   Revert
-                </span>
+                </Badge>
               )}
             </div>
             <p className="mt-0.5 text-sm text-gray-600">{version.changeDescription}</p>

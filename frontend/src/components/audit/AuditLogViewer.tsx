@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button } from '@radix-ui/themes';
+import { Button, Select, TextField, Spinner, Badge, Flex, Text } from '@radix-ui/themes';
 import type { AuditEntryWithActor } from '@echo-portal/shared';
 
 interface AuditLogViewerProps {
@@ -56,25 +56,25 @@ export function AuditLogViewer({
     onFilterChange?.({});
   };
 
-  const getOutcomeBadgeStyle = (outcome: string | null) => {
+  const getOutcomeBadgeColor = (outcome: string | null): 'green' | 'red' | 'orange' | 'gray' => {
     switch (outcome) {
       case 'success':
-        return 'bg-green-100 text-green-800';
+        return 'green';
       case 'failure':
-        return 'bg-red-100 text-red-800';
+        return 'red';
       case 'denied':
-        return 'bg-orange-100 text-orange-800';
+        return 'orange';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'gray';
     }
   };
 
-  const getActionBadgeStyle = (action: string) => {
-    if (action.includes('denied')) return 'bg-red-100 text-red-800';
-    if (action.includes('failed')) return 'bg-orange-100 text-orange-800';
-    if (action.includes('approved') || action.includes('granted')) return 'bg-green-100 text-green-800';
-    if (action.includes('created')) return 'bg-blue-100 text-blue-800';
-    return 'bg-gray-100 text-gray-800';
+  const getActionBadgeColor = (action: string): 'red' | 'orange' | 'green' | 'blue' | 'gray' => {
+    if (action.includes('denied')) return 'red';
+    if (action.includes('failed')) return 'orange';
+    if (action.includes('approved') || action.includes('granted')) return 'green';
+    if (action.includes('created')) return 'blue';
+    return 'gray';
   };
 
   const formatTimestamp = (timestamp: Date) => {
@@ -94,19 +94,19 @@ export function AuditLogViewer({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-3 text-gray-600">Loading audit logs...</span>
-      </div>
+      <Flex align="center" justify="center" py="9">
+        <Spinner size="2" />
+        <Text size="2" color="gray" ml="3">Loading audit logs...</Text>
+      </Flex>
     );
   }
 
   return (
     <div className="space-y-4">
       {/* Filters Section */}
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
+      <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--color-background)', border: '1px solid var(--gray-6)' }}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-medium text-gray-900">Filters</h3>
+          <h3 className="text-sm font-medium" style={{ color: 'var(--gray-12)' }}>Filters</h3>
           {Object.keys(filters).length > 0 && (
             <Button variant="ghost" size="2" onClick={resetFilters}>
               Clear all
@@ -117,49 +117,53 @@ export function AuditLogViewer({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Resource Type Filter */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label className="block text-xs font-medium text-[var(--gray-12)] mb-1">
               Resource Type
             </label>
-            <select
-              value={filters.resourceType || ''}
-              onChange={(e) =>
-                handleFilterChange('resourceType', e.target.value || undefined)
+            <Select.Root
+              value={filters.resourceType || 'all'}
+              onValueChange={(value) =>
+                handleFilterChange('resourceType', value === 'all' ? undefined : value)
               }
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
             >
-              <option value="">All</option>
-              <option value="branch">Branch</option>
-              <option value="review">Review</option>
-              <option value="convergence">Convergence</option>
-              <option value="user">User</option>
-            </select>
+              <Select.Trigger placeholder="All" style={{ width: '100%' }} />
+              <Select.Content>
+                <Select.Item value="all">All</Select.Item>
+                <Select.Item value="branch">Branch</Select.Item>
+                <Select.Item value="review">Review</Select.Item>
+                <Select.Item value="convergence">Convergence</Select.Item>
+                <Select.Item value="user">User</Select.Item>
+              </Select.Content>
+            </Select.Root>
           </div>
 
           {/* Outcome Filter */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label className="block text-xs font-medium text-[var(--gray-12)] mb-1">
               Outcome
             </label>
-            <select
-              value={filters.outcome || ''}
-              onChange={(e) =>
-                handleFilterChange('outcome', e.target.value || undefined)
+            <Select.Root
+              value={filters.outcome || 'all'}
+              onValueChange={(value) =>
+                handleFilterChange('outcome', value === 'all' ? undefined : value)
               }
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
             >
-              <option value="">All</option>
-              <option value="success">Success</option>
-              <option value="failure">Failure</option>
-              <option value="denied">Denied</option>
-            </select>
+              <Select.Trigger placeholder="All" style={{ width: '100%' }} />
+              <Select.Content>
+                <Select.Item value="all">All</Select.Item>
+                <Select.Item value="success">Success</Select.Item>
+                <Select.Item value="failure">Failure</Select.Item>
+                <Select.Item value="denied">Denied</Select.Item>
+              </Select.Content>
+            </Select.Root>
           </div>
 
           {/* Date Range Filter */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label className="block text-xs font-medium text-[var(--gray-12)] mb-1">
               Start Date
             </label>
-            <input
+            <TextField.Root
               type="datetime-local"
               value={filters.startDate?.toISOString().slice(0, 16) || ''}
               onChange={(e) =>
@@ -168,44 +172,44 @@ export function AuditLogViewer({
                   e.target.value ? new Date(e.target.value) : undefined
                 )
               }
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
             />
           </div>
         </div>
       </div>
 
       {/* Audit Log Table */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div className="rounded-lg border overflow-hidden" style={{ backgroundColor: 'var(--color-background)', borderColor: 'var(--gray-6)' }}>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+            <thead style={{ backgroundColor: 'var(--gray-2)' }}>
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--gray-11)', borderBottom: '1px solid var(--gray-6)' }}>
                   Timestamp
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--gray-11)', borderBottom: '1px solid var(--gray-6)' }}>
                   Actor
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--gray-11)', borderBottom: '1px solid var(--gray-6)' }}>
                   Action
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--gray-11)', borderBottom: '1px solid var(--gray-6)' }}>
                   Resource
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--gray-11)', borderBottom: '1px solid var(--gray-6)' }}>
                   Outcome
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--gray-11)', borderBottom: '1px solid var(--gray-6)' }}>
                   Details
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody style={{ backgroundColor: 'var(--color-background)' }}>
               {entries.length === 0 ? (
                 <tr>
                   <td
                     colSpan={6}
-                    className="px-6 py-12 text-center text-sm text-gray-500"
+                    className="px-6 py-12 text-center text-sm"
+                    style={{ color: 'var(--gray-11)' }}
                   >
                     No audit logs found matching the current filters.
                   </td>
@@ -215,10 +219,13 @@ export function AuditLogViewer({
                   <>
                     <tr
                       key={entry.id}
-                      className="hover:bg-gray-50 cursor-pointer"
+                      className="cursor-pointer"
+                      style={{ borderBottom: '1px solid var(--gray-6)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--gray-2)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       onClick={() => toggleExpandEntry(entry.id)}
                     >
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm" style={{ color: 'var(--gray-12)' }}>
                         {formatTimestamp(entry.timestamp)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -232,46 +239,38 @@ export function AuditLogViewer({
                               />
                             )}
                             <div>
-                              <div className="text-sm font-medium text-gray-900">
+                              <div className="text-sm font-medium" style={{ color: 'var(--gray-12)' }}>
                                 {entry.actor.displayName}
                               </div>
-                              <div className="text-xs text-gray-500">
+                              <div className="text-xs" style={{ color: 'var(--gray-11)' }}>
                                 {entry.actor.email}
                               </div>
                             </div>
                           </div>
                         ) : (
-                          <span className="text-sm text-gray-500">
+                          <span className="text-sm" style={{ color: 'var(--gray-11)' }}>
                             {entry.actorId}
                           </span>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getActionBadgeStyle(
-                            entry.action
-                          )}`}
-                        >
+                        <Badge color={getActionBadgeColor(entry.action)} variant="soft" size="1" radius="full">
                           {entry.action}
-                        </span>
+                        </Badge>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
+                        <div className="text-sm" style={{ color: 'var(--gray-12)' }}>
                           {entry.resourceType}
                         </div>
-                        <div className="text-xs text-gray-500 font-mono">
+                        <div className="text-xs font-mono" style={{ color: 'var(--gray-11)' }}>
                           {entry.resourceId.slice(0, 8)}...
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {entry.outcome && (
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getOutcomeBadgeStyle(
-                              entry.outcome
-                            )}`}
-                          >
+                          <Badge color={getOutcomeBadgeColor(entry.outcome)} variant="soft" size="1" radius="full">
                             {entry.outcome}
-                          </span>
+                          </Badge>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
@@ -282,48 +281,48 @@ export function AuditLogViewer({
                     </tr>
                     {expandedEntry === entry.id && (
                       <tr>
-                        <td colSpan={6} className="px-6 py-4 bg-gray-50">
+                        <td colSpan={6} className="px-6 py-4" style={{ backgroundColor: 'var(--gray-2)', borderBottom: '1px solid var(--gray-6)' }}>
                           <div className="space-y-3">
                             <div className="grid grid-cols-2 gap-4 text-sm">
                               <div>
-                                <span className="font-medium text-gray-700">
+                                <span className="font-medium" style={{ color: 'var(--gray-11)' }}>
                                   Request ID:
                                 </span>{' '}
-                                <span className="text-gray-900 font-mono text-xs">
+                                <span className="font-mono text-xs" style={{ color: 'var(--gray-12)' }}>
                                   {entry.requestId || 'N/A'}
                                 </span>
                               </div>
                               <div>
-                                <span className="font-medium text-gray-700">
+                                <span className="font-medium" style={{ color: 'var(--gray-11)' }}>
                                   Session ID:
                                 </span>{' '}
-                                <span className="text-gray-900 font-mono text-xs">
+                                <span className="font-mono text-xs" style={{ color: 'var(--gray-12)' }}>
                                   {entry.sessionId || 'N/A'}
                                 </span>
                               </div>
                               <div>
-                                <span className="font-medium text-gray-700">
+                                <span className="font-medium" style={{ color: 'var(--gray-11)' }}>
                                   IP Address:
                                 </span>{' '}
-                                <span className="text-gray-900">
+                                <span style={{ color: 'var(--gray-12)' }}>
                                   {entry.actorIp || 'N/A'}
                                 </span>
                               </div>
                               <div>
-                                <span className="font-medium text-gray-700">
+                                <span className="font-medium" style={{ color: 'var(--gray-11)' }}>
                                   User Agent:
                                 </span>{' '}
-                                <span className="text-gray-900 text-xs">
+                                <span className="text-xs" style={{ color: 'var(--gray-12)' }}>
                                   {entry.actorUserAgent || 'N/A'}
                                 </span>
                               </div>
                             </div>
                             {Object.keys(entry.metadata as object).length > 0 && (
                               <div>
-                                <div className="font-medium text-gray-700 mb-2">
+                                <div className="font-medium mb-2" style={{ color: 'var(--gray-11)' }}>
                                   Metadata:
                                 </div>
-                                <pre className="bg-white p-3 rounded border border-gray-200 text-xs overflow-x-auto">
+                                <pre className="p-3 rounded text-xs overflow-x-auto" style={{ backgroundColor: 'var(--color-background)', border: '1px solid var(--gray-6)' }}>
                                   {JSON.stringify(entry.metadata, null, 2)}
                                 </pre>
                               </div>
@@ -341,7 +340,7 @@ export function AuditLogViewer({
 
         {/* Pagination */}
         {(totalPages > 1 || hasMore) && (
-          <div className="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+          <div className="px-4 py-3 flex items-center justify-between sm:px-6" style={{ backgroundColor: 'var(--gray-2)', borderTop: '1px solid var(--gray-6)' }}>
             <div className="flex-1 flex justify-between sm:hidden">
               <Button
                 variant="outline"
@@ -362,7 +361,7 @@ export function AuditLogViewer({
             </div>
             <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm text-gray-700">
+                <p className="text-sm" style={{ color: 'var(--gray-11)' }}>
                   Page <span className="font-medium">{currentPage}</span> of{' '}
                   <span className="font-medium">{totalPages}</span>
                 </p>

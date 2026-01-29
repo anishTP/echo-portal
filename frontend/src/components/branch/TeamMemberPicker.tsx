@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { IconButton, Button } from '@radix-ui/themes';
-import { Cross1Icon, PlusIcon } from '@radix-ui/react-icons';
+import { IconButton, Button, TextField, Spinner, Badge, Popover, Flex, Text, Box } from '@radix-ui/themes';
+import { Cross1Icon, PlusIcon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
 import { api } from '../../services/api';
 
 export interface TeamMember {
@@ -99,18 +99,21 @@ export function TeamMemberPicker({
       .slice(0, 2);
   };
 
-  const getRoleBadge = (roles: string[]) => {
+  const getRoleBadge = (roles: string[]): { label: string; color: 'purple' | 'blue' | 'green' | 'gray' } => {
     if (roles.includes('administrator')) {
-      return { label: 'Admin', className: 'bg-purple-100 text-purple-800' };
+      return { label: 'Admin', color: 'purple' };
     }
     if (roles.includes('publisher')) {
-      return { label: 'Publisher', className: 'bg-blue-100 text-blue-800' };
+      return { label: 'Publisher', color: 'blue' };
     }
     if (roles.includes('reviewer')) {
-      return { label: 'Reviewer', className: 'bg-green-100 text-green-800' };
+      return { label: 'Reviewer', color: 'green' };
     }
-    return { label: 'Contributor', className: 'bg-gray-100 text-gray-800' };
+    return { label: 'Contributor', color: 'gray' };
   };
+
+  // Compute popover open state based on search query
+  const popoverShouldBeOpen = searchQuery.length >= 2 && isSearching;
 
   return (
     <div className="space-y-4">
@@ -125,13 +128,10 @@ export function TeamMemberPicker({
         {/* Current Reviewers */}
         <div className="mt-2 space-y-2">
           {loadingReviewers ? (
-            <div className="flex items-center gap-2 py-2 text-sm text-gray-500">
-              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-              Loading reviewers...
-            </div>
+            <Flex align="center" gap="2" py="2">
+              <Spinner size="1" />
+              <Text size="2" color="gray">Loading reviewers...</Text>
+            </Flex>
           ) : reviewers.length === 0 ? (
             <p className="py-2 text-sm text-gray-500">No reviewers assigned yet.</p>
           ) : (
@@ -160,9 +160,9 @@ export function TeamMemberPicker({
                       </div>
                       <div className="text-xs text-gray-500">{reviewer.email}</div>
                     </div>
-                    <span className={`ml-2 rounded-full px-2 py-0.5 text-xs font-medium ${roleBadge.className}`}>
+                    <Badge color={roleBadge.color} variant="soft" size="1" radius="full">
                       {roleBadge.label}
-                    </span>
+                    </Badge>
                   </div>
                   {!disabled && (
                     <IconButton
@@ -184,91 +184,85 @@ export function TeamMemberPicker({
 
       {/* Add Reviewer Search */}
       {!disabled && (
-        <div className="relative">
-          <div className="relative">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={handleSearchChange}
-              placeholder="Search by name or email to add reviewer..."
-              className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-            <svg
-              className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            {searching && (
-              <svg className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-gray-400" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
+        <Popover.Root open={popoverShouldBeOpen}>
+          <Popover.Trigger>
+            <Box style={{ width: '100%' }}>
+              <TextField.Root
+                size="2"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                placeholder="Search by name or email to add reviewer..."
+              >
+                <TextField.Slot>
+                  <MagnifyingGlassIcon height="16" width="16" />
+                </TextField.Slot>
+                <TextField.Slot>
+                  {searching && <Spinner size="1" />}
+                </TextField.Slot>
+              </TextField.Root>
+            </Box>
+          </Popover.Trigger>
+          <Popover.Content
+            style={{ width: 'var(--radix-popover-trigger-width)', padding: 0 }}
+            align="start"
+            sideOffset={4}
+          >
+            {searching ? (
+              <Flex align="center" gap="2" p="3">
+                <Spinner size="1" />
+                <Text size="2" color="gray">Searching...</Text>
+              </Flex>
+            ) : searchResults.length === 0 ? (
+              <Text size="2" color="gray" style={{ padding: '12px 16px', display: 'block' }}>
+                No users found matching "{searchQuery}"
+              </Text>
+            ) : (
+              <Box style={{ maxHeight: '240px', overflowY: 'auto' }}>
+                {searchResults.map((member) => {
+                  const roleBadge = getRoleBadge(member.roles);
+                  return (
+                    <Button
+                      key={member.id}
+                      variant="ghost"
+                      size="2"
+                      onClick={() => handleAddReviewer(member)}
+                      disabled={addReviewer.isPending}
+                      style={{ width: '100%', justifyContent: 'flex-start', padding: '8px 16px', borderRadius: 0 }}
+                    >
+                      {member.avatarUrl ? (
+                        <img
+                          src={member.avatarUrl}
+                          alt={member.displayName}
+                          className="h-8 w-8 rounded-full"
+                        />
+                      ) : (
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-xs font-medium text-gray-600">
+                          {getInitials(member.displayName)}
+                        </div>
+                      )}
+                      <div className="flex-1 text-left">
+                        <Text size="2" weight="medium">{member.displayName}</Text>
+                        <Text size="1" color="gray">{member.email}</Text>
+                      </div>
+                      <Badge color={roleBadge.color} variant="soft" size="1" radius="full">
+                        {roleBadge.label}
+                      </Badge>
+                      <PlusIcon />
+                    </Button>
+                  );
+                })}
+              </Box>
             )}
-          </div>
-
-          {/* Search Results Dropdown */}
-          {isSearching && searchQuery.length >= 2 && (
-            <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg">
-              {searching ? (
-                <div className="px-4 py-3 text-sm text-gray-500">Searching...</div>
-              ) : searchResults.length === 0 ? (
-                <div className="px-4 py-3 text-sm text-gray-500">
-                  No users found matching "{searchQuery}"
-                </div>
-              ) : (
-                <ul className="max-h-60 overflow-auto py-1">
-                  {searchResults.map((member) => {
-                    const roleBadge = getRoleBadge(member.roles);
-                    return (
-                      <li key={member.id}>
-                        <Button
-                          variant="ghost"
-                          size="2"
-                          onClick={() => handleAddReviewer(member)}
-                          disabled={addReviewer.isPending}
-                          style={{ width: '100%', justifyContent: 'flex-start', padding: '8px 16px' }}
-                        >
-                          {member.avatarUrl ? (
-                            <img
-                              src={member.avatarUrl}
-                              alt={member.displayName}
-                              className="h-8 w-8 rounded-full"
-                            />
-                          ) : (
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-xs font-medium text-gray-600">
-                              {getInitials(member.displayName)}
-                            </div>
-                          )}
-                          <div className="flex-1 text-left">
-                            <div className="text-sm font-medium">
-                              {member.displayName}
-                            </div>
-                            <div className="text-xs opacity-70">{member.email}</div>
-                          </div>
-                          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${roleBadge.className}`}>
-                            {roleBadge.label}
-                          </span>
-                          <PlusIcon />
-                        </Button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-          )}
-        </div>
+          </Popover.Content>
+        </Popover.Root>
       )}
 
       {/* Help Text */}
-      <p className="text-xs text-gray-500">
+      <Text size="1" color="gray">
         {disabled
           ? 'Reviewers can only be modified for draft branches.'
           : 'Add team members who will review this branch before publication.'}
-      </p>
+      </Text>
     </div>
   );
 }

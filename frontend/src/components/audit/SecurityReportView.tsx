@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button } from '@radix-ui/themes';
+import { Button, Spinner, Badge, Flex, Text } from '@radix-ui/themes';
 import { ReloadIcon } from '@radix-ui/react-icons';
 import type { AuditEntryWithActor } from '@echo-portal/shared';
 
@@ -64,10 +64,10 @@ export function SecurityReportView({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
-        <span className="ml-3 text-gray-600">Loading security reports...</span>
-      </div>
+      <Flex align="center" justify="center" py="9">
+        <Spinner size="2" />
+        <Text size="2" color="gray" ml="3">Loading security reports...</Text>
+      </Flex>
     );
   }
 
@@ -219,63 +219,67 @@ export function SecurityReportView({
           {activeTab === 'failed-logins' && (
             <div className="space-y-4">
               {failedLogins?.entries && failedLogins.entries.length > 0 ? (
-                <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
-                  <table className="min-w-full divide-y divide-gray-300">
-                    <thead className="bg-gray-50">
+                <div className="overflow-hidden shadow rounded-lg" style={{ border: '1px solid var(--gray-6)' }}>
+                  <table className="min-w-full" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+                    <thead style={{ backgroundColor: 'var(--gray-2)' }}>
                       <tr>
-                        <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">
+                        <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold" style={{ color: 'var(--gray-12)', borderBottom: '1px solid var(--gray-6)' }}>
                           Timestamp
                         </th>
-                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                        <th className="px-3 py-3.5 text-left text-sm font-semibold" style={{ color: 'var(--gray-12)', borderBottom: '1px solid var(--gray-6)' }}>
                           User
                         </th>
-                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                        <th className="px-3 py-3.5 text-left text-sm font-semibold" style={{ color: 'var(--gray-12)', borderBottom: '1px solid var(--gray-6)' }}>
                           IP Address
                         </th>
-                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                        <th className="px-3 py-3.5 text-left text-sm font-semibold" style={{ color: 'var(--gray-12)', borderBottom: '1px solid var(--gray-6)' }}>
                           Reason
                         </th>
-                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                        <th className="px-3 py-3.5 text-left text-sm font-semibold" style={{ color: 'var(--gray-12)', borderBottom: '1px solid var(--gray-6)' }}>
                           Status
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200 bg-white">
+                    <tbody style={{ backgroundColor: 'var(--color-background)' }}>
                       {failedLogins.entries.map((entry) => (
-                        <tr key={entry.id} className="hover:bg-gray-50">
-                          <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-900">
+                        <tr
+                          key={entry.id}
+                          style={{ borderBottom: '1px solid var(--gray-6)' }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--gray-2)'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm" style={{ color: 'var(--gray-12)' }}>
                             {formatTimestamp(entry.timestamp)}
                           </td>
                           <td className="whitespace-nowrap px-3 py-4 text-sm">
                             {entry.actor ? (
                               <div>
-                                <div className="font-medium text-gray-900">
+                                <div className="font-medium" style={{ color: 'var(--gray-12)' }}>
                                   {entry.actor.displayName}
                                 </div>
-                                <div className="text-gray-500">
+                                <div style={{ color: 'var(--gray-11)' }}>
                                   {entry.actor.email}
                                 </div>
                               </div>
                             ) : (
-                              <span className="text-gray-500">{entry.actorId}</span>
+                              <span style={{ color: 'var(--gray-11)' }}>{entry.actorId}</span>
                             )}
                           </td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                          <td className="whitespace-nowrap px-3 py-4 text-sm" style={{ color: 'var(--gray-11)' }}>
                             {entry.actorIp || 'N/A'}
                           </td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                          <td className="whitespace-nowrap px-3 py-4 text-sm" style={{ color: 'var(--gray-11)' }}>
                             {(entry.metadata as any)?.reason || 'Invalid credentials'}
                           </td>
                           <td className="whitespace-nowrap px-3 py-4 text-sm">
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                entry.action === 'auth.locked'
-                                  ? 'bg-red-100 text-red-800'
-                                  : 'bg-orange-100 text-orange-800'
-                              }`}
+                            <Badge
+                              color={entry.action === 'auth.locked' ? 'red' : 'orange'}
+                              variant="soft"
+                              size="1"
+                              radius="full"
                             >
                               {entry.action === 'auth.locked' ? 'Locked' : 'Failed'}
-                            </span>
+                            </Badge>
                           </td>
                         </tr>
                       ))}
@@ -312,47 +316,52 @@ export function SecurityReportView({
                     <h3 className="text-lg font-medium text-gray-900 mb-4">
                       Top Denied Actions
                     </h3>
-                    <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
-                      <table className="min-w-full divide-y divide-gray-300">
-                        <thead className="bg-gray-50">
+                    <div className="overflow-hidden shadow rounded-lg" style={{ border: '1px solid var(--gray-6)' }}>
+                      <table className="min-w-full" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+                        <thead style={{ backgroundColor: 'var(--gray-2)' }}>
                           <tr>
-                            <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">
+                            <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold" style={{ color: 'var(--gray-12)', borderBottom: '1px solid var(--gray-6)' }}>
                               Actor
                             </th>
-                            <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                            <th className="px-3 py-3.5 text-left text-sm font-semibold" style={{ color: 'var(--gray-12)', borderBottom: '1px solid var(--gray-6)' }}>
                               Action
                             </th>
-                            <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                            <th className="px-3 py-3.5 text-left text-sm font-semibold" style={{ color: 'var(--gray-12)', borderBottom: '1px solid var(--gray-6)' }}>
                               Resource Type
                             </th>
-                            <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                            <th className="px-3 py-3.5 text-left text-sm font-semibold" style={{ color: 'var(--gray-12)', borderBottom: '1px solid var(--gray-6)' }}>
                               Count
                             </th>
-                            <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                            <th className="px-3 py-3.5 text-left text-sm font-semibold" style={{ color: 'var(--gray-12)', borderBottom: '1px solid var(--gray-6)' }}>
                               Last Attempt
                             </th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-200 bg-white">
+                        <tbody style={{ backgroundColor: 'var(--color-background)' }}>
                           {permissionDenials.aggregated.map((item, idx) => (
-                            <tr key={idx} className="hover:bg-gray-50">
-                              <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">
+                            <tr
+                              key={idx}
+                              style={{ borderBottom: '1px solid var(--gray-6)' }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--gray-2)'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                            >
+                              <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium" style={{ color: 'var(--gray-12)' }}>
                                 {item.actorId.slice(0, 8)}...
                               </td>
-                              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
+                              <td className="whitespace-nowrap px-3 py-4 text-sm" style={{ color: 'var(--gray-12)' }}>
                                 <span className="font-mono text-xs">
                                   {item.action}
                                 </span>
                               </td>
-                              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                              <td className="whitespace-nowrap px-3 py-4 text-sm" style={{ color: 'var(--gray-11)' }}>
                                 {item.resourceType}
                               </td>
                               <td className="whitespace-nowrap px-3 py-4 text-sm">
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                <Badge color="red" variant="soft" size="1" radius="full">
                                   {item.count}
-                                </span>
+                                </Badge>
                               </td>
-                              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                              <td className="whitespace-nowrap px-3 py-4 text-sm" style={{ color: 'var(--gray-11)' }}>
                                 {formatTimestamp(item.lastAttempt)}
                               </td>
                             </tr>

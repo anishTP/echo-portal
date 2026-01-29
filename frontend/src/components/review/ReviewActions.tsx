@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Button } from '@radix-ui/themes';
+import { Button, TextArea, Callout } from '@radix-ui/themes';
+import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
 import { useApproveReview, useRequestChanges } from '../../hooks/useReview';
 import type { ReviewResponse } from '../../services/reviewService';
 
@@ -108,11 +109,11 @@ export function ReviewActions({ review, onSuccess }: ReviewActionsProps) {
 
       <div className="rounded-lg bg-gray-50 p-4 space-y-4">
         <div>
-          <label htmlFor="review-reason" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="review-reason" className="block text-sm font-medium text-[var(--gray-12)]">
             {mode === 'approve' ? 'Approval comment (optional)' : 'Reason for requesting changes'}
-            {mode === 'changes' && <span className="text-red-500"> *</span>}
+            {mode === 'changes' && <span className="text-[var(--red-9)]"> *</span>}
           </label>
-          <textarea
+          <TextArea
             id="review-reason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
@@ -123,14 +124,17 @@ export function ReviewActions({ review, onSuccess }: ReviewActionsProps) {
             }
             rows={4}
             disabled={isSubmitting}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
+            style={{ marginTop: '4px' }}
           />
         </div>
 
         {localError && (
-          <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
-            {localError}
-          </div>
+          <Callout.Root color="red" size="1">
+            <Callout.Icon>
+              <ExclamationTriangleIcon />
+            </Callout.Icon>
+            <Callout.Text>{localError}</Callout.Text>
+          </Callout.Root>
         )}
 
         <div className="flex gap-3">
