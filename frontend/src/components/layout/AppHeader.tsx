@@ -3,7 +3,8 @@ import { useAuth } from '../../context/AuthContext';
 import { LoginButton, LogoutButton, RoleBadge } from '../auth';
 
 export function AppHeader() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, loginDev } = useAuth();
+  const isDev = import.meta.env.DEV;
   const location = useLocation();
 
   const isActive = (path: string) => {
@@ -109,6 +110,17 @@ export function AppHeader() {
             ) : (
               /* Login Buttons */
               <div className="flex items-center gap-3">
+                {isDev && (
+                  <>
+                    <button
+                      onClick={loginDev}
+                      className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-500"
+                    >
+                      Dev Login
+                    </button>
+                    <div className="text-sm text-gray-400">or</div>
+                  </>
+                )}
                 <LoginButton provider="github" size="sm" />
                 <div className="text-sm text-gray-400">or</div>
                 <LoginButton provider="google" size="sm" />
