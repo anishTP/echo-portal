@@ -1,12 +1,13 @@
 import { Link, useParams } from 'react-router-dom';
 import Markdown from 'react-markdown';
+import { Badge } from '@radix-ui/themes';
 import { useContentBySlug } from '../hooks/usePublishedContent';
 import { TableOfContents } from '../components/library';
 
-const typeStyles: Record<string, string> = {
-  guideline: 'bg-green-100 text-green-800',
-  asset: 'bg-purple-100 text-purple-800',
-  opinion: 'bg-amber-100 text-amber-800',
+const typeBadgeColors: Record<string, 'green' | 'purple' | 'orange' | 'gray'> = {
+  guideline: 'green',
+  asset: 'purple',
+  opinion: 'orange',
 };
 
 /**
@@ -180,11 +181,14 @@ export default function ContentView() {
             {/* Header */}
             <header className="mb-8 rounded-lg bg-white p-6 shadow-sm">
               {/* Type badge */}
-              <span
-                className={`inline-flex rounded-full px-3 py-1 text-sm font-medium ${typeStyles[content.contentType] || 'bg-gray-100 text-gray-800'}`}
+              <Badge
+                color={typeBadgeColors[content.contentType] || 'gray'}
+                variant="soft"
+                radius="full"
+                size="2"
               >
                 {content.contentType.charAt(0).toUpperCase() + content.contentType.slice(1)}
-              </span>
+              </Badge>
 
               {/* Title */}
               <h1 className="mt-4 text-3xl font-bold text-gray-900">{content.title}</h1>
@@ -280,12 +284,9 @@ export default function ContentView() {
                   <h3 className="mb-3 text-sm font-medium text-gray-500">Tags</h3>
                   <div className="flex flex-wrap gap-2">
                     {content.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="inline-flex rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-700"
-                      >
+                      <Badge key={tag} color="gray" variant="soft" radius="full" size="2">
                         {tag}
-                      </span>
+                      </Badge>
                     ))}
                   </div>
                 </div>

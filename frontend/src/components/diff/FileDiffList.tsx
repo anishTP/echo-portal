@@ -1,5 +1,5 @@
 import { useState, memo } from 'react';
-import { Button } from '@radix-ui/themes';
+import { Button, Badge, Spinner } from '@radix-ui/themes';
 import { DiffViewer, type FileDiff } from './DiffViewer';
 
 export interface BranchDiff {
@@ -30,7 +30,7 @@ export function FileDiffList({ diff, isLoading }: FileDiffListProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600" />
+        <Spinner size="3" />
       </div>
     );
   }
@@ -170,7 +170,7 @@ export const FileDiffSummary = memo(function FileDiffSummary({
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 text-sm text-gray-500">
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+        <Spinner size="1" />
         Loading changes...
       </div>
     );
@@ -189,19 +189,13 @@ export const FileDiffSummary = memo(function FileDiffSummary({
       </div>
       <div className="flex flex-wrap gap-2">
         {summary.added.length > 0 && (
-          <span className="rounded bg-green-100 px-2 py-1 text-xs text-green-800">
-            +{summary.added.length} added
-          </span>
+          <Badge color="green" variant="soft" size="1">+{summary.added.length} added</Badge>
         )}
         {summary.modified.length > 0 && (
-          <span className="rounded bg-yellow-100 px-2 py-1 text-xs text-yellow-800">
-            ~{summary.modified.length} modified
-          </span>
+          <Badge color="yellow" variant="soft" size="1">~{summary.modified.length} modified</Badge>
         )}
         {summary.deleted.length > 0 && (
-          <span className="rounded bg-red-100 px-2 py-1 text-xs text-red-800">
-            -{summary.deleted.length} deleted
-          </span>
+          <Badge color="red" variant="soft" size="1">-{summary.deleted.length} deleted</Badge>
         )}
       </div>
     </div>

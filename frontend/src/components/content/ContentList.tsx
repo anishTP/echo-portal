@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Card } from '@radix-ui/themes';
+import { Card, Badge } from '@radix-ui/themes';
 import type { ContentSummary, ContentTypeValue } from '@echo-portal/shared';
 
 interface ContentListProps {
@@ -15,10 +15,10 @@ const typeLabels: Record<ContentTypeValue, string> = {
   opinion: 'Opinion',
 };
 
-const typeColors: Record<ContentTypeValue, string> = {
-  guideline: 'bg-green-100 text-green-800',
-  asset: 'bg-purple-100 text-purple-800',
-  opinion: 'bg-amber-100 text-amber-800',
+const typeBadgeColors: Record<ContentTypeValue, 'green' | 'purple' | 'orange'> = {
+  guideline: 'green',
+  asset: 'purple',
+  opinion: 'orange',
 };
 
 export function ContentList({
@@ -86,11 +86,9 @@ const ContentListItem = memo(function ContentListItem({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <h3 className="truncate text-lg font-medium text-gray-900">{content.title}</h3>
-              <span
-                className={`rounded-full px-2 py-0.5 text-xs font-medium ${typeColors[content.contentType]}`}
-              >
+              <Badge color={typeBadgeColors[content.contentType]} variant="soft" radius="full" size="1">
                 {typeLabels[content.contentType]}
-              </span>
+              </Badge>
             </div>
 
             {content.description && (
@@ -112,12 +110,9 @@ const ContentListItem = memo(function ContentListItem({
             {content.tags.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1">
                 {content.tags.slice(0, 5).map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
-                  >
+                  <Badge key={tag} color="gray" variant="soft" size="1">
                     {tag}
-                  </span>
+                  </Badge>
                 ))}
                 {content.tags.length > 5 && (
                   <span className="text-xs text-gray-400">+{content.tags.length - 5} more</span>

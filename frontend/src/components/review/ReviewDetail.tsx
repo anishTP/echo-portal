@@ -1,3 +1,4 @@
+import { Badge } from '@radix-ui/themes';
 import { useBranchReviewStats } from '../../hooks/useReview';
 import type { ReviewResponse } from '../../services/reviewService';
 
@@ -24,15 +25,9 @@ function ApprovalStatus({
     <div className="rounded-lg border border-gray-200 bg-white p-4">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-sm font-medium text-gray-900">Approval Status</h3>
-        <span
-          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-            isApproved
-              ? 'bg-green-100 text-green-800'
-              : 'bg-orange-100 text-orange-800'
-          }`}
-        >
+        <Badge color={isApproved ? 'green' : 'orange'} variant="soft" radius="full" size="1">
           {isApproved ? 'Approved' : 'Pending'}
-        </span>
+        </Badge>
       </div>
 
       <div className="space-y-3">
@@ -77,56 +72,35 @@ export function ReviewDetail({ review, requiredApprovals = 1 }: ReviewDetailProp
 
   // Status badge
   const getStatusBadge = () => {
-    switch (review.status) {
-      case 'pending':
-        return (
-          <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">
-            Pending
-          </span>
-        );
-      case 'in_progress':
-        return (
-          <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
-            In Progress
-          </span>
-        );
-      case 'completed':
-        return (
-          <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-            Completed
-          </span>
-        );
-      case 'cancelled':
-        return (
-          <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">
-            Cancelled
-          </span>
-        );
-      default:
-        return null;
-    }
+    const statusConfig: Record<string, { color: 'yellow' | 'blue' | 'green' | 'gray'; label: string }> = {
+      pending: { color: 'yellow', label: 'Pending' },
+      in_progress: { color: 'blue', label: 'In Progress' },
+      completed: { color: 'green', label: 'Completed' },
+      cancelled: { color: 'gray', label: 'Cancelled' },
+    };
+    const config = statusConfig[review.status];
+    if (!config) return null;
+    return (
+      <Badge color={config.color} variant="soft" radius="full" size="1">
+        {config.label}
+      </Badge>
+    );
   };
 
   // Decision badge
   const getDecisionBadge = () => {
     if (!review.decision) return null;
-
-    switch (review.decision) {
-      case 'approved':
-        return (
-          <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-            ✓ Approved
-          </span>
-        );
-      case 'changes_requested':
-        return (
-          <span className="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-800">
-            ⚠ Changes Requested
-          </span>
-        );
-      default:
-        return null;
-    }
+    const decisionConfig: Record<string, { color: 'green' | 'orange'; label: string }> = {
+      approved: { color: 'green', label: '✓ Approved' },
+      changes_requested: { color: 'orange', label: '⚠ Changes Requested' },
+    };
+    const config = decisionConfig[review.decision];
+    if (!config) return null;
+    return (
+      <Badge color={config.color} variant="soft" radius="full" size="1">
+        {config.label}
+      </Badge>
+    );
   };
 
   return (

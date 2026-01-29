@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import { Link } from 'react-router-dom';
+import { Badge } from '@radix-ui/themes';
 import { LifecycleStatus } from './LifecycleStatus';
 import type { BranchResponse } from '../../services/branchService';
 import type { BranchStateType, VisibilityType } from '@echo-portal/shared';
@@ -101,12 +102,9 @@ const BranchListItem = memo(function BranchListItem({ branch, showOwner }: Branc
           {branch.labels && branch.labels.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1">
               {branch.labels.slice(0, 3).map((label) => (
-                <span
-                  key={label}
-                  className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
-                >
+                <Badge key={label} color="gray" variant="soft" size="1">
                   {label}
-                </span>
+                </Badge>
               ))}
               {branch.labels.length > 3 && (
                 <span className="text-xs text-gray-400">+{branch.labels.length - 3} more</span>
