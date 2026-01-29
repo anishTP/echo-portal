@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { Button, TextArea, TextField, Callout } from '@radix-ui/themes';
 import { ContentTypeSelector } from './ContentTypeSelector';
 import { ContentMetadata } from './ContentMetadata';
 import { useContentStore } from '../../stores/contentStore';
@@ -92,27 +93,18 @@ export function ContentEditor({ branchId, content, onSave, onCancel }: ContentEd
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900">
+        <h2 className="text-lg font-semibold">
           {isEditing ? 'Edit Content' : 'New Content'}
         </h2>
         <div className="flex gap-2">
           {onCancel && (
-            <button
-              type="button"
-              onClick={onCancel}
-              className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
+            <Button variant="outline" onClick={onCancel}>
               Cancel
-            </button>
+            </Button>
           )}
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={!canSave}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-          >
+          <Button onClick={handleSave} disabled={!canSave}>
             {isSaving ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Content'}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -132,43 +124,38 @@ export function ContentEditor({ branchId, content, onSave, onCancel }: ContentEd
       />
 
       <div>
-        <label htmlFor="content-body" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="content-body" className="block text-sm font-medium mb-1">
           Content Body <span className="text-red-500">*</span>
         </label>
-        <textarea
+        <TextArea
           id="content-body"
           value={body}
           onChange={(e) => setBody(e.target.value)}
           rows={20}
-          className="mt-1 block w-full rounded-md border-gray-300 font-mono text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
           placeholder="Write your content in Markdown..."
+          style={{ fontFamily: 'monospace' }}
         />
       </div>
 
       <div>
-        <label
-          htmlFor="change-description"
-          className="block text-sm font-medium text-gray-700"
-        >
+        <label htmlFor="change-description" className="block text-sm font-medium mb-1">
           Change Description <span className="text-red-500">*</span>
         </label>
-        <input
+        <TextField.Root
           id="change-description"
-          type="text"
           value={changeDescription}
           onChange={(e) => setChangeDescription(e.target.value)}
           maxLength={2000}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
           placeholder="Describe what changed and why"
         />
       </div>
 
       {(createMutation.error || updateMutation.error) && (
-        <div className="rounded-md bg-red-50 p-4">
-          <p className="text-sm text-red-700">
+        <Callout.Root color="red">
+          <Callout.Text>
             {(createMutation.error || updateMutation.error)?.message || 'An error occurred'}
-          </p>
-        </div>
+          </Callout.Text>
+        </Callout.Root>
       )}
     </div>
   );

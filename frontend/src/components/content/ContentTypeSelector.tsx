@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { Card, Text } from '@radix-ui/themes';
 import type { ContentTypeValue } from '@echo-portal/shared';
 
 interface ContentTypeSelectorProps {
@@ -32,23 +33,30 @@ export const ContentTypeSelector = memo(function ContentTypeSelector({
 }: ContentTypeSelectorProps) {
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-gray-700">Content Type</label>
+      <Text as="label" size="2" weight="medium">Content Type</Text>
       <div className="grid grid-cols-3 gap-3">
         {contentTypes.map((type) => (
-          <button
+          <Card
             key={type.value}
-            type="button"
-            disabled={disabled}
-            onClick={() => onChange(type.value)}
-            className={`rounded-lg border-2 p-3 text-left transition-colors ${
-              value === type.value
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-200 bg-white hover:border-gray-300'
-            } ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+            asChild
+            style={{
+              cursor: disabled ? 'not-allowed' : 'pointer',
+              opacity: disabled ? 0.5 : 1,
+              borderWidth: '2px',
+              borderColor: value === type.value ? 'var(--accent-9)' : 'var(--gray-6)',
+              backgroundColor: value === type.value ? 'var(--accent-3)' : undefined,
+            }}
           >
-            <div className="text-sm font-medium text-gray-900">{type.label}</div>
-            <div className="mt-1 text-xs text-gray-500">{type.description}</div>
-          </button>
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => onChange(type.value)}
+              className="text-left w-full"
+            >
+              <Text as="div" size="2" weight="medium">{type.label}</Text>
+              <Text as="div" size="1" color="gray" className="mt-1">{type.description}</Text>
+            </button>
+          </Card>
         ))}
       </div>
     </div>

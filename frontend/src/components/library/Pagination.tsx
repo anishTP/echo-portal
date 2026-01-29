@@ -1,3 +1,6 @@
+import { Button, Flex, Text } from '@radix-ui/themes';
+import { ChevronLeftIcon, ChevronRightIcon } from '@radix-ui/react-icons';
+
 interface PaginationProps {
   page: number;
   totalPages: number;
@@ -14,69 +17,59 @@ export function Pagination({ page, totalPages, totalItems, onPageChange }: Pagin
   const canGoNext = page < totalPages;
 
   return (
-    <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
-      <div className="flex flex-1 justify-between sm:hidden">
-        <button
+    <Flex justify="between" align="center" py="3" px="4" className="border-t border-[var(--gray-6)]">
+      {/* Mobile view */}
+      <Flex gap="3" className="sm:hidden" style={{ flex: 1 }} justify="between">
+        <Button
+          variant="outline"
           onClick={() => onPageChange(page - 1)}
           disabled={!canGoPrev}
-          className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Previous
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="outline"
           onClick={() => onPageChange(page + 1)}
           disabled={!canGoNext}
-          className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Next
-        </button>
-      </div>
-      <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm text-gray-700">
-            Showing page <span className="font-medium">{page}</span> of{' '}
-            <span className="font-medium">{totalPages}</span>
-            {' - '}
-            <span className="font-medium">{totalItems}</span> results
-          </p>
-        </div>
-        <div>
-          <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-            <button
-              onClick={() => onPageChange(page - 1)}
-              disabled={!canGoPrev}
-              className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <span className="sr-only">Previous</span>
-              <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path
-                  fillRule="evenodd"
-                  d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </button>
-            <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300">
-              {page}
-            </span>
-            <button
-              onClick={() => onPageChange(page + 1)}
-              disabled={!canGoNext}
-              className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <span className="sr-only">Next</span>
-              <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path
-                  fillRule="evenodd"
-                  d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </button>
-          </nav>
-        </div>
-      </div>
-    </div>
+        </Button>
+      </Flex>
+
+      {/* Desktop view */}
+      <Flex className="hidden sm:flex" style={{ flex: 1 }} justify="between" align="center">
+        <Text size="2" color="gray">
+          Showing page <Text weight="medium">{page}</Text> of{' '}
+          <Text weight="medium">{totalPages}</Text>
+          {' - '}
+          <Text weight="medium">{totalItems}</Text> results
+        </Text>
+
+        <Flex gap="1" align="center">
+          <Button
+            variant="ghost"
+            size="2"
+            onClick={() => onPageChange(page - 1)}
+            disabled={!canGoPrev}
+          >
+            <ChevronLeftIcon />
+            <span className="sr-only">Previous</span>
+          </Button>
+          <Text size="2" weight="medium" style={{ minWidth: '2rem', textAlign: 'center' }}>
+            {page}
+          </Text>
+          <Button
+            variant="ghost"
+            size="2"
+            onClick={() => onPageChange(page + 1)}
+            disabled={!canGoNext}
+          >
+            <ChevronRightIcon />
+            <span className="sr-only">Next</span>
+          </Button>
+        </Flex>
+      </Flex>
+    </Flex>
   );
 }
 

@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Button, TextField, TextArea, Select, Badge } from '@radix-ui/themes';
 import { useCreateBranch } from '../../hooks/useBranch';
 import { useBranchStore } from '../../stores/branchStore';
 import type { BranchCreateInput, VisibilityType } from '@echo-portal/shared';
@@ -54,114 +55,106 @@ export function BranchCreate({ onSuccess, onCancel }: BranchCreateProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="name" className="block text-sm font-medium mb-1">
           Branch Name *
         </label>
-        <input
-          type="text"
+        <TextField.Root
           id="name"
           required
           value={formData.name}
           onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           placeholder="Enter branch name"
         />
       </div>
 
       <div>
-        <label htmlFor="baseRef" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="baseRef" className="block text-sm font-medium mb-1">
           Base Branch *
         </label>
-        <select
-          id="baseRef"
+        <Select.Root
           value={formData.baseRef}
-          onChange={(e) =>
-            setFormData((prev) => ({ ...prev, baseRef: e.target.value as 'main' | 'dev' }))
+          onValueChange={(value) =>
+            setFormData((prev) => ({ ...prev, baseRef: value as 'main' | 'dev' }))
           }
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
-          <option value="main">main (Production)</option>
-        </select>
-        <p className="mt-1 text-sm text-gray-500">
+          <Select.Trigger placeholder="Select base branch" style={{ width: '100%' }} />
+          <Select.Content>
+            <Select.Item value="main">main (Production)</Select.Item>
+          </Select.Content>
+        </Select.Root>
+        <p className="mt-1 text-sm text-[var(--gray-11)]">
           Your branch will start from the current state of main.
         </p>
       </div>
 
       <div>
-        <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="description" className="block text-sm font-medium mb-1">
           Description
         </label>
-        <textarea
+        <TextArea
           id="description"
           rows={3}
           value={formData.description || ''}
           onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           placeholder="Describe the purpose of this branch..."
         />
       </div>
 
       <div>
-        <label htmlFor="visibility" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="visibility" className="block text-sm font-medium mb-1">
           Visibility
         </label>
-        <select
-          id="visibility"
+        <Select.Root
           value={formData.visibility}
-          onChange={(e) =>
+          onValueChange={(value) =>
             setFormData((prev) => ({
               ...prev,
-              visibility: e.target.value as VisibilityType,
+              visibility: value as VisibilityType,
             }))
           }
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
-          <option value="private">Private - Only you can see this branch</option>
-          <option value="team">Team - Team members can see this branch</option>
-          <option value="public">Public - Anyone can see this branch</option>
-        </select>
+          <Select.Trigger placeholder="Select visibility" style={{ width: '100%' }} />
+          <Select.Content>
+            <Select.Item value="private">Private - Only you can see this branch</Select.Item>
+            <Select.Item value="team">Team - Team members can see this branch</Select.Item>
+            <Select.Item value="public">Public - Anyone can see this branch</Select.Item>
+          </Select.Content>
+        </Select.Root>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Labels</label>
-        <div className="mt-1 flex gap-2">
-          <input
-            type="text"
-            value={labelInput}
-            onChange={(e) => setLabelInput(e.target.value)}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleAddLabel();
-              }
-            }}
-            className="block flex-1 rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            placeholder="Add a label"
-          />
-          <button
-            type="button"
-            onClick={handleAddLabel}
-            className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
-          >
+        <label className="block text-sm font-medium mb-1">Labels</label>
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <TextField.Root
+              value={labelInput}
+              onChange={(e) => setLabelInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddLabel();
+                }
+              }}
+              placeholder="Add a label"
+            />
+          </div>
+          <Button type="button" variant="soft" onClick={handleAddLabel}>
             Add
-          </button>
+          </Button>
         </div>
         {formData.labels && formData.labels.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
             {formData.labels.map((label) => (
-              <span
-                key={label}
-                className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-sm text-blue-800"
-              >
+              <Badge key={label} color="blue">
                 {label}
                 <button
                   type="button"
                   onClick={() => handleRemoveLabel(label)}
-                  className="text-blue-600 hover:text-blue-800"
+                  className="ml-1 hover:opacity-70"
                 >
                   &times;
                 </button>
-              </span>
+              </Badge>
             ))}
           </div>
         )}
@@ -169,21 +162,13 @@ export function BranchCreate({ onSuccess, onCancel }: BranchCreateProps) {
 
       <div className="flex justify-end gap-3 pt-4">
         {onCancel && (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
+          <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
-          </button>
+          </Button>
         )}
-        <button
-          type="submit"
-          disabled={isCreating || !formData.name}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
+        <Button type="submit" disabled={isCreating || !formData.name}>
           {isCreating ? 'Creating...' : 'Create Branch'}
-        </button>
+        </Button>
       </div>
     </form>
   );

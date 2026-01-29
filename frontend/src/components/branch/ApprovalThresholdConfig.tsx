@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Card, Button, Badge, TextField, Slider, Text, Callout, Heading } from '@radix-ui/themes';
 import { branchService } from '../../services/branchService';
 import type { BranchResponse } from '../../services/branchService';
 
@@ -52,121 +53,120 @@ export function ApprovalThresholdConfig({
   if (!isAdmin) {
     // Non-admin view - just display the current threshold
     return (
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
+      <Card>
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-medium text-gray-900">Approval Threshold</h3>
-            <p className="mt-1 text-sm text-gray-500">
+            <Heading as="h3" size="2">Approval Threshold</Heading>
+            <Text as="p" size="2" color="gray" className="mt-1">
               This branch requires {branch.requiredApprovals || 1} approval
               {(branch.requiredApprovals || 1) !== 1 ? 's' : ''} to proceed
-            </p>
+            </Text>
           </div>
-          <span className="inline-flex items-center justify-center rounded-full bg-blue-100 px-3 py-1 text-lg font-semibold text-blue-800">
+          <Badge size="2" color="blue" radius="full">
             {branch.requiredApprovals || 1}
-          </span>
+          </Badge>
         </div>
-      </div>
+      </Card>
     );
   }
 
   // Admin view - editable
   if (!isEditing) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
+      <Card>
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-medium text-gray-900">Approval Threshold</h3>
-            <p className="mt-1 text-sm text-gray-500">
+            <Heading as="h3" size="2">Approval Threshold</Heading>
+            <Text as="p" size="2" color="gray" className="mt-1">
               Requires {branch.requiredApprovals || 1} approval
               {(branch.requiredApprovals || 1) !== 1 ? 's' : ''} to approve the branch
-            </p>
+            </Text>
           </div>
           <div className="flex items-center gap-3">
-            <span className="inline-flex items-center justify-center rounded-full bg-blue-100 px-3 py-1 text-lg font-semibold text-blue-800">
+            <Badge size="2" color="blue" radius="full">
               {branch.requiredApprovals || 1}
-            </span>
-            <button
-              onClick={() => setIsEditing(true)}
-              className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
-            >
+            </Badge>
+            <Button size="2" onClick={() => setIsEditing(true)}>
               Configure
-            </button>
+            </Button>
           </div>
         </div>
-      </div>
+      </Card>
     );
   }
 
   // Editing mode
   return (
-    <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-      <h3 className="text-sm font-medium text-gray-900 mb-3">
+    <Card style={{ backgroundColor: 'var(--accent-3)', borderColor: 'var(--accent-6)' }}>
+      <Heading as="h3" size="2" className="mb-3">
         Configure Approval Threshold
-      </h3>
+      </Heading>
 
       <div className="space-y-4">
         <div>
-          <label htmlFor="threshold" className="block text-sm font-medium text-gray-700 mb-2">
+          <Text as="label" htmlFor="threshold" size="2" weight="medium" className="block mb-2">
             Required Approvals
-          </label>
+          </Text>
           <div className="flex items-center gap-4">
-            <input
-              id="threshold"
-              type="number"
-              min={1}
-              max={10}
-              value={threshold}
-              onChange={(e) => setThreshold(parseInt(e.target.value, 10))}
-              disabled={isSubmitting}
-              className="block w-24 rounded-md border border-gray-300 px-3 py-2 text-center text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
-            />
-            <div className="flex-1">
-              <input
-                type="range"
+            <div style={{ width: '6rem' }}>
+              <TextField.Root
+                id="threshold"
+                type="number"
                 min={1}
                 max={10}
-                value={threshold}
-                onChange={(e) => setThreshold(parseInt(e.target.value, 10))}
+                value={threshold.toString()}
+                onChange={(e) => setThreshold(parseInt(e.target.value, 10) || 1)}
                 disabled={isSubmitting}
-                className="w-full"
+                style={{ textAlign: 'center' }}
               />
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>1</span>
-                <span>5</span>
-                <span>10</span>
+            </div>
+            <div className="flex-1">
+              <Slider
+                value={[threshold]}
+                onValueChange={(values) => setThreshold(values[0])}
+                min={1}
+                max={10}
+                step={1}
+                disabled={isSubmitting}
+              />
+              <div className="flex justify-between mt-1">
+                <Text size="1" color="gray">1</Text>
+                <Text size="1" color="gray">5</Text>
+                <Text size="1" color="gray">10</Text>
               </div>
             </div>
           </div>
-          <p className="mt-2 text-xs text-gray-500">
+          <Text as="p" size="1" color="gray" className="mt-2">
             The branch will require {threshold} approval{threshold !== 1 ? 's' : ''} from reviewers
             before it can be approved.
-          </p>
+          </Text>
         </div>
 
         {error && (
-          <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
-            {error}
-          </div>
+          <Callout.Root color="red" size="1">
+            <Callout.Text>{error}</Callout.Text>
+          </Callout.Root>
         )}
 
         <div className="flex gap-3">
-          <button
+          <Button
+            variant="outline"
             onClick={handleCancel}
             disabled={isSubmitting}
-            className="flex-1 rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            style={{ flex: 1 }}
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleSave}
             disabled={isSubmitting}
-            className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            style={{ flex: 1 }}
           >
             {isSubmitting ? 'Saving...' : 'Save'}
-          </button>
+          </Button>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
 

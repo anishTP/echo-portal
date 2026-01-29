@@ -14,6 +14,8 @@
   },
   "dependencies": {
     "@echo-portal/shared": "workspace:*",
+    "@radix-ui/react-icons": "^1.3.2",
+    "@radix-ui/themes": "^3.2.1",
     "@tanstack/react-query": "^5.75.5",
     "monaco-editor": "^0.52.2",
     "react": "^19.2.0",
