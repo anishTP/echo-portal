@@ -1,0 +1,63 @@
+/**
+ * Monaco Editor CSS Variable Bridge
+ *
+ * Maps Radix Themes CSS variables to Monaco Editor's VS Code theme variables.
+ * This allows Monaco to respect the application's light/dark theme.
+ *
+ * Note: Monaco uses --vscode-* prefixed variables internally.
+ * We map Radix's semantic tokens to these variables.
+ */
+
+/* Light theme (default) */
+.monaco-editor {
+  --vscode-editor-background: var(--color-background);
+  --vscode-editor-foreground: var(--gray-12);
+  --vscode-editorLineNumber-foreground: var(--gray-11);
+  --vscode-editorLineNumber-activeForeground: var(--gray-12);
+  --vscode-editorCursor-foreground: var(--accent-11);
+  --vscode-editor-selectionBackground: var(--accent-5);
+  --vscode-editor-selectionForeground: var(--accent-12);
+  --vscode-editor-inactiveSelectionBackground: var(--accent-4);
+  --vscode-editorWidget-background: var(--gray-2);
+  --vscode-editorWidget-border: var(--gray-6);
+  --vscode-editorHoverWidget-background: var(--gray-2);
+  --vscode-editorHoverWidget-border: var(--gray-6);
+  --vscode-editorSuggestWidget-background: var(--gray-2);
+  --vscode-editorSuggestWidget-border: var(--gray-6);
+  --vscode-editorSuggestWidget-selectedBackground: var(--accent-4);
+  --vscode-scrollbarSlider-background: var(--gray-6);
+  --vscode-scrollbarSlider-hoverBackground: var(--gray-7);
+  --vscode-scrollbarSlider-activeBackground: var(--gray-8);
+}
+
+/* Dark theme */
+:root.dark .monaco-editor,
+.dark .monaco-editor {
+  --vscode-editor-background: var(--gray-1);
+  --vscode-editor-foreground: var(--gray-12);
+  --vscode-editorLineNumber-foreground: var(--gray-10);
+  --vscode-editorLineNumber-activeForeground: var(--gray-12);
+  --vscode-editorCursor-foreground: var(--accent-10);
+  --vscode-editor-selectionBackground: var(--accent-6);
+  --vscode-editor-selectionForeground: var(--accent-12);
+  --vscode-editor-inactiveSelectionBackground: var(--accent-5);
+  --vscode-editorWidget-background: var(--gray-2);
+  --vscode-editorWidget-border: var(--gray-5);
+  --vscode-editorHoverWidget-background: var(--gray-2);
+  --vscode-editorHoverWidget-border: var(--gray-5);
+  --vscode-editorSuggestWidget-background: var(--gray-2);
+  --vscode-editorSuggestWidget-border: var(--gray-5);
+  --vscode-editorSuggestWidget-selectedBackground: var(--accent-5);
+  --vscode-scrollbarSlider-background: var(--gray-5);
+  --vscode-scrollbarSlider-hoverBackground: var(--gray-6);
+  --vscode-scrollbarSlider-activeBackground: var(--gray-7);
+}
+
+/* Syntax highlighting colors using Radix semantic tokens */
+.monaco-editor .mtk1 { color: var(--gray-12); }           /* Default text */
+.monaco-editor .mtk3 { color: var(--green-11); }          /* Comments */
+.monaco-editor .mtk4 { color: var(--blue-11); }           /* Numbers */
+.monaco-editor .mtk5 { color: var(--purple-11); }         /* Keywords */
+.monaco-editor .mtk6 { color: var(--orange-11); }         /* Strings */
+.monaco-editor .mtk7 { color: var(--cyan-11); }           /* Operators */
+.monaco-editor .mtk8 { color: var(--yellow-11); }         /* Functions */
