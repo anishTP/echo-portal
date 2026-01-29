@@ -1,6 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
+import { Button } from '@radix-ui/themes';
 import { useAuth } from '../../context/AuthContext';
 import { LoginButton, LogoutButton, RoleBadge } from '../auth';
+import { ThemeToggle } from './ThemeToggle';
 
 export function AppHeader() {
   const { user, isAuthenticated, isLoading, loginDev } = useAuth();
@@ -15,7 +17,7 @@ export function AppHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-gray-200 bg-white shadow-sm">
+    <header className="sticky top-0 z-50 border-b border-[var(--gray-6)] bg-[var(--color-background)] shadow-sm">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo / Brand */}
@@ -104,19 +106,26 @@ export function AppHeader() {
                   <RoleBadge role={user.role} size="sm" />
                 </div>
 
+                {/* Theme Toggle */}
+                <ThemeToggle />
+
                 {/* Logout Button */}
                 <LogoutButton size="sm" variant="secondary" showIcon={false} />
               </>
             ) : (
               /* Login Buttons */
               <div className="flex items-center gap-2">
+                {/* Theme Toggle */}
+                <ThemeToggle />
                 {isDev && (
-                  <button
+                  <Button
                     onClick={loginDev}
-                    className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-500"
+                    variant="soft"
+                    color="orange"
+                    size="1"
                   >
                     Dev Login
-                  </button>
+                  </Button>
                 )}
                 <LoginButton provider="github" size="sm" />
                 <LoginButton provider="google" size="sm" />
