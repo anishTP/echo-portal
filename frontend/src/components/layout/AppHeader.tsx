@@ -120,13 +120,13 @@ export function AppHeader() {
                     onClick={loginDev}
                     variant="soft"
                     color="orange"
-                    size="1"
+                    size="2"
                   >
                     Dev Login
                   </Button>
                 )}
-                <LoginButton provider="github" size="1" />
-                <LoginButton provider="google" size="1" />
+                <LoginButton provider="github" size="2" />
+                <LoginButton provider="google" size="2" />
               </div>
             )}
           </div>
