@@ -109,20 +109,16 @@ export function AppHeader() {
               </>
             ) : (
               /* Login Buttons */
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 {isDev && (
-                  <>
-                    <button
-                      onClick={loginDev}
-                      className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-500"
-                    >
-                      Dev Login
-                    </button>
-                    <div className="text-sm text-gray-400">or</div>
-                  </>
+                  <button
+                    onClick={loginDev}
+                    className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-500"
+                  >
+                    Dev Login
+                  </button>
                 )}
                 <LoginButton provider="github" size="sm" />
-                <div className="text-sm text-gray-400">or</div>
                 <LoginButton provider="google" size="sm" />
               </div>
             )}
