@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Button } from '@radix-ui/themes';
 
 interface ApprovalActionsProps {
   onApprove: (reason?: string) => Promise<void>;
@@ -51,20 +52,22 @@ export function ApprovalActions({
   if (mode === 'idle') {
     return (
       <div className="flex gap-3">
-        <button
+        <Button
+          color="green"
           onClick={() => setMode('approve')}
           disabled={isSubmitting}
-          className="flex-1 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+          style={{ flex: 1 }}
         >
           Approve
-        </button>
-        <button
+        </Button>
+        <Button
+          color="orange"
           onClick={() => setMode('changes')}
           disabled={isSubmitting}
-          className="flex-1 rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-50"
+          style={{ flex: 1 }}
         >
           Request Changes
-        </button>
+        </Button>
       </div>
     );
   }
@@ -94,28 +97,26 @@ export function ApprovalActions({
       )}
 
       <div className="flex gap-3">
-        <button
+        <Button
+          variant="outline"
           onClick={handleCancel}
           disabled={isSubmitting}
-          className="flex-1 rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50 disabled:opacity-50"
+          style={{ flex: 1 }}
         >
           Cancel
-        </button>
-        <button
+        </Button>
+        <Button
+          color={mode === 'approve' ? 'green' : 'orange'}
           onClick={mode === 'approve' ? handleApprove : handleRequestChanges}
           disabled={isSubmitting}
-          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium text-white disabled:opacity-50 ${
-            mode === 'approve'
-              ? 'bg-green-600 hover:bg-green-700'
-              : 'bg-orange-600 hover:bg-orange-700'
-          }`}
+          style={{ flex: 1 }}
         >
           {isSubmitting
             ? 'Submitting...'
             : mode === 'approve'
               ? 'Confirm Approval'
               : 'Submit Changes Request'}
-        </button>
+        </Button>
       </div>
     </div>
   );

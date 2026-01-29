@@ -1,3 +1,5 @@
+import { Button } from '@radix-ui/themes';
+
 interface AccessDeniedGuidance {
   reason: string;
   requiredRole?: string;
@@ -115,12 +117,13 @@ export function AccessDenied({
 
           {/* Back button */}
           <div className="mt-6">
-            <button
+            <Button
+              color="red"
               onClick={() => window.history.back()}
-              className="w-full rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+              style={{ width: '100%' }}
             >
               Go Back
-            </button>
+            </Button>
           </div>
         </div>
       </div>

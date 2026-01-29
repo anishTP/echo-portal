@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Button } from '@radix-ui/themes';
 import { useAuth } from '../context/AuthContext';
 import { useMyBranches, useReviewBranches } from '../hooks/useBranch';
 import { BranchList, BranchCreate } from '../components/branch';
@@ -53,12 +54,9 @@ export default function Dashboard() {
             <section>
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">My Branches</h2>
-                <button
-                  onClick={() => setShowCreateModal(true)}
-                  className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-                >
+                <Button onClick={() => setShowCreateModal(true)}>
                   New Branch
-                </button>
+                </Button>
               </div>
               <BranchList
                 branches={myBranches}

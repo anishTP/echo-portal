@@ -1,4 +1,5 @@
 import { useState, memo, useCallback } from 'react';
+import { Button } from '@radix-ui/themes';
 import { useVersionHistory, useRevertContent } from '../../hooks/useVersionHistory';
 import type { ContentVersionSummary } from '@echo-portal/shared';
 
@@ -64,13 +65,9 @@ export function VersionHistory({ contentId, onSelectDiff, isReadOnly }: VersionH
           Version History ({data?.total ?? 0})
         </h3>
         {selectedVersions.length === 2 && (
-          <button
-            type="button"
-            onClick={handleCompare}
-            className="rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
-          >
+          <Button size="1" onClick={handleCompare}>
             Compare Selected
-          </button>
+          </Button>
         )}
       </div>
 
@@ -145,13 +142,9 @@ const VersionEntry = memo(function VersionEntry({
           </div>
         </div>
         {onRevert && (
-          <button
-            type="button"
-            onClick={onRevert}
-            className="text-xs text-blue-600 hover:text-blue-800"
-          >
+          <Button variant="ghost" size="1" onClick={onRevert}>
             Revert
-          </button>
+          </Button>
         )}
       </div>
     </div>

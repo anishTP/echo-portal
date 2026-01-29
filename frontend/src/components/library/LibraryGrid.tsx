@@ -1,3 +1,4 @@
+import { Button } from '@radix-ui/themes';
 import type { ContentSummary } from '@echo-portal/shared';
 import { ContentCard } from './ContentCard';
 
@@ -78,12 +79,9 @@ function ErrorState({ onRetry }: { onRetry?: () => void }) {
         Something went wrong while loading the content library.
       </p>
       {onRetry && (
-        <button
-          onClick={onRetry}
-          className="mt-4 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
-        >
+        <Button color="red" onClick={onRetry} className="mt-4">
           Try Again
-        </button>
+        </Button>
       )}
     </div>
   );

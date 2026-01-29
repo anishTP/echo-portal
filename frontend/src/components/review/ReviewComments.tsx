@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Button } from '@radix-ui/themes';
 import type { ReviewComment } from './ReviewPanel';
 
 interface ReviewCommentsProps {
@@ -126,21 +127,17 @@ export function ReviewComments({
           )}
 
           <div className="flex justify-end gap-3">
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={onToggleCommentForm}
               disabled={isSubmitting}
-              className="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50 disabled:opacity-50"
             >
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            >
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? 'Posting...' : 'Post Comment'}
-            </button>
+            </Button>
           </div>
         </form>
       )}
