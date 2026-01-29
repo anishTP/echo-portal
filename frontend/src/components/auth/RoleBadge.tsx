@@ -1,3 +1,4 @@
+import { Badge } from '@radix-ui/themes';
 import type { RoleType } from '@echo-portal/shared';
 
 interface RoleBadgeProps {
@@ -6,44 +7,37 @@ interface RoleBadgeProps {
   showIcon?: boolean;
 }
 
+// Map roles to Radix Badge colors
 const roleConfig: Record<
   RoleType,
-  { label: string; color: string; bgColor: string; borderColor: string; icon: string }
+  { label: string; color: 'gray' | 'blue' | 'purple' | 'red'; icon: string }
 > = {
   viewer: {
     label: 'Viewer',
-    color: 'text-gray-700',
-    bgColor: 'bg-gray-100',
-    borderColor: 'border-gray-200',
+    color: 'gray',
     icon: '👁️',
   },
   contributor: {
     label: 'Contributor',
-    color: 'text-blue-700',
-    bgColor: 'bg-blue-100',
-    borderColor: 'border-blue-200',
+    color: 'blue',
     icon: '✏️',
   },
   reviewer: {
     label: 'Reviewer',
-    color: 'text-purple-700',
-    bgColor: 'bg-purple-100',
-    borderColor: 'border-purple-200',
+    color: 'purple',
     icon: '🔍',
   },
   administrator: {
     label: 'Administrator',
-    color: 'text-red-700',
-    bgColor: 'bg-red-100',
-    borderColor: 'border-red-200',
+    color: 'red',
     icon: '⚙️',
   },
 };
 
-const sizeClasses = {
-  sm: 'px-2 py-0.5 text-xs',
-  md: 'px-2.5 py-1 text-sm',
-  lg: 'px-3 py-1.5 text-base',
+const sizeMap = {
+  sm: '1' as const,
+  md: '2' as const,
+  lg: '3' as const,
 };
 
 export function RoleBadge({ role, size = 'md', showIcon = true }: RoleBadgeProps) {
@@ -54,13 +48,16 @@ export function RoleBadge({ role, size = 'md', showIcon = true }: RoleBadgeProps
   }
 
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full border font-medium ${config.bgColor} ${config.color} ${config.borderColor} ${sizeClasses[size]}`}
+    <Badge
+      color={config.color}
+      variant="soft"
+      size={sizeMap[size]}
+      radius="full"
       title={`Role: ${config.label}`}
     >
       {showIcon && <span>{config.icon}</span>}
       <span>{config.label}</span>
-    </span>
+    </Badge>
   );
 }
 

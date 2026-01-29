@@ -1,3 +1,4 @@
+import { Badge } from '@radix-ui/themes';
 import type { BranchStateType } from '@echo-portal/shared';
 
 interface LifecycleStatusProps {
@@ -5,52 +6,51 @@ interface LifecycleStatusProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
+// Map branch states to Radix Badge colors
 const stateConfig: Record<
   BranchStateType,
-  { label: string; color: string; bgColor: string }
+  { label: string; color: 'gray' | 'yellow' | 'green' | 'blue' }
 > = {
   draft: {
     label: 'Draft',
-    color: 'text-gray-700',
-    bgColor: 'bg-gray-100',
+    color: 'gray',
   },
   review: {
     label: 'In Review',
-    color: 'text-yellow-700',
-    bgColor: 'bg-yellow-100',
+    color: 'yellow',
   },
   approved: {
     label: 'Approved',
-    color: 'text-green-700',
-    bgColor: 'bg-green-100',
+    color: 'green',
   },
   published: {
     label: 'Published',
-    color: 'text-blue-700',
-    bgColor: 'bg-blue-100',
+    color: 'blue',
   },
   archived: {
     label: 'Archived',
-    color: 'text-gray-500',
-    bgColor: 'bg-gray-50',
+    color: 'gray',
   },
 };
 
-const sizeClasses = {
-  sm: 'px-2 py-0.5 text-xs',
-  md: 'px-2.5 py-1 text-sm',
-  lg: 'px-3 py-1.5 text-base',
+const sizeMap = {
+  sm: '1' as const,
+  md: '2' as const,
+  lg: '3' as const,
 };
 
 export function LifecycleStatus({ state, size = 'md' }: LifecycleStatusProps) {
   const config = stateConfig[state] || stateConfig.draft;
 
   return (
-    <span
-      className={`inline-flex items-center rounded-full font-medium ${config.bgColor} ${config.color} ${sizeClasses[size]}`}
+    <Badge
+      color={config.color}
+      variant="soft"
+      size={sizeMap[size]}
+      radius="full"
     >
       {config.label}
-    </span>
+    </Badge>
   );
 }
 
