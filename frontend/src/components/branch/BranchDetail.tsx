@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Dialog, Button, Flex } from '@radix-ui/themes';
 import { LifecycleStatus } from './LifecycleStatus';
 import { VisibilitySelector } from './VisibilitySelector';
 import { TeamMemberPicker } from './TeamMemberPicker';
@@ -95,21 +96,15 @@ export function BranchDetail({ branch, onEdit }: BranchDetailProps) {
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <Flex gap="2">
           <PermissionGate checkPermission={() => permissions.canEdit}>
             <>
-              <button
-                onClick={onEdit}
-                className="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50"
-              >
+              <Button variant="outline" onClick={onEdit}>
                 Edit
-              </button>
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="rounded-md bg-red-50 px-4 py-2 text-sm font-medium text-red-700 ring-1 ring-red-200 hover:bg-red-100"
-              >
+              </Button>
+              <Button variant="soft" color="red" onClick={() => setShowDeleteConfirm(true)}>
                 Delete
-              </button>
+              </Button>
             </>
           </PermissionGate>
           <PermissionGate checkPermission={() => permissions.canSubmitForReview && isDraft}>
@@ -118,7 +113,7 @@ export function BranchDetail({ branch, onEdit }: BranchDetailProps) {
           <PermissionGate checkPermission={() => permissions.canPublish && branch.state === 'approved'}>
             <PublishButton branch={branch} />
           </PermissionGate>
-        </div>
+        </Flex>
       </div>
 
       {/* Description */}
@@ -285,31 +280,25 @@ export function BranchDetail({ branch, onEdit }: BranchDetailProps) {
       )}
 
       {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-            <h2 className="text-lg font-semibold text-gray-900">Delete Branch</h2>
-            <p className="mt-2 text-gray-600">
-              Are you sure you want to delete "{branch.name}"? This action cannot be undone.
-            </p>
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50"
-              >
+      <Dialog.Root open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <Dialog.Content maxWidth="450px">
+          <Dialog.Title>Delete Branch</Dialog.Title>
+          <Dialog.Description size="2" color="gray">
+            Are you sure you want to delete "{branch.name}"? This action cannot be undone.
+          </Dialog.Description>
+
+          <Flex gap="3" mt="5" justify="end">
+            <Dialog.Close>
+              <Button variant="outline">
                 Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleteBranch.isPending}
-                className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
-              >
-                {deleteBranch.isPending ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              </Button>
+            </Dialog.Close>
+            <Button color="red" onClick={handleDelete} disabled={deleteBranch.isPending}>
+              {deleteBranch.isPending ? 'Deleting...' : 'Delete'}
+            </Button>
+          </Flex>
+        </Dialog.Content>
+      </Dialog.Root>
     </div>
   );
 }

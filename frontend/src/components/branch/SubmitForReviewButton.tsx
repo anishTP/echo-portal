@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { Dialog, Button, TextArea, Text, Callout, Flex, Avatar, Badge } from '@radix-ui/themes';
 import { branchService } from '../../services/branchService';
 import { api } from '../../services/api';
 import { invalidateWorkflowQueries } from '../../hooks/queryKeys';
@@ -64,114 +65,95 @@ export function SubmitForReviewButton({
   const hasReviewers = reviewers.length > 0;
 
   return (
-    <>
-      <button
-        type="button"
-        onClick={handleSubmit}
-        disabled={disabled || !hasReviewers}
-        className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-        title={
-          !hasReviewers
-            ? 'Please assign at least one reviewer before submitting'
-            : 'Submit this branch for review'
-        }
-      >
-        Submit for Review
-        {hasReviewers && (
-          <span className="ml-2 rounded-full bg-blue-500 px-2 py-0.5 text-xs">
-            {reviewers.length} reviewer{reviewers.length !== 1 ? 's' : ''}
-          </span>
-        )}
-      </button>
+    <Dialog.Root open={showModal} onOpenChange={(open) => !open && handleCancel()}>
+      <Dialog.Trigger>
+        <Button
+          onClick={handleSubmit}
+          disabled={disabled || !hasReviewers}
+          title={
+            !hasReviewers
+              ? 'Please assign at least one reviewer before submitting'
+              : 'Submit this branch for review'
+          }
+        >
+          Submit for Review
+          {hasReviewers && (
+            <Badge color="blue" size="1" ml="2">
+              {reviewers.length}
+            </Badge>
+          )}
+        </Button>
+      </Dialog.Trigger>
 
-      {/* Confirmation Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-            <h2 className="text-lg font-semibold text-gray-900">Submit for Review</h2>
-            <p className="mt-2 text-sm text-gray-600">
-              This branch will be submitted for review to{' '}
-              {reviewers.length === 1 ? (
-                <strong>{reviewers[0].displayName}</strong>
-              ) : (
-                <strong>
-                  {reviewers.length} reviewer{reviewers.length !== 1 ? 's' : ''}
-                </strong>
-              )}
-              .
-            </p>
+      <Dialog.Content maxWidth="450px">
+        <Dialog.Title>Submit for Review</Dialog.Title>
+        <Dialog.Description size="2" color="gray">
+          This branch will be submitted for review to{' '}
+          {reviewers.length === 1 ? (
+            <Text weight="bold">{reviewers[0].displayName}</Text>
+          ) : (
+            <Text weight="bold">
+              {reviewers.length} reviewer{reviewers.length !== 1 ? 's' : ''}
+            </Text>
+          )}
+          .
+        </Dialog.Description>
 
-            {/* Reviewers List */}
-            <div className="mt-3 rounded-lg bg-gray-50 p-3">
-              <p className="text-xs font-medium text-gray-700">Assigned Reviewers:</p>
-              <ul className="mt-2 space-y-1">
-                {reviewers.map((reviewer) => (
-                  <li key={reviewer.id} className="flex items-center gap-2 text-sm text-gray-900">
-                    {reviewer.avatarUrl ? (
-                      <img
-                        src={reviewer.avatarUrl}
-                        alt={reviewer.displayName}
-                        className="h-5 w-5 rounded-full"
-                      />
-                    ) : (
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-300 text-xs font-medium text-gray-600">
-                        {reviewer.displayName.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    <span>{reviewer.displayName}</span>
-                    <span className="text-xs text-gray-500">({reviewer.email})</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Optional Reason */}
-            <div className="mt-4">
-              <label htmlFor="submit-reason" className="block text-sm font-medium text-gray-700">
-                Message (optional)
-              </label>
-              <textarea
-                id="submit-reason"
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                placeholder="Add a message for the reviewers..."
-                rows={3}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
-
-            {/* Actions */}
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={handleCancel}
-                disabled={submitMutation.isPending}
-                className="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmSubmit}
-                disabled={submitMutation.isPending}
-                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                {submitMutation.isPending ? 'Submitting...' : 'Submit for Review'}
-              </button>
-            </div>
-
-            {/* Error Display */}
-            {submitMutation.isError && (
-              <div className="mt-4 rounded-lg bg-red-50 p-3">
-                <p className="text-sm text-red-800">
-                  {(submitMutation.error as any)?.message || 'Failed to submit for review'}
-                </p>
-              </div>
-            )}
+        <Flex direction="column" gap="4" mt="4">
+          {/* Reviewers List */}
+          <div className="rounded-lg bg-[var(--gray-3)] p-3">
+            <Text size="1" weight="medium">Assigned Reviewers:</Text>
+            <Flex direction="column" gap="2" mt="2">
+              {reviewers.map((reviewer) => (
+                <Flex key={reviewer.id} align="center" gap="2">
+                  <Avatar
+                    src={reviewer.avatarUrl}
+                    fallback={reviewer.displayName.charAt(0).toUpperCase()}
+                    size="1"
+                  />
+                  <Text size="2">{reviewer.displayName}</Text>
+                  <Text size="1" color="gray">({reviewer.email})</Text>
+                </Flex>
+              ))}
+            </Flex>
           </div>
-        </div>
-      )}
-    </>
+
+          {/* Optional Reason */}
+          <div>
+            <Text as="label" size="2" weight="medium" className="block mb-1">
+              Message (optional)
+            </Text>
+            <TextArea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Add a message for the reviewers..."
+              rows={3}
+            />
+          </div>
+
+          {/* Error Display */}
+          {submitMutation.isError && (
+            <Callout.Root color="red">
+              <Callout.Text>
+                {(submitMutation.error as any)?.message || 'Failed to submit for review'}
+              </Callout.Text>
+            </Callout.Root>
+          )}
+        </Flex>
+
+        {/* Actions */}
+        <Flex gap="3" mt="5" justify="end">
+          <Dialog.Close>
+            <Button variant="outline" disabled={submitMutation.isPending}>
+              Cancel
+            </Button>
+          </Dialog.Close>
+          <Button onClick={handleConfirmSubmit} disabled={submitMutation.isPending}>
+            {submitMutation.isPending ? 'Submitting...' : 'Submit for Review'}
+          </Button>
+        </Flex>
+      </Dialog.Content>
+    </Dialog.Root>
   );
 }
 

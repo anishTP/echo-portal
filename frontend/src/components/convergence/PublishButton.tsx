@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Dialog, Button, Text, Callout, Flex } from '@radix-ui/themes';
+import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
 
 interface PublishButtonProps {
   branchId: string;
@@ -60,75 +62,53 @@ export function PublishButton({
   const buttonState = getButtonState();
 
   return (
-    <>
-      <button
-        onClick={() => setShowConfirm(true)}
-        disabled={buttonState.disabled}
-        className={`rounded-md px-4 py-2 text-sm font-medium ${buttonState.className}`}
-      >
-        {buttonState.label}
-      </button>
+    <Dialog.Root open={showConfirm} onOpenChange={setShowConfirm}>
+      <Dialog.Trigger>
+        <Button
+          color={buttonState.disabled ? 'gray' : 'purple'}
+          disabled={buttonState.disabled}
+        >
+          {buttonState.label}
+        </Button>
+      </Dialog.Trigger>
 
-      {/* Confirmation Modal */}
-      {showConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Publish Branch
-            </h2>
-            <p className="mt-2 text-gray-600">
-              You are about to publish <strong>{branchName}</strong> to main.
-              This action will merge all changes and make them live.
-            </p>
+      <Dialog.Content maxWidth="450px">
+        <Dialog.Title>Publish Branch</Dialog.Title>
+        <Dialog.Description size="2" color="gray">
+          You are about to publish <Text weight="bold">{branchName}</Text> to main.
+          This action will merge all changes and make them live.
+        </Dialog.Description>
 
-            <div className="mt-4 rounded-md bg-yellow-50 p-3">
-              <div className="flex">
-                <svg
-                  className="h-5 w-5 text-yellow-400"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <div className="ml-3">
-                  <p className="text-sm text-yellow-700">
-                    This action cannot be undone. Make sure all changes have
-                    been reviewed and approved.
-                  </p>
-                </div>
-              </div>
-            </div>
+        <Flex direction="column" gap="4" mt="4">
+          <Callout.Root color="yellow">
+            <Callout.Icon>
+              <ExclamationTriangleIcon />
+            </Callout.Icon>
+            <Callout.Text>
+              This action cannot be undone. Make sure all changes have
+              been reviewed and approved.
+            </Callout.Text>
+          </Callout.Root>
 
-            {error && (
-              <div className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
-                {error}
-              </div>
-            )}
+          {error && (
+            <Callout.Root color="red">
+              <Callout.Text>{error}</Callout.Text>
+            </Callout.Root>
+          )}
+        </Flex>
 
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                onClick={() => setShowConfirm(false)}
-                disabled={isPublishing}
-                className="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handlePublish}
-                disabled={isPublishing}
-                className="rounded-md bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-50"
-              >
-                {isPublishing ? 'Publishing...' : 'Confirm Publish'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+        <Flex gap="3" mt="5" justify="end">
+          <Dialog.Close>
+            <Button variant="outline" disabled={isPublishing}>
+              Cancel
+            </Button>
+          </Dialog.Close>
+          <Button color="purple" onClick={handlePublish} disabled={isPublishing}>
+            {isPublishing ? 'Publishing...' : 'Confirm Publish'}
+          </Button>
+        </Flex>
+      </Dialog.Content>
+    </Dialog.Root>
   );
 }
 
