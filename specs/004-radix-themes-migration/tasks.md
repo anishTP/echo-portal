@@ -238,18 +238,18 @@ bd comments <id>
 
 ---
 
-## Phase 6: User Story 4 — Design Token Customization (P3) — ⬜ Pending
+## Phase 6: User Story 4 — Design Token Customization (P3) — ✅ COMPLETED
 
 **Beads Phase ID**: `echo-portal-k55.6`
 **Goal**: Design tokens can be changed centrally and propagate to all components
 **Acceptance**: Change accent color in Theme config, verify all components update
 **Dependencies**: Phase 4 complete (components must be migrated first)
 
-- [ ] T043 [US4] Document theme configuration options in `specs/004-radix-themes-migration/quickstart.md`
-- [ ] T044 [US4] Verify accent color change propagates to all buttons in `frontend/src/main.tsx`
-- [ ] T045 [US4] Verify gray scale change propagates to all neutral UI in `frontend/src/main.tsx`
-- [ ] T046 [US4] Verify border radius change propagates to all components in `frontend/src/main.tsx`
-- [ ] T047 [US4] Create design token customization test in `frontend/tests/unit/theme/tokenPropagation.test.tsx`
+- [x] T043 [US4] Document theme configuration options in `specs/004-radix-themes-migration/quickstart.md`
+- [x] T044 [US4] Verify accent color change propagates to all buttons in `frontend/src/main.tsx`
+- [x] T045 [US4] Verify gray scale change propagates to all neutral UI in `frontend/src/main.tsx`
+- [x] T046 [US4] Verify border radius change propagates to all components in `frontend/src/main.tsx`
+- [x] T047 [US4] Create design token customization test in `frontend/tests/unit/theme/tokenPropagation.test.tsx`
 
 **✓ Checkpoint**: US4 acceptance - token changes propagate 100% to components
 
