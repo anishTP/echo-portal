@@ -33,18 +33,16 @@ export function AppHeader() {
             <nav className="hidden md:flex items-center gap-6">
               <Link
                 to="/"
-                className={`text-sm font-medium transition-colors ${
-                  isActive('/') ? 'text-blue-600' : 'text-gray-700 hover:text-gray-900'
-                }`}
+                className={`text-sm font-medium transition-colors ${isActive('/') ? 'text-blue-600' : 'text-gray-700 hover:text-gray-900'
+                  }`}
               >
                 Library
               </Link>
               {isAuthenticated && (
                 <Link
                   to="/dashboard"
-                  className={`text-sm font-medium transition-colors ${
-                    isActive('/dashboard') ? 'text-blue-600' : 'text-gray-700 hover:text-gray-900'
-                  }`}
+                  className={`text-sm font-medium transition-colors ${isActive('/dashboard') ? 'text-blue-600' : 'text-gray-700 hover:text-gray-900'
+                    }`}
                 >
                   Dashboard
                 </Link>
