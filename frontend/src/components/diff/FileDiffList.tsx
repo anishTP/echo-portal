@@ -1,4 +1,5 @@
 import { useState, memo } from 'react';
+import { Button } from '@radix-ui/themes';
 import { DiffViewer, type FileDiff } from './DiffViewer';
 
 export interface BranchDiff {
@@ -67,63 +68,52 @@ export function FileDiffList({ diff, isLoading }: FileDiffListProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setExpandAll(!expandAll)}
-            className="text-sm text-blue-600 hover:text-blue-800"
-          >
+          <Button variant="ghost" size="1" onClick={() => setExpandAll(!expandAll)}>
             {expandAll ? 'Collapse all' : 'Expand all'}
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Filters */}
       <div className="flex items-center gap-2">
         <span className="text-sm text-gray-500">Filter:</span>
-        <button
+        <Button
+          variant={filter === 'all' ? 'solid' : 'soft'}
+          size="1"
+          color="gray"
           onClick={() => setFilter('all')}
-          className={`rounded-full px-3 py-1 text-xs font-medium ${
-            filter === 'all'
-              ? 'bg-gray-900 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
         >
           All ({diff.files.length})
-        </button>
+        </Button>
         {addedCount > 0 && (
-          <button
+          <Button
+            variant={filter === 'added' ? 'solid' : 'soft'}
+            size="1"
+            color="green"
             onClick={() => setFilter('added')}
-            className={`rounded-full px-3 py-1 text-xs font-medium ${
-              filter === 'added'
-                ? 'bg-green-600 text-white'
-                : 'bg-green-100 text-green-800 hover:bg-green-200'
-            }`}
           >
             Added ({addedCount})
-          </button>
+          </Button>
         )}
         {modifiedCount > 0 && (
-          <button
+          <Button
+            variant={filter === 'modified' ? 'solid' : 'soft'}
+            size="1"
+            color="yellow"
             onClick={() => setFilter('modified')}
-            className={`rounded-full px-3 py-1 text-xs font-medium ${
-              filter === 'modified'
-                ? 'bg-yellow-600 text-white'
-                : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-            }`}
           >
             Modified ({modifiedCount})
-          </button>
+          </Button>
         )}
         {deletedCount > 0 && (
-          <button
+          <Button
+            variant={filter === 'deleted' ? 'solid' : 'soft'}
+            size="1"
+            color="red"
             onClick={() => setFilter('deleted')}
-            className={`rounded-full px-3 py-1 text-xs font-medium ${
-              filter === 'deleted'
-                ? 'bg-red-600 text-white'
-                : 'bg-red-100 text-red-800 hover:bg-red-200'
-            }`}
           >
             Deleted ({deletedCount})
-          </button>
+          </Button>
         )}
       </div>
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { Button } from '@radix-ui/themes';
 import { useAuth } from '../context/AuthContext';
 import { AuditLogViewer, SecurityReportView } from '../components/audit';
 import type {
@@ -203,17 +204,15 @@ export default function AuditLog() {
           {/* View Selector */}
           <div className="mb-6">
             <div className="border-b border-gray-200">
-              <nav className="-mb-px flex space-x-8">
-                <button
+              <nav className="-mb-px flex space-x-4">
+                <Button
+                  variant={activeView === 'logs' ? 'solid' : 'ghost'}
+                  size="2"
+                  color={activeView === 'logs' ? 'blue' : 'gray'}
                   onClick={() => setActiveView('logs')}
-                  className={`${
-                    activeView === 'logs'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                 >
                   <svg
-                    className="inline-block mr-2 h-5 w-5"
+                    className="mr-2 h-5 w-5"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -226,17 +225,15 @@ export default function AuditLog() {
                     />
                   </svg>
                   Activity Logs
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant={activeView === 'security' ? 'solid' : 'ghost'}
+                  size="2"
+                  color={activeView === 'security' ? 'red' : 'gray'}
                   onClick={() => setActiveView('security')}
-                  className={`${
-                    activeView === 'security'
-                      ? 'border-red-500 text-red-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                 >
                   <svg
-                    className="inline-block mr-2 h-5 w-5"
+                    className="mr-2 h-5 w-5"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -249,7 +246,7 @@ export default function AuditLog() {
                     />
                   </svg>
                   Security Reports
-                </button>
+                </Button>
               </nav>
             </div>
           </div>

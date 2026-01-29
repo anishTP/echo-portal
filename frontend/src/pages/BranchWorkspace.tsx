@@ -328,13 +328,15 @@ export default function BranchWorkspace() {
               ) : (
                 <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
                   <p className="text-red-600">Content not found</p>
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
+                    size="2"
+                    color="red"
                     onClick={handleBackToList}
-                    className="mt-2 text-sm text-red-700 underline hover:text-red-800"
+                    className="mt-2"
                   >
                     Return to list
-                  </button>
+                  </Button>
                 </div>
               )
             )}

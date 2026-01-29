@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
-import { Button, TextField, TextArea, Select, Badge } from '@radix-ui/themes';
+import { Button, TextField, TextArea, Select, Badge, IconButton } from '@radix-ui/themes';
+import { Cross1Icon } from '@radix-ui/react-icons';
 import { useCreateBranch } from '../../hooks/useBranch';
 import { useBranchStore } from '../../stores/branchStore';
 import type { BranchCreateInput, VisibilityType } from '@echo-portal/shared';
@@ -147,13 +148,14 @@ export function BranchCreate({ onSuccess, onCancel }: BranchCreateProps) {
             {formData.labels.map((label) => (
               <Badge key={label} color="blue">
                 {label}
-                <button
-                  type="button"
+                <IconButton
+                  variant="ghost"
+                  size="1"
                   onClick={() => handleRemoveLabel(label)}
-                  className="ml-1 hover:opacity-70"
+                  style={{ marginLeft: '2px', width: '14px', height: '14px' }}
                 >
-                  &times;
-                </button>
+                  <Cross1Icon width={10} height={10} />
+                </IconButton>
               </Badge>
             ))}
           </div>

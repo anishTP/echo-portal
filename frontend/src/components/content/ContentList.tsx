@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { Card } from '@radix-ui/themes';
 import type { ContentSummary, ContentTypeValue } from '@echo-portal/shared';
 
 interface ContentListProps {
@@ -75,56 +76,58 @@ const ContentListItem = memo(function ContentListItem({
   });
 
   return (
-    <button
-      type="button"
+    <Card
+      asChild
+      style={{ cursor: 'pointer' }}
       onClick={() => onSelect?.(content)}
-      className="block w-full rounded-lg border border-gray-200 bg-white p-4 text-left transition-shadow hover:shadow-md"
     >
-      <div className="flex items-start justify-between">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h3 className="truncate text-lg font-medium text-gray-900">{content.title}</h3>
-            <span
-              className={`rounded-full px-2 py-0.5 text-xs font-medium ${typeColors[content.contentType]}`}
-            >
-              {typeLabels[content.contentType]}
-            </span>
-          </div>
-
-          {content.description && (
-            <p className="mt-1 truncate text-sm text-gray-500">{content.description}</p>
-          )}
-
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500">
-            {content.category && (
-              <>
-                <span>{content.category}</span>
-                <span>&middot;</span>
-              </>
-            )}
-            <span>by {content.createdBy.displayName}</span>
-            <span>&middot;</span>
-            <span>Updated {formattedDate}</span>
-          </div>
-
-          {content.tags.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1">
-              {content.tags.slice(0, 5).map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
-                >
-                  {tag}
-                </span>
-              ))}
-              {content.tags.length > 5 && (
-                <span className="text-xs text-gray-400">+{content.tags.length - 5} more</span>
-              )}
+      <button type="button" className="w-full text-left">
+        <div className="flex items-start justify-between">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="truncate text-lg font-medium text-gray-900">{content.title}</h3>
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs font-medium ${typeColors[content.contentType]}`}
+              >
+                {typeLabels[content.contentType]}
+              </span>
             </div>
-          )}
+
+            {content.description && (
+              <p className="mt-1 truncate text-sm text-gray-500">{content.description}</p>
+            )}
+
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+              {content.category && (
+                <>
+                  <span>{content.category}</span>
+                  <span>&middot;</span>
+                </>
+              )}
+              <span>by {content.createdBy.displayName}</span>
+              <span>&middot;</span>
+              <span>Updated {formattedDate}</span>
+            </div>
+
+            {content.tags.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {content.tags.slice(0, 5).map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
+                  >
+                    {tag}
+                  </span>
+                ))}
+                {content.tags.length > 5 && (
+                  <span className="text-xs text-gray-400">+{content.tags.length - 5} more</span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </button>
+      </button>
+    </Card>
   );
 });
 

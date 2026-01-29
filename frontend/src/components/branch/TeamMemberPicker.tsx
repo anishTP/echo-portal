@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { IconButton, Button } from '@radix-ui/themes';
+import { Cross1Icon, PlusIcon } from '@radix-ui/react-icons';
 import { api } from '../../services/api';
 
 export interface TeamMember {
@@ -163,16 +165,15 @@ export function TeamMemberPicker({
                     </span>
                   </div>
                   {!disabled && (
-                    <button
-                      type="button"
+                    <IconButton
+                      variant="ghost"
+                      size="1"
+                      color="gray"
                       onClick={() => handleRemoveReviewer(reviewer.id)}
                       disabled={removeReviewer.isPending}
-                      className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50"
                     >
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                      <Cross1Icon />
+                    </IconButton>
                   )}
                 </div>
               );
@@ -223,11 +224,12 @@ export function TeamMemberPicker({
                     const roleBadge = getRoleBadge(member.roles);
                     return (
                       <li key={member.id}>
-                        <button
-                          type="button"
+                        <Button
+                          variant="ghost"
+                          size="2"
                           onClick={() => handleAddReviewer(member)}
                           disabled={addReviewer.isPending}
-                          className="flex w-full items-center gap-3 px-4 py-2 text-left hover:bg-gray-50 disabled:opacity-50"
+                          style={{ width: '100%', justifyContent: 'flex-start', padding: '8px 16px' }}
                         >
                           {member.avatarUrl ? (
                             <img
@@ -240,19 +242,17 @@ export function TeamMemberPicker({
                               {getInitials(member.displayName)}
                             </div>
                           )}
-                          <div className="flex-1">
-                            <div className="text-sm font-medium text-gray-900">
+                          <div className="flex-1 text-left">
+                            <div className="text-sm font-medium">
                               {member.displayName}
                             </div>
-                            <div className="text-xs text-gray-500">{member.email}</div>
+                            <div className="text-xs opacity-70">{member.email}</div>
                           </div>
                           <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${roleBadge.className}`}>
                             {roleBadge.label}
                           </span>
-                          <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                          </svg>
-                        </button>
+                          <PlusIcon />
+                        </Button>
                       </li>
                     );
                   })}

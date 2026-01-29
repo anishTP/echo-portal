@@ -1,4 +1,5 @@
 import { useState, memo } from 'react';
+import { IconButton } from '@radix-ui/themes';
 
 export interface DiffLine {
   type: 'context' | 'addition' | 'deletion';
@@ -54,7 +55,7 @@ export const DiffViewer = memo(function DiffViewer({ file, defaultExpanded = tru
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-3">
-          <button className="text-gray-500">
+          <IconButton variant="ghost" size="1" color="gray">
             <svg
               className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
               fill="none"
@@ -68,7 +69,7 @@ export const DiffViewer = memo(function DiffViewer({ file, defaultExpanded = tru
                 d="M9 5l7 7-7 7"
               />
             </svg>
-          </button>
+          </IconButton>
           <span
             className={`rounded px-2 py-0.5 text-xs font-medium ${statusColors[file.status]}`}
           >

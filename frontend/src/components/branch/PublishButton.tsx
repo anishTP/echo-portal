@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Button } from '@radix-ui/themes';
 import { usePublishBranch } from '../../hooks/useBranch';
 import type { BranchResponse } from '../../services/branchService';
 
@@ -49,20 +50,23 @@ export function PublishButton({ branch, onPublishSuccess }: PublishButtonProps) 
         </div>
 
         <div className="flex gap-3">
-          <button
+          <Button
+            variant="outline"
+            size="2"
+            style={{ flex: 1 }}
             onClick={() => setShowConfirm(false)}
             disabled={publishMutation.isPending}
-            className="flex-1 rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            size="2"
+            style={{ flex: 1 }}
             onClick={handlePublish}
             disabled={publishMutation.isPending}
-            className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {publishMutation.isPending ? 'Publishing...' : 'Confirm Publish'}
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -71,17 +75,18 @@ export function PublishButton({ branch, onPublishSuccess }: PublishButtonProps) 
   // Show publish button or disabled state
   return (
     <div>
-      <button
+      <Button
+        size="2"
+        style={{ width: '100%' }}
         onClick={() => setShowConfirm(true)}
         disabled={!canPublish || publishMutation.isPending}
-        className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
       >
         {!canPublish && branch.state !== 'approved' ? (
           'Branch must be approved before publishing'
         ) : (
           'Publish Branch'
         )}
-      </button>
+      </Button>
 
       {!canPublish && branch.state === 'approved' && (
         <p className="mt-2 text-xs text-gray-500">

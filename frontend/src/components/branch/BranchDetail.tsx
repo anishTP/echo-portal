@@ -236,21 +236,22 @@ export function BranchDetail({ branch, onEdit }: BranchDetailProps) {
             {/* Visibility Settings (expandable for draft branches) */}
             {isDraft && (
               <div>
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="2"
                   onClick={() => setShowVisibilityPanel(!showVisibilityPanel)}
-                  className="flex w-full items-center justify-between text-left"
+                  style={{ width: '100%', justifyContent: 'space-between' }}
                 >
-                  <span className="text-sm font-medium text-gray-700">Visibility Settings</span>
+                  <span className="text-sm font-medium">Visibility Settings</span>
                   <svg
-                    className={`h-5 w-5 text-gray-400 transition-transform ${showVisibilityPanel ? 'rotate-180' : ''}`}
+                    className={`h-5 w-5 transition-transform ${showVisibilityPanel ? 'rotate-180' : ''}`}
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
                   >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
-                </button>
+                </Button>
                 {showVisibilityPanel && (
                   <div className="mt-3">
                     <VisibilitySelector

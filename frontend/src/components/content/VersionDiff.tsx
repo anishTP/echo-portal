@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { Button } from '@radix-ui/themes';
 import { useVersionDiff } from '../../hooks/useVersionHistory';
 import type { DiffChange } from '@echo-portal/shared';
 
@@ -29,13 +30,9 @@ export function VersionDiff({ contentId, fromTimestamp, toTimestamp, onClose }: 
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-900">Version Comparison</h3>
         {onClose && (
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-sm text-gray-500 hover:text-gray-700"
-          >
+          <Button variant="ghost" size="1" onClick={onClose}>
             Close
-          </button>
+          </Button>
         )}
       </div>
 

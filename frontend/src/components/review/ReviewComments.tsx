@@ -69,12 +69,9 @@ export function ReviewComments({
           Comments {comments.length > 0 && `(${comments.length})`}
         </h4>
         {canAddComment && !showCommentForm && (
-          <button
-            onClick={onToggleCommentForm}
-            className="text-sm text-blue-600 hover:text-blue-700"
-          >
+          <Button variant="ghost" size="1" onClick={onToggleCommentForm}>
             Add Comment
-          </button>
+          </Button>
         )}
       </div>
 

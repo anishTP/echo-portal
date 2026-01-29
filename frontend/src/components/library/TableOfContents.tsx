@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { Button } from '@radix-ui/themes';
 
 interface TocItem {
   id: string;
@@ -93,16 +94,15 @@ export function TableOfContents({ markdown }: TableOfContentsProps) {
 
           return (
             <li key={heading.id} style={{ paddingLeft: `${indent}px` }}>
-              <button
+              <Button
+                variant="ghost"
+                size="1"
+                color={isActive ? 'blue' : 'gray'}
                 onClick={() => handleClick(heading.id)}
-                className={`block w-full text-left text-sm transition-colors ${
-                  isActive
-                    ? 'font-medium text-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
+                style={{ width: '100%', justifyContent: 'flex-start', fontWeight: isActive ? 500 : 400 }}
               >
                 {heading.text}
-              </button>
+              </Button>
             </li>
           );
         })}

@@ -1,5 +1,6 @@
 import { memo, useState, useCallback } from 'react';
-import { TextField, TextArea, Button, Badge } from '@radix-ui/themes';
+import { TextField, TextArea, Button, Badge, IconButton } from '@radix-ui/themes';
+import { Cross1Icon } from '@radix-ui/react-icons';
 
 interface ContentMetadataProps {
   title: string;
@@ -90,13 +91,14 @@ export const ContentMetadata = memo(function ContentMetadata({
             <Badge key={tag} color="blue" size="1">
               {tag}
               {!disabled && (
-                <button
-                  type="button"
+                <IconButton
+                  variant="ghost"
+                  size="1"
                   onClick={() => handleRemoveTag(tag)}
-                  className="ml-1 hover:opacity-70"
+                  style={{ marginLeft: '2px', width: '14px', height: '14px' }}
                 >
-                  x
-                </button>
+                  <Cross1Icon width={10} height={10} />
+                </IconButton>
               )}
             </Badge>
           ))}

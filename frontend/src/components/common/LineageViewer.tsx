@@ -1,4 +1,5 @@
 import { useMemo, memo } from 'react';
+import { Button } from '@radix-ui/themes';
 
 export interface LineageEvent {
   id: string;
@@ -263,20 +264,21 @@ export const LineageViewer = memo(function LineageViewer({
           <h4 className="mb-3 font-medium text-gray-900">Related Branches</h4>
           <div className="space-y-2">
             {lineage.relatedBranches.map((related) => (
-              <button
+              <Button
                 key={related.id}
-                type="button"
+                variant="outline"
+                size="2"
                 onClick={() => onBranchClick?.(related.id)}
-                className="flex w-full items-center justify-between rounded-lg border border-gray-200 p-3 text-left hover:bg-gray-50"
+                style={{ width: '100%', justifyContent: 'space-between' }}
               >
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{related.name}</p>
-                  <p className="text-xs text-gray-500">{relationshipLabels[related.relationship]}</p>
+                <div className="text-left">
+                  <p className="text-sm font-medium">{related.name}</p>
+                  <p className="text-xs opacity-70">{relationshipLabels[related.relationship]}</p>
                 </div>
-                <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-4 w-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-              </button>
+              </Button>
             ))}
           </div>
         </div>

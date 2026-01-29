@@ -4,7 +4,7 @@ import { Theme } from '@radix-ui/themes';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '@/services/api';
 import { AuthProvider } from '@/context/AuthContext';
-import { ThemeProvider } from '@/context/ThemeContext';
+import { ThemeProvider, useThemeContext } from '@/context/ThemeContext';
 import { AppRouter } from '@/router';
 import './index.css';
 
@@ -22,20 +22,30 @@ import './index.css';
  * Change any value below to see it propagate to all components.
  * See specs/004-radix-themes-migration/quickstart.md for full documentation.
  */
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
+
+function ThemedApp() {
+  const { resolvedTheme } = useThemeContext();
+
+  return (
     <Theme
+      appearance={resolvedTheme}
       accentColor="blue"   // T044: Primary color for buttons, links, focus states
       grayColor="slate"    // T045: Neutral scale for text, borders, backgrounds
       radius="medium"      // T046: Border radius for all components
     >
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <ThemeProvider>
-            <AppRouter />
-          </ThemeProvider>
+          <AppRouter />
         </AuthProvider>
       </QueryClientProvider>
     </Theme>
+  );
+}
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <ThemeProvider>
+      <ThemedApp />
+    </ThemeProvider>
   </StrictMode>
 );
