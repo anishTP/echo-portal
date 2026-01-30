@@ -34,12 +34,15 @@ export const authMiddleware = createMiddleware<AuthEnv>(async (c: Context, next:
   // Try cookie-based session first (primary method)
   const sessionToken = getCookie(c, SESSION_COOKIE_NAME);
 
+  const authHeader = c.req.header('Authorization');
   console.log('[AUTH] Middleware check', {
     path: c.req.path,
     method: c.req.method,
     hasCookie: !!sessionToken,
+    hasAuthHeader: !!authHeader,
     cookieName: SESSION_COOKIE_NAME,
     tokenPrefix: sessionToken ? sessionToken.substring(0, 8) + '...' : 'none',
+    authHeaderPrefix: authHeader ? authHeader.substring(0, 20) + '...' : 'none',
   });
 
   if (sessionToken) {
@@ -149,6 +152,14 @@ export const authMiddleware = createMiddleware<AuthEnv>(async (c: Context, next:
  */
 export const requireAuth = createMiddleware<AuthEnv>(async (c: Context, next: Next) => {
   const user = c.get('user');
+
+  console.log('[AUTH] requireAuth check', {
+    path: c.req.path,
+    method: c.req.method,
+    hasUser: !!user,
+    userId: user?.id,
+    isActive: user?.isActive,
+  });
 
   if (!user) {
     return c.json(
