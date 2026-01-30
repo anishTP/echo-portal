@@ -523,6 +523,9 @@ branchRoutes.post(
       throw new ValidationError(result.error || 'Failed to publish branch');
     }
 
+    // Mark all content in the branch as published
+    await contentService.markPublished(id, user.id);
+
     return success(c, result);
   }
 );
@@ -561,6 +564,11 @@ branchRoutes.post(
 
     if (!result.success) {
       throw new ValidationError(result.error || 'Transition failed');
+    }
+
+    // If this was a PUBLISH transition, mark all content as published
+    if (event === TransitionEvent.PUBLISH) {
+      await contentService.markPublished(id, user.id);
     }
 
     return success(c, result);
