@@ -313,7 +313,7 @@ export class ReviewService {
 
       // Only transition to approved if threshold is met
       if (approvalCount >= requiredApprovals) {
-        await transitionService.executeTransition({
+        const transitionResult = await transitionService.executeTransition({
           branchId: review.branchId,
           event: TransitionEvent.APPROVE,
           actorId,
@@ -321,17 +321,31 @@ export class ReviewService {
           reason: reason || `${approvalCount}/${requiredApprovals} approvals received`,
           metadata: { approvalCount, requiredApprovals },
         });
+
+        if (!transitionResult.success) {
+          console.error('[Review] Failed to transition branch to approved:', transitionResult.error);
+          throw new ValidationError(
+            `Failed to transition branch: ${transitionResult.error || 'Unknown error'}`
+          );
+        }
       }
       // Otherwise, branch stays in review state, just accumulating approvals
     } else if (decision === ReviewDecision.CHANGES_REQUESTED) {
       // Transition branch back to draft state (resets approval count)
-      await transitionService.executeTransition({
+      const transitionResult = await transitionService.executeTransition({
         branchId: review.branchId,
         event: TransitionEvent.REQUEST_CHANGES,
         actorId,
         actorRoles,
         reason: reason || 'Changes requested',
       });
+
+      if (!transitionResult.success) {
+        console.error('[Review] Failed to transition branch to draft after changes requested:', transitionResult.error);
+        throw new ValidationError(
+          `Failed to transition branch: ${transitionResult.error || 'Unknown error'}`
+        );
+      }
     }
 
     return createReviewModel(updated);

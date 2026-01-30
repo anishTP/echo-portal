@@ -144,6 +144,7 @@ export class BranchService {
 
   /**
    * Get a branch by ID
+   * Includes auto-repair for branches stuck in 'review' state after changes were requested
    */
   async getById(id: string): Promise<BranchModel | null> {
     const branch = await db.query.branches.findFirst({
@@ -154,7 +155,62 @@ export class BranchService {
       return null;
     }
 
+    // Auto-repair: if branch is stuck in 'review' with changes_requested, fix it
+    if (branch.state === 'review') {
+      const repaired = await this.autoRepairIfNeeded(branch);
+      if (repaired) {
+        return repaired;
+      }
+    }
+
     return createBranchModel(branch);
+  }
+
+  /**
+   * Auto-repair a branch if it's stuck in 'review' state after changes were requested.
+   * Returns the repaired branch model if repair was needed, null otherwise.
+   */
+  private async autoRepairIfNeeded(branch: typeof branches.$inferSelect): Promise<BranchModel | null> {
+    // Import reviews table dynamically to avoid circular dependency
+    const { reviews } = await import('../../db/schema/reviews.js');
+
+    // Check if there's a completed review with changes_requested
+    const stuckReview = await db.query.reviews.findFirst({
+      where: and(
+        eq(reviews.branchId, branch.id),
+        eq(reviews.status, 'completed'),
+        eq(reviews.decision, 'changes_requested')
+      ),
+    });
+
+    if (!stuckReview) {
+      return null; // Not stuck, normal review state
+    }
+
+    // Auto-repair: transition to draft
+    console.log(`[BranchService] Auto-repairing stuck branch ${branch.id} (was in review with changes_requested)`);
+
+    const [updated] = await db
+      .update(branches)
+      .set({
+        state: 'draft',
+        updatedAt: new Date(),
+      })
+      .where(eq(branches.id, branch.id))
+      .returning();
+
+    // Log the repair
+    await db.insert(branchStateTransitions).values({
+      branchId: branch.id,
+      fromState: 'review',
+      toState: 'draft',
+      actorId: branch.ownerId, // Attribute to owner
+      actorType: ActorType.SYSTEM,
+      reason: 'Auto-repair: branch was stuck in review after changes were requested',
+      metadata: { autoRepair: true, reviewId: stuckReview.id },
+    });
+
+    return createBranchModel(updated);
   }
 
   /**
@@ -357,6 +413,42 @@ export class BranchService {
       reason: 'Branch deleted by owner',
       metadata: {},
     });
+  }
+
+  /**
+   * Repair a branch stuck in 'review' state after a failed transition.
+   * This directly updates the branch state to 'draft' and logs the repair.
+   */
+  async repairStuckBranch(id: string, actorId: string): Promise<BranchModel> {
+    const existing = await this.getByIdOrThrow(id);
+
+    // Verify branch is stuck in review state
+    if (existing.state !== 'review') {
+      throw new ValidationError(`Branch is in '${existing.state}' state, not stuck in review`);
+    }
+
+    // Update the branch state to draft
+    const [updated] = await db
+      .update(branches)
+      .set({
+        state: 'draft',
+        updatedAt: new Date(),
+      })
+      .where(eq(branches.id, id))
+      .returning();
+
+    // Record the repair in the state transition log
+    await db.insert(branchStateTransitions).values({
+      branchId: id,
+      fromState: 'review',
+      toState: 'draft',
+      actorId,
+      actorType: ActorType.USER,
+      reason: 'Branch repair: fixed stuck state after failed transition',
+      metadata: { repairAction: true },
+    });
+
+    return createBranchModel(updated);
   }
 
   /**

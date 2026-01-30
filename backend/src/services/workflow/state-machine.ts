@@ -46,11 +46,13 @@ export const EventToTargetState: Record<TransitionEventType, BranchStateType> = 
 
 /**
  * Role requirements for each transition event
+ * Note: Contributors can be assigned as reviewers, so they need to be able to
+ * approve or request changes. The isReviewerGuard ensures they're actually assigned.
  */
 export const EventRoleRequirements: Record<TransitionEventType, string[]> = {
   [TransitionEvent.SUBMIT_FOR_REVIEW]: ['contributor', 'reviewer', 'publisher', 'administrator'],
-  [TransitionEvent.REQUEST_CHANGES]: ['reviewer', 'publisher', 'administrator'],
-  [TransitionEvent.APPROVE]: ['reviewer', 'publisher', 'administrator'],
+  [TransitionEvent.REQUEST_CHANGES]: ['contributor', 'reviewer', 'publisher', 'administrator'],
+  [TransitionEvent.APPROVE]: ['contributor', 'reviewer', 'publisher', 'administrator'],
   [TransitionEvent.PUBLISH]: ['publisher', 'administrator'],
   [TransitionEvent.ARCHIVE]: ['contributor', 'reviewer', 'publisher', 'administrator'],
 };

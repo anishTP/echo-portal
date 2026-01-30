@@ -727,4 +727,57 @@ branchRoutes.get(
   }
 );
 
+/**
+ * POST /api/v1/branches/:id/repair - Repair a stuck branch (admin only)
+ * Fixes branches that are stuck in 'review' state after changes were requested
+ * but the transition failed.
+ */
+branchRoutes.post(
+  '/:id/repair',
+  requireAuth,
+  zValidator('param', branchIdParamSchema),
+  async (c) => {
+    const user = c.get('user')!;
+    const { id } = c.req.valid('param');
+
+    // Only admins or branch owner can repair
+    const branch = await branchService.getById(id);
+    if (!branch) {
+      throw new NotFoundError('Branch', id);
+    }
+
+    const isAdmin = user.roles?.includes('administrator');
+    const isOwner = branch.ownerId === user.id;
+
+    if (!isAdmin && !isOwner) {
+      throw new ForbiddenError('Only administrators or the branch owner can repair a branch');
+    }
+
+    // Check if branch needs repair (stuck in review with changes_requested)
+    if (branch.state !== 'review') {
+      throw new ValidationError(`Branch is in '${branch.state}' state, not stuck in review`);
+    }
+
+    // Check if there's a completed review with changes_requested
+    const branchReviews = await reviewService.getByBranch(id);
+    const hasChangesRequested = branchReviews.some(
+      (r) => r.status === 'completed' && r.decision === 'changes_requested'
+    );
+
+    if (!hasChangesRequested) {
+      throw new ValidationError(
+        'Branch does not have any reviews with changes requested. Use normal transitions instead.'
+      );
+    }
+
+    // Directly repair the branch state (bypassing normal transition guards)
+    const updatedBranch = await branchService.repairStuckBranch(id, user.id);
+
+    return success(c, {
+      message: 'Branch repaired successfully. Branch is now in draft state.',
+      branch: updatedBranch.toResponseForUser(getBranchUserContext(c)),
+    });
+  }
+);
+
 export { branchRoutes };
