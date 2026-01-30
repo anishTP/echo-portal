@@ -107,9 +107,12 @@ export function BranchDetail({ branch, onEdit }: BranchDetailProps) {
               </Button>
             </>
           </PermissionGate>
-          <PermissionGate checkPermission={() => permissions.canSubmitForReview && isDraft}>
-            <SubmitForReviewButton branchId={branch.id} />
-          </PermissionGate>
+          {isOwner && isDraft && (
+            <SubmitForReviewButton
+              branchId={branch.id}
+              disabled={!permissions.canSubmitForReview}
+            />
+          )}
           <PermissionGate checkPermission={() => permissions.canPublish && branch.state === 'approved'}>
             <PublishButton branch={branch} />
           </PermissionGate>

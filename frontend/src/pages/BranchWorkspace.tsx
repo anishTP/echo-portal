@@ -323,6 +323,7 @@ export default function BranchWorkspace() {
                       content={selectedContent}
                       onSave={handleContentSaved}
                       onCancel={handleBackToList}
+                      onDelete={handleBackToList}
                     />
                   </div>
                   <div className="rounded-lg border border-gray-200 bg-white p-4">

@@ -2,8 +2,9 @@ import { useState, useCallback, useEffect } from 'react';
 import { Button, TextArea, TextField, Callout } from '@radix-ui/themes';
 import { ContentTypeSelector } from './ContentTypeSelector';
 import { ContentMetadata } from './ContentMetadata';
+import { DeleteContentDialog } from './DeleteContentDialog';
 import { useContentStore } from '../../stores/contentStore';
-import { useCreateContent, useUpdateContent } from '../../hooks/useContent';
+import { useCreateContent, useUpdateContent, useDeleteContent } from '../../hooks/useContent';
 import type { ContentTypeValue, ContentDetail } from '@echo-portal/shared';
 
 interface ContentEditorProps {
@@ -11,9 +12,10 @@ interface ContentEditorProps {
   content?: ContentDetail | null;
   onSave?: (content: ContentDetail) => void;
   onCancel?: () => void;
+  onDelete?: () => void;
 }
 
-export function ContentEditor({ branchId, content, onSave, onCancel }: ContentEditorProps) {
+export function ContentEditor({ branchId, content, onSave, onCancel, onDelete }: ContentEditorProps) {
   const [title, setTitle] = useState(content?.title ?? '');
   const [contentType, setContentType] = useState<ContentTypeValue>(
     content?.contentType ?? 'guideline'
@@ -23,13 +25,17 @@ export function ContentEditor({ branchId, content, onSave, onCancel }: ContentEd
   const [description, setDescription] = useState(content?.description ?? '');
   const [body, setBody] = useState(content?.currentVersion?.body ?? '');
   const [changeDescription, setChangeDescription] = useState('');
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const setIsDirty = useContentStore((s) => s.setIsDirty);
   const createMutation = useCreateContent();
   const updateMutation = useUpdateContent(content?.id ?? '');
+  const deleteMutation = useDeleteContent(branchId);
 
   const isEditing = !!content;
   const isSaving = createMutation.isPending || updateMutation.isPending;
+  const isDeleting = deleteMutation.isPending;
 
   // Track dirty state
   useEffect(() => {
@@ -90,6 +96,19 @@ export function ContentEditor({ branchId, content, onSave, onCancel }: ContentEd
 
   const canSave = title.trim() && body.trim() && changeDescription.trim() && !isSaving;
 
+  const handleDelete = useCallback(async () => {
+    if (!content?.id) return;
+    setDeleteError(null);
+    try {
+      await deleteMutation.mutateAsync(content.id);
+      setShowDeleteDialog(false);
+      setIsDirty(false);
+      onDelete?.();
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete content');
+    }
+  }, [content?.id, deleteMutation, setIsDirty, onDelete]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -97,6 +116,11 @@ export function ContentEditor({ branchId, content, onSave, onCancel }: ContentEd
           {isEditing ? 'Edit Content' : 'New Content'}
         </h2>
         <div className="flex gap-2">
+          {isEditing && (
+            <Button color="red" variant="outline" onClick={() => setShowDeleteDialog(true)}>
+              Delete
+            </Button>
+          )}
           {onCancel && (
             <Button variant="outline" onClick={onCancel}>
               Cancel
@@ -107,6 +131,17 @@ export function ContentEditor({ branchId, content, onSave, onCancel }: ContentEd
           </Button>
         </div>
       </div>
+
+      {isEditing && (
+        <DeleteContentDialog
+          contentTitle={content?.title ?? ''}
+          isOpen={showDeleteDialog}
+          isDeleting={isDeleting}
+          error={deleteError}
+          onConfirm={handleDelete}
+          onCancel={() => setShowDeleteDialog(false)}
+        />
+      )}
 
       {!isEditing && (
         <ContentTypeSelector value={contentType} onChange={setContentType} />

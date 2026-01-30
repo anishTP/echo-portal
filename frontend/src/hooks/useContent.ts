@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { contentApi } from '../services/content-api';
 import { useContentStore } from '../stores/contentStore';
+import { branchKeys } from './queryKeys';
 import type { ContentCreateInput, ContentUpdateInput } from '@echo-portal/shared';
 
 export const contentKeys = {
@@ -68,6 +69,8 @@ export function useCreateContent() {
     mutationFn: (input: ContentCreateInput) => contentApi.create(input),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: contentKeys.lists() });
+      // Invalidate branch query to update canSubmitForReview permission
+      queryClient.invalidateQueries({ queryKey: branchKeys.detail(data.branchId) });
       useContentStore.getState().setCurrentContent(data);
     },
   });
@@ -85,6 +88,26 @@ export function useUpdateContent(contentId: string) {
       queryClient.invalidateQueries({ queryKey: contentKeys.detail(contentId) });
       queryClient.invalidateQueries({ queryKey: contentKeys.lists() });
       useContentStore.getState().setCurrentContent(data);
+    },
+  });
+}
+
+/**
+ * Delete content mutation (soft delete via archive)
+ */
+export function useDeleteContent(branchId?: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (contentId: string) => contentApi.delete(contentId),
+    onSuccess: (_data, contentId) => {
+      queryClient.invalidateQueries({ queryKey: contentKeys.detail(contentId) });
+      queryClient.invalidateQueries({ queryKey: contentKeys.lists() });
+      // Invalidate branch query to update canSubmitForReview permission
+      if (branchId) {
+        queryClient.invalidateQueries({ queryKey: branchKeys.detail(branchId) });
+      }
+      useContentStore.getState().setCurrentContent(null);
     },
   });
 }

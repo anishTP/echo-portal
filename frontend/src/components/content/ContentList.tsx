@@ -1,5 +1,8 @@
-import { memo } from 'react';
-import { Card, Badge } from '@radix-ui/themes';
+import { memo, useState } from 'react';
+import { Card, Badge, DropdownMenu, IconButton } from '@radix-ui/themes';
+import { DotsVerticalIcon, Pencil1Icon, TrashIcon } from '@radix-ui/react-icons';
+import { DeleteContentDialog } from './DeleteContentDialog';
+import { useDeleteContent } from '../../hooks/useContent';
 import type { ContentSummary, ContentTypeValue } from '@echo-portal/shared';
 
 interface ContentListProps {
@@ -7,6 +10,8 @@ interface ContentListProps {
   isLoading?: boolean;
   emptyMessage?: string;
   onSelect?: (content: ContentSummary) => void;
+  onDelete?: (content: ContentSummary) => void;
+  showActions?: boolean;
 }
 
 const typeLabels: Record<ContentTypeValue, string> = {
@@ -26,6 +31,8 @@ export function ContentList({
   isLoading,
   emptyMessage = 'No content items found',
   onSelect,
+  onDelete,
+  showActions = false,
 }: ContentListProps) {
   if (isLoading) {
     return (
@@ -54,7 +61,13 @@ export function ContentList({
   return (
     <div className="space-y-3">
       {contents.map((content) => (
-        <ContentListItem key={content.id} content={content} onSelect={onSelect} />
+        <ContentListItem
+          key={content.id}
+          content={content}
+          onSelect={onSelect}
+          onDelete={onDelete}
+          showActions={showActions}
+        />
       ))}
     </div>
   );
@@ -63,27 +76,46 @@ export function ContentList({
 interface ContentListItemProps {
   content: ContentSummary;
   onSelect?: (content: ContentSummary) => void;
+  onDelete?: (content: ContentSummary) => void;
+  showActions?: boolean;
 }
 
 const ContentListItem = memo(function ContentListItem({
   content,
   onSelect,
+  onDelete,
+  showActions = false,
 }: ContentListItemProps) {
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const deleteMutation = useDeleteContent(content.branchId);
+
   const formattedDate = new Date(content.updatedAt).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   });
 
+  const handleDelete = async () => {
+    setDeleteError(null);
+    try {
+      await deleteMutation.mutateAsync(content.id);
+      setShowDeleteDialog(false);
+      onDelete?.(content);
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete content');
+    }
+  };
+
   return (
-    <Card
-      asChild
-      style={{ cursor: 'pointer' }}
-      onClick={() => onSelect?.(content)}
-    >
-      <button type="button" className="w-full text-left">
+    <>
+      <Card style={{ cursor: 'pointer' }}>
         <div className="flex items-start justify-between">
-          <div className="min-w-0 flex-1">
+          <button
+            type="button"
+            className="min-w-0 flex-1 text-left"
+            onClick={() => onSelect?.(content)}
+          >
             <div className="flex items-center gap-2">
               <h3 className="truncate text-lg font-medium text-gray-900">{content.title}</h3>
               <Badge color={typeBadgeColors[content.contentType]} variant="soft" radius="full" size="1">
@@ -119,10 +151,44 @@ const ContentListItem = memo(function ContentListItem({
                 )}
               </div>
             )}
-          </div>
+          </button>
+
+          {showActions && (
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger>
+                <IconButton
+                  variant="ghost"
+                  color="gray"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <DotsVerticalIcon />
+                </IconButton>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Content>
+                <DropdownMenu.Item onClick={() => onSelect?.(content)}>
+                  <Pencil1Icon />
+                  Edit
+                </DropdownMenu.Item>
+                <DropdownMenu.Separator />
+                <DropdownMenu.Item color="red" onClick={() => setShowDeleteDialog(true)}>
+                  <TrashIcon />
+                  Delete
+                </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu.Root>
+          )}
         </div>
-      </button>
-    </Card>
+      </Card>
+
+      <DeleteContentDialog
+        contentTitle={content.title}
+        isOpen={showDeleteDialog}
+        isDeleting={deleteMutation.isPending}
+        error={deleteError}
+        onConfirm={handleDelete}
+        onCancel={() => setShowDeleteDialog(false)}
+      />
+    </>
   );
 });
 

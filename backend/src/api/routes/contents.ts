@@ -245,6 +245,43 @@ contentRoutes.put(
 );
 
 /**
+ * DELETE /api/v1/contents/:contentId - Delete (archive) content
+ */
+contentRoutes.delete(
+  '/:contentId',
+  requireAuth,
+  zValidator('param', contentIdParamSchema),
+  async (c) => {
+    const user = c.get('user')!;
+    const { contentId } = c.req.valid('param');
+
+    // Authorization: look up content to get branchId, then check permissions
+    const existing = await contentService.getById(contentId);
+    if (!existing) {
+      return c.json({ error: { code: 'NOT_FOUND', message: 'Content not found' } }, 404);
+    }
+    await assertCanEditBranchContent(existing.branchId, user);
+
+    try {
+      await contentService.delete(contentId);
+      return c.body(null, 204);
+    } catch (error: unknown) {
+      const err = error as Error;
+      if (err.message === 'Content not found') {
+        return c.json({ error: { code: 'NOT_FOUND', message: err.message } }, 404);
+      }
+      if (err.message.includes('Published content')) {
+        return c.json({ error: { code: 'IMMUTABLE', message: err.message } }, 403);
+      }
+      if (err.message.includes('draft')) {
+        return c.json({ error: { code: 'INVALID_STATE', message: err.message } }, 403);
+      }
+      throw error;
+    }
+  }
+);
+
+/**
  * GET /api/v1/contents/:contentId/versions - List version history
  */
 contentRoutes.get(

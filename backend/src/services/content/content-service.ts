@@ -1,4 +1,4 @@
-import { eq, and, desc, sql, ilike, or } from 'drizzle-orm';
+import { eq, and, desc, sql, ilike, or, isNull } from 'drizzle-orm';
 import { db, schema } from '../../db/index.js';
 import { generateContentSlug, computeChecksum, computeByteSize, createMetadataSnapshot, MAX_CONTENT_BYTE_SIZE } from '../../models/content.js';
 import type { ContentDetail, ContentSummary, UserSummary } from '@echo-portal/shared';
@@ -325,7 +325,10 @@ export const contentService = {
     const limit = Math.min(options.limit ?? 20, 100);
     const offset = (page - 1) * limit;
 
-    const conditions = [eq(schema.contents.branchId, branchId)];
+    const conditions = [
+      eq(schema.contents.branchId, branchId),
+      isNull(schema.contents.archivedAt),
+    ];
     if (options.contentType) {
       conditions.push(eq(schema.contents.contentType, options.contentType as 'guideline' | 'asset' | 'opinion'));
     }
@@ -371,6 +374,7 @@ export const contentService = {
     const conditions = [
       eq(schema.contents.isPublished, true),
       eq(schema.contents.visibility, 'public'),
+      isNull(schema.contents.archivedAt),
     ];
     if (options.contentType) {
       conditions.push(eq(schema.contents.contentType, options.contentType as 'guideline' | 'asset' | 'opinion'));
@@ -414,6 +418,7 @@ export const contentService = {
     const searchPattern = `%${query}%`;
 
     const conditions = [
+      isNull(schema.contents.archivedAt),
       or(
         ilike(schema.contents.title, searchPattern),
         ilike(schema.contents.description, searchPattern),
@@ -475,6 +480,35 @@ export const contentService = {
       .update(schema.contents)
       .set({ archivedAt: new Date() })
       .where(eq(schema.contents.branchId, branchId));
+  },
+
+  /**
+   * Delete (archive) content by ID.
+   * Soft delete: sets archivedAt timestamp.
+   */
+  async delete(contentId: string): Promise<void> {
+    const content = await db.query.contents.findFirst({
+      where: eq(schema.contents.id, contentId),
+    });
+    if (!content) {
+      throw new Error('Content not found');
+    }
+    if (content.isPublished) {
+      throw new Error('Published content cannot be deleted');
+    }
+
+    // Validate branch state
+    const branch = await db.query.branches.findFirst({
+      where: eq(schema.branches.id, content.branchId),
+    });
+    if (!branch || branch.state !== 'draft') {
+      throw new Error('Content can only be deleted in draft branches');
+    }
+
+    await db
+      .update(schema.contents)
+      .set({ archivedAt: new Date() })
+      .where(eq(schema.contents.id, contentId));
   },
 
   /**

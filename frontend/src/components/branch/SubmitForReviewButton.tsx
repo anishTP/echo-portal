@@ -8,6 +8,7 @@ import type { TeamMember } from './TeamMemberPicker';
 
 interface SubmitForReviewButtonProps {
   branchId: string;
+  /** Disabled due to missing content (passed from parent based on canSubmitForReview) */
   disabled?: boolean;
   onSuccess?: () => void;
 }
@@ -63,18 +64,25 @@ export function SubmitForReviewButton({
   }, []);
 
   const hasReviewers = reviewers.length > 0;
+  const isDisabled = disabled || !hasReviewers;
+
+  const getTooltip = () => {
+    if (disabled) {
+      return 'Add content to this branch before submitting for review';
+    }
+    if (!hasReviewers) {
+      return 'Please assign at least one reviewer before submitting';
+    }
+    return 'Submit this branch for review';
+  };
 
   return (
     <Dialog.Root open={showModal} onOpenChange={(open) => !open && handleCancel()}>
       <Dialog.Trigger>
         <Button
           onClick={handleSubmit}
-          disabled={disabled || !hasReviewers}
-          title={
-            !hasReviewers
-              ? 'Please assign at least one reviewer before submitting'
-              : 'Submit this branch for review'
-          }
+          disabled={isDisabled}
+          title={getTooltip()}
         >
           Submit for Review
           {hasReviewers && (

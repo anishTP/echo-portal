@@ -53,6 +53,14 @@ function getBranchUserContext(c: any): { userId: string | null; roles: string[] 
 }
 
 /**
+ * Helper to check if a branch has content (for canSubmitForReview permission)
+ */
+async function checkBranchHasContent(branchId: string): Promise<boolean> {
+  const contentResult = await contentService.listByBranch(branchId, { limit: 1 });
+  return contentResult.total > 0;
+}
+
+/**
  * POST /api/v1/branches - Create a new branch
  */
 branchRoutes.post(
@@ -148,8 +156,7 @@ branchRoutes.get('/:id', zValidator('param', branchIdParamSchema), async (c) => 
   visibilityService.assertAccess(branch.toJSON(), context);
 
   // Check if branch has content (for canSubmitForReview permission)
-  const contentResult = await contentService.listByBranch(id, { limit: 1 });
-  const hasContent = contentResult.total > 0;
+  const hasContent = await checkBranchHasContent(id);
 
   const response = branch.toResponseForUser({ ...getBranchUserContext(c), hasContent });
 
@@ -175,7 +182,8 @@ branchRoutes.patch(
     const body = c.req.valid('json');
 
     const branch = await branchService.update(id, body, user.id);
-    return success(c, branch.toResponseForUser(getBranchUserContext(c)));
+    const hasContent = await checkBranchHasContent(id);
+    return success(c, branch.toResponseForUser({ ...getBranchUserContext(c), hasContent }));
   }
 );
 
@@ -478,7 +486,8 @@ branchRoutes.patch(
       user.id
     );
 
-    return success(c, updated.toResponseForUser(getBranchUserContext(c)));
+    const hasContent = await checkBranchHasContent(id);
+    return success(c, updated.toResponseForUser({ ...getBranchUserContext(c), hasContent }));
   }
 );
 
@@ -786,9 +795,10 @@ branchRoutes.post(
     // Directly repair the branch state (bypassing normal transition guards)
     const updatedBranch = await branchService.repairStuckBranch(id, user.id);
 
+    const hasContent = await checkBranchHasContent(id);
     return success(c, {
       message: 'Branch repaired successfully. Branch is now in draft state.',
-      branch: updatedBranch.toResponseForUser(getBranchUserContext(c)),
+      branch: updatedBranch.toResponseForUser({ ...getBranchUserContext(c), hasContent }),
     });
   }
 );

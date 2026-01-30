@@ -31,6 +31,11 @@ export const contentApi = {
     });
   },
 
+  /** Delete (archive) content */
+  delete(contentId: string): Promise<void> {
+    return api.delete(`/contents/${contentId}`);
+  },
+
   /** List contents in a branch */
   listByBranch(params: {
     branchId: string;
