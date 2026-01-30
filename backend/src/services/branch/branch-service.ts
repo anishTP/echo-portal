@@ -14,7 +14,8 @@ import {
   type UpdateBranchInput,
 } from '../../models/branch.js';
 import { NotFoundError, ValidationError, ConflictError, ForbiddenError } from '../../api/utils/errors.js';
-import { BranchState, ActorType } from '@echo-portal/shared';
+import { BranchState, ActorType, Role } from '@echo-portal/shared';
+import type { RoleType } from '@echo-portal/shared';
 import { contentInheritanceService } from '../content/content-inheritance-service.js';
 
 export interface BranchListOptions {
@@ -311,12 +312,13 @@ export class BranchService {
   /**
    * Delete a branch (soft delete by archiving)
    */
-  async delete(id: string, actorId: string): Promise<void> {
+  async delete(id: string, actorId: string, actorRoles: RoleType[] = []): Promise<void> {
     const existing = await this.getByIdOrThrow(id);
 
-    // Check ownership
-    if (existing.ownerId !== actorId) {
-      throw new ForbiddenError('Only the branch owner can delete this branch');
+    // Check ownership or admin role
+    const isAdmin = actorRoles.includes(Role.ADMINISTRATOR);
+    if (existing.ownerId !== actorId && !isAdmin) {
+      throw new ForbiddenError('Only the branch owner or administrators can delete this branch');
     }
 
     // Can only delete draft branches

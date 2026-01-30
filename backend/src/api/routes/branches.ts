@@ -185,7 +185,7 @@ branchRoutes.delete(
     const user = c.get('user')!;
     const { id } = c.req.valid('param');
 
-    await branchService.delete(id, user.id);
+    await branchService.delete(id, user.id, user.roles);
     return noContent(c);
   }
 );
