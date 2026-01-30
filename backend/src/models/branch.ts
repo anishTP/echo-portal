@@ -318,8 +318,8 @@ export class BranchModel {
   /**
    * Get a serializable representation with user-aware permissions
    */
-  toResponseForUser(context: { userId: string | null; roles: string[] }): Record<string, unknown> {
-    const { userId, roles } = context;
+  toResponseForUser(context: { userId: string | null; roles: string[]; hasContent?: boolean }): Record<string, unknown> {
+    const { userId, roles, hasContent = true } = context;
     const isOwner = !!userId && this.ownerId === userId;
     const isCollaborator = !!userId && this.collaborators.includes(userId);
     const isAssignedReviewer = !!userId && this.reviewers.includes(userId);
@@ -328,14 +328,14 @@ export class BranchModel {
 
     const userPermissions = {
       canEdit: (isOwner || isCollaborator || isAdmin) && this.state === BranchState.DRAFT,
-      canSubmitForReview: isOwner && this.state === BranchState.DRAFT,
+      canSubmitForReview: isOwner && this.state === BranchState.DRAFT && hasContent,
       canApprove: (isAssignedReviewer || isAdmin) && !isOwner && this.state === BranchState.REVIEW,
       canPublish: (isPublisher || isAdmin) && this.state === BranchState.APPROVED,
       canArchive: (isOwner || isAdmin) && this.state !== BranchState.ARCHIVED,
       validTransitions: this.getValidTransitions().filter((target) => {
         switch (target) {
           case BranchState.REVIEW:
-            return isOwner;
+            return isOwner && hasContent;
           case BranchState.DRAFT:
             // Return to draft (request changes) — reviewer or admin, not owner
             return (isAssignedReviewer || isAdmin) && !isOwner;

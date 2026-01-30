@@ -8,6 +8,7 @@ import { reviewService } from '../../services/review/review-service.js';
 import { diffService } from '../../services/git/diff.js';
 import { contentMergeService } from '../../services/content/content-merge-service.js';
 import { conflictResolutionService } from '../../services/content/conflict-resolution-service.js';
+import { contentService } from '../../services/content/content-service.js';
 import { requireAuth, type AuthEnv } from '../middleware/auth.js';
 import { success, created, paginated, noContent } from '../utils/responses.js';
 import { NotFoundError, ForbiddenError, ValidationError } from '../utils/errors.js';
@@ -146,7 +147,11 @@ branchRoutes.get('/:id', zValidator('param', branchIdParamSchema), async (c) => 
   // Check access
   visibilityService.assertAccess(branch.toJSON(), context);
 
-  const response = branch.toResponseForUser(getBranchUserContext(c));
+  // Check if branch has content (for canSubmitForReview permission)
+  const contentResult = await contentService.listByBranch(id, { limit: 1 });
+  const hasContent = contentResult.total > 0;
+
+  const response = branch.toResponseForUser({ ...getBranchUserContext(c), hasContent });
 
   // Embed review records from the reviews table so the branch page
   // shows the same review data as the review queue (single source of truth)
