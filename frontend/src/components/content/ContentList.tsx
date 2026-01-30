@@ -1,6 +1,6 @@
 import { memo, useState } from 'react';
-import { Card, Badge, DropdownMenu, IconButton } from '@radix-ui/themes';
-import { DotsVerticalIcon, Pencil1Icon, TrashIcon } from '@radix-ui/react-icons';
+import { Card, Badge, IconButton } from '@radix-ui/themes';
+import { TrashIcon } from '@radix-ui/react-icons';
 import { DeleteContentDialog } from './DeleteContentDialog';
 import { useDeleteContent } from '../../hooks/useContent';
 import type { ContentSummary, ContentTypeValue } from '@echo-portal/shared';
@@ -154,28 +154,17 @@ const ContentListItem = memo(function ContentListItem({
           </button>
 
           {showActions && (
-            <DropdownMenu.Root>
-              <DropdownMenu.Trigger>
-                <IconButton
-                  variant="ghost"
-                  color="gray"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <DotsVerticalIcon />
-                </IconButton>
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Content>
-                <DropdownMenu.Item onClick={() => onSelect?.(content)}>
-                  <Pencil1Icon />
-                  Edit
-                </DropdownMenu.Item>
-                <DropdownMenu.Separator />
-                <DropdownMenu.Item color="red" onClick={() => setShowDeleteDialog(true)}>
-                  <TrashIcon />
-                  Delete
-                </DropdownMenu.Item>
-              </DropdownMenu.Content>
-            </DropdownMenu.Root>
+            <IconButton
+              variant="ghost"
+              color="red"
+              title="Delete content"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDeleteDialog(true);
+              }}
+            >
+              <TrashIcon />
+            </IconButton>
           )}
         </div>
       </Card>

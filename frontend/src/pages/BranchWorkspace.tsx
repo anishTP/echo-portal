@@ -294,6 +294,7 @@ export default function BranchWorkspace() {
                 isLoading={isContentListLoading}
                 onSelect={handleSelectContent}
                 emptyMessage="No content in this branch yet"
+                showActions={canEdit}
               />
             )}
 
