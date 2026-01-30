@@ -141,7 +141,25 @@ export const contentService = {
       throw new Error('Content can only be created in draft branches');
     }
 
-    const slug = generateContentSlug(input.title);
+    // Generate a unique slug, handling conflicts with existing (including archived) content
+    const baseSlug = generateContentSlug(input.title);
+    let slug = baseSlug;
+    let suffix = 1;
+    while (true) {
+      const existing = await db.query.contents.findFirst({
+        where: and(
+          eq(schema.contents.branchId, input.branchId),
+          eq(schema.contents.slug, slug)
+        ),
+      });
+      if (!existing) break;
+      slug = `${baseSlug}-${suffix}`;
+      suffix++;
+      if (suffix > 100) {
+        throw new Error('Unable to generate unique slug');
+      }
+    }
+
     const checksum = computeChecksum(input.body);
     const tags = input.tags ?? [];
     const metadataSnapshot = createMetadataSnapshot({
