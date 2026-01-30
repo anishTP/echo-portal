@@ -1,5 +1,6 @@
 import { db } from '../../db/index.js';
 import { reviews } from '../../db/schema/reviews.js';
+import { contents } from '../../db/schema/contents.js';
 import { eq, and } from 'drizzle-orm';
 import {
   TransitionEvent,
@@ -86,6 +87,20 @@ const hasReviewersGuard: ValidationGuard = {
     return context.branch.reviewers.length > 0;
   },
   errorMessage: 'Branch must have at least one reviewer assigned before submitting for review',
+};
+
+/**
+ * Guard: Branch must have at least one content item
+ */
+const hasContentGuard: ValidationGuard = {
+  name: 'hasContent',
+  check: async (context) => {
+    const content = await db.query.contents.findFirst({
+      where: eq(contents.branchId, context.branchId),
+    });
+    return !!content;
+  },
+  errorMessage: 'Cannot submit for review: branch has no content',
 };
 
 /**
@@ -182,6 +197,7 @@ export const validationGuards: Record<TransitionEventType, ValidationGuard[]> = 
   [TransitionEvent.SUBMIT_FOR_REVIEW]: [
     ownerOnlyGuard,
     hasReviewersGuard,
+    hasContentGuard,
     notArchivedGuard,
   ],
   [TransitionEvent.REQUEST_CHANGES]: [
