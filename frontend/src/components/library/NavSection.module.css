@@ -1,0 +1,144 @@
+/* NavSection.module.css */
+/* Collapsible navigation section for sidebar */
+
+.section {
+  margin-bottom: var(--space-2);
+}
+
+/* Section Header/Trigger */
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--space-2) var(--space-2);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-2);
+  cursor: pointer;
+  font-family: var(--default-font-family);
+  font-size: var(--font-size-2);
+  font-weight: var(--font-weight-medium);
+  color: var(--gray-11);
+  text-align: left;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.trigger:hover {
+  background: var(--gray-3);
+  color: var(--gray-12);
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--focus-8);
+  outline-offset: -2px;
+  border-radius: var(--radius-2);
+}
+
+.trigger[data-state="open"] {
+  color: var(--gray-12);
+}
+
+/* Chevron icon */
+.chevron {
+  color: var(--gray-9);
+  transition: transform 0.2s ease;
+}
+
+.trigger[data-state="open"] .chevron {
+  transform: rotate(90deg);
+}
+
+/* Section Content */
+.content {
+  overflow: hidden;
+}
+
+.content[data-state="open"] {
+  animation: slideDown 0.2s ease-out;
+}
+
+.content[data-state="closed"] {
+  animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    height: 0;
+    opacity: 0;
+  }
+  to {
+    height: var(--radix-collapsible-content-height);
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    height: var(--radix-collapsible-content-height);
+    opacity: 1;
+  }
+  to {
+    height: 0;
+    opacity: 0;
+  }
+}
+
+/* Nav Items List */
+.navList {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-1) 0 var(--space-2) 0;
+}
+
+/* Nav Item */
+.navItem {
+  display: block;
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-4);
+  margin: 1px 0;
+  border-radius: var(--radius-2);
+  font-size: var(--font-size-2);
+  color: var(--gray-11);
+  text-decoration: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  cursor: pointer;
+}
+
+.navItem:hover {
+  background: var(--gray-3);
+  color: var(--gray-12);
+}
+
+.navItem:focus-visible {
+  outline: 2px solid var(--focus-8);
+  outline-offset: -2px;
+}
+
+/* Active state */
+.navItem[data-active="true"] {
+  background: var(--accent-3);
+  color: var(--accent-11);
+  font-weight: var(--font-weight-medium);
+}
+
+.navItem[data-active="true"]:hover {
+  background: var(--accent-4);
+}
+
+/* Item count badge */
+.count {
+  margin-left: var(--space-2);
+  padding: 0 var(--space-1);
+  background: var(--gray-4);
+  color: var(--gray-11);
+  font-size: var(--font-size-1);
+  border-radius: var(--radius-full);
+  min-width: 20px;
+  text-align: center;
+  display: inline-block;
+}
+
+.navItem[data-active="true"] .count {
+  background: var(--accent-4);
+  color: var(--accent-11);
+}

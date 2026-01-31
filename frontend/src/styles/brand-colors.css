@@ -1,0 +1,78 @@
+/**
+ * Brand Color Overrides
+ *
+ * Override Radix Themes accent colors with our brand orange (#FF5310)
+ * These CSS custom properties override the default accent scale.
+ */
+
+:root,
+.radix-themes {
+  /* Primary orange brand color scale */
+  --accent-1: #fffcfa;
+  --accent-2: #fff5ed;
+  --accent-3: #ffebdc;
+  --accent-4: #ffddc6;
+  --accent-5: #ffcfb0;
+  --accent-6: #ffbe94;
+  --accent-7: #ffa86e;
+  --accent-8: #ff8c3d;
+  --accent-9: #ff5310;
+  --accent-10: #e64a0e;
+  --accent-11: #c43d0b;
+  --accent-12: #451505;
+
+  /* Alpha variants for overlays and subtle backgrounds */
+  --accent-a1: rgba(255, 83, 16, 0.02);
+  --accent-a2: rgba(255, 83, 16, 0.05);
+  --accent-a3: rgba(255, 83, 16, 0.1);
+  --accent-a4: rgba(255, 83, 16, 0.15);
+  --accent-a5: rgba(255, 83, 16, 0.22);
+  --accent-a6: rgba(255, 83, 16, 0.32);
+  --accent-a7: rgba(255, 83, 16, 0.45);
+  --accent-a8: rgba(255, 83, 16, 0.65);
+  --accent-a9: rgba(255, 83, 16, 0.9);
+  --accent-a10: rgba(230, 74, 14, 0.95);
+  --accent-a11: rgba(196, 61, 11, 1);
+  --accent-a12: rgba(69, 21, 5, 1);
+
+  /* Functional accent tokens */
+  --accent-surface: rgba(255, 83, 16, 0.05);
+  --accent-indicator: #ff5310;
+  --accent-track: #ff5310;
+  --accent-contrast: #ffffff;
+}
+
+/* Dark mode adjustments */
+.dark,
+[data-theme="dark"] {
+  --accent-1: #1a0f08;
+  --accent-2: #261408;
+  --accent-3: #3a1c0a;
+  --accent-4: #4d240c;
+  --accent-5: #5f2c0f;
+  --accent-6: #763812;
+  --accent-7: #944716;
+  --accent-8: #b8591b;
+  --accent-9: #ff5310;
+  --accent-10: #ff6a2e;
+  --accent-11: #ff8c5a;
+  --accent-12: #ffe8d6;
+
+  --accent-a1: rgba(255, 83, 16, 0.03);
+  --accent-a2: rgba(255, 83, 16, 0.07);
+  --accent-a3: rgba(255, 83, 16, 0.12);
+  --accent-a4: rgba(255, 83, 16, 0.18);
+  --accent-a5: rgba(255, 83, 16, 0.25);
+  --accent-a6: rgba(255, 83, 16, 0.35);
+  --accent-a7: rgba(255, 83, 16, 0.48);
+  --accent-a8: rgba(255, 83, 16, 0.65);
+  --accent-a9: rgba(255, 83, 16, 0.92);
+  --accent-a10: rgba(255, 106, 46, 0.95);
+  --accent-a11: rgba(255, 140, 90, 1);
+  --accent-a12: rgba(255, 232, 214, 1);
+
+  --accent-surface: rgba(255, 83, 16, 0.08);
+  --accent-indicator: #ff5310;
+  --accent-track: #ff5310;
+  --accent-contrast: #ffffff;
+}

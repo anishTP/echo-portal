@@ -1,0 +1,187 @@
+/* LibrarySidebar.module.css */
+/* Left sidebar for library navigation */
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Logo/Brand */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  margin-bottom: var(--space-2);
+}
+
+.brandIcon {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-2);
+  background: var(--accent-9);
+  color: var(--accent-contrast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-2);
+}
+
+.brandText {
+  font-size: var(--font-size-3);
+  font-weight: var(--font-weight-bold);
+  color: var(--gray-12);
+}
+
+/* Search Section */
+.searchSection {
+  margin-bottom: var(--space-2);
+}
+
+.searchWrapper {
+  position: relative;
+}
+
+.searchInput {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  padding-left: calc(var(--space-3) + 20px);
+  background: var(--gray-2);
+  border: 1px solid var(--gray-5);
+  border-radius: var(--radius-2);
+  font-size: var(--font-size-2);
+  color: var(--gray-12);
+  outline: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.searchInput::placeholder {
+  color: var(--gray-9);
+}
+
+.searchInput:hover {
+  border-color: var(--gray-6);
+}
+
+.searchInput:focus {
+  border-color: var(--accent-7);
+  background: var(--color-background);
+}
+
+.searchIcon {
+  position: absolute;
+  left: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--gray-9);
+  pointer-events: none;
+}
+
+.searchBadge {
+  position: absolute;
+  right: var(--space-2);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 2px var(--space-1);
+  background: var(--gray-4);
+  border-radius: var(--radius-1);
+  font-size: 10px;
+  font-weight: var(--font-weight-medium);
+  color: var(--gray-10);
+  font-family: var(--code-font-family);
+}
+
+/* Filter Pills */
+.filterSection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--gray-4);
+}
+
+.filterPill {
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  border: 1px solid var(--gray-6);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-1);
+  font-weight: var(--font-weight-medium);
+  color: var(--gray-11);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filterPill:hover {
+  border-color: var(--gray-7);
+  background: var(--gray-2);
+}
+
+.filterPill:focus-visible {
+  outline: 2px solid var(--focus-8);
+  outline-offset: 2px;
+}
+
+.filterPill[data-active="true"] {
+  background: var(--accent-3);
+  border-color: var(--accent-7);
+  color: var(--accent-11);
+}
+
+.filterPill[data-active="true"]:hover {
+  background: var(--accent-4);
+}
+
+/* Color variants for filter pills */
+.filterPill[data-color="green"][data-active="true"] {
+  background: var(--green-3);
+  border-color: var(--green-7);
+  color: var(--green-11);
+}
+
+.filterPill[data-color="purple"][data-active="true"] {
+  background: var(--purple-3);
+  border-color: var(--purple-7);
+  color: var(--purple-11);
+}
+
+.filterPill[data-color="orange"][data-active="true"] {
+  background: var(--orange-3);
+  border-color: var(--orange-7);
+  color: var(--orange-11);
+}
+
+/* Navigation sections */
+.navSections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* Clear filters link */
+.clearFilters {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  margin-top: var(--space-2);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-2);
+  font-size: var(--font-size-1);
+  color: var(--gray-10);
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.clearFilters:hover {
+  color: var(--gray-12);
+  background: var(--gray-3);
+}
+
+.clearFilters:focus-visible {
+  outline: 2px solid var(--focus-8);
+  outline-offset: -2px;
+}

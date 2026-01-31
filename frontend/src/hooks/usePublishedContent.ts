@@ -55,7 +55,7 @@ export function useContentBySlug(slug: string | undefined) {
 }
 
 /**
- * Derive unique categories from published content
+ * Derive unique categories from published content with counts
  */
 export function useCategories() {
   // Fetch all published content to derive categories
@@ -63,16 +63,20 @@ export function useCategories() {
   const { data, isLoading } = usePublishedContent({ limit: 100 });
 
   const items = data?.items;
-  const categories = useMemo(() => {
-    if (!items) return [];
-    const uniqueCategories = new Set<string>();
+
+  const { categories, categoryCounts } = useMemo(() => {
+    if (!items) return { categories: [], categoryCounts: {} };
+
+    const countMap: Record<string, number> = {};
     items.forEach((item) => {
       if (item.category) {
-        uniqueCategories.add(item.category);
+        countMap[item.category] = (countMap[item.category] || 0) + 1;
       }
     });
-    return Array.from(uniqueCategories).sort();
+
+    const sortedCategories = Object.keys(countMap).sort();
+    return { categories: sortedCategories, categoryCounts: countMap };
   }, [items]);
 
-  return { categories, isLoading };
+  return { categories, categoryCounts, isLoading };
 }

@@ -23,26 +23,26 @@ export function AppHeader() {
           {/* Logo / Brand */}
           <div className="flex items-center gap-8">
             <Link to="/" className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-lg">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg text-white font-bold text-lg" style={{ background: 'var(--accent-9)' }}>
                 E
               </div>
-              <span className="text-xl font-bold text-gray-900">Echo Portal</span>
+              <span className="text-xl font-bold" style={{ color: 'var(--gray-12)' }}>Echo Portal</span>
             </Link>
 
             {/* Navigation */}
             <nav className="hidden md:flex items-center gap-6">
               <Link
                 to="/"
-                className={`text-sm font-medium transition-colors ${isActive('/') ? 'text-blue-600' : 'text-gray-700 hover:text-gray-900'
-                  }`}
+                className="text-sm font-medium transition-colors"
+                style={{ color: isActive('/') ? 'var(--accent-11)' : 'var(--gray-11)' }}
               >
                 Library
               </Link>
               {isAuthenticated && (
                 <Link
                   to="/dashboard"
-                  className={`text-sm font-medium transition-colors ${isActive('/dashboard') ? 'text-blue-600' : 'text-gray-700 hover:text-gray-900'
-                    }`}
+                  className="text-sm font-medium transition-colors"
+                  style={{ color: isActive('/dashboard') ? 'var(--accent-11)' : 'var(--gray-11)' }}
                 >
                   Dashboard
                 </Link>

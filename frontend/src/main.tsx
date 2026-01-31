@@ -7,6 +7,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { ThemeProvider, useThemeContext } from '@/context/ThemeContext';
 import { AppRouter } from '@/router';
 import './index.css';
+import './styles/brand-colors.css';
 
 /**
  * Radix Theme Configuration
@@ -29,9 +30,9 @@ function ThemedApp() {
   return (
     <Theme
       appearance={resolvedTheme}
-      accentColor="blue"   // T044: Primary color for buttons, links, focus states
-      grayColor="slate"    // T045: Neutral scale for text, borders, backgrounds
-      radius="medium"      // T046: Border radius for all components
+      accentColor="orange"  // Brand orange (#FF5310) - overridden in brand-colors.css
+      grayColor="sand"      // Warm neutral scale for text, borders, backgrounds
+      radius="medium"       // T046: Border radius for all components
     >
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
