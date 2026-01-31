@@ -7,3 +7,4 @@ export { TableOfContents } from './TableOfContents';
 export { NavSection, type NavItem, type NavSectionProps } from './NavSection';
 export { LibrarySidebar, type LibrarySidebarProps } from './LibrarySidebar';
 export { ContentMetadataSidebar, type ContentMetadataSidebarProps } from './ContentMetadataSidebar';
+export { ContentRenderer } from './ContentRenderer';

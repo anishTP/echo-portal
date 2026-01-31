@@ -1,35 +1,45 @@
-import { useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useCallback, useEffect } from 'react';
+import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
 import { DocumentationLayout } from '../components/layout';
-import { LibrarySidebar, LibraryGrid, Pagination } from '../components/library';
-import { usePublishedContent, useCategories } from '../hooks/usePublishedContent';
+import { LibrarySidebar, ContentRenderer, ContentMetadataSidebar } from '../components/library';
+import { usePublishedContent, useContentBySlug } from '../hooks/usePublishedContent';
 
 type ContentType = 'all' | 'guideline' | 'asset' | 'opinion';
 
 export default function Library() {
+  const { slug } = useParams<{ slug?: string }>();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Extract filters from URL
   const type = (searchParams.get('type') as ContentType) || 'all';
-  const category = searchParams.get('category') || '';
   const search = searchParams.get('q') || '';
-  const page = parseInt(searchParams.get('page') || '1', 10);
 
-  // Fetch data
+  // Fetch all published content for sidebar
   const {
-    data,
-    isLoading,
-    isError,
-    refetch,
+    data: allContent,
+    isLoading: isLoadingList,
   } = usePublishedContent({
     contentType: type === 'all' ? undefined : type,
-    category: category || undefined,
     search: search || undefined,
-    page,
-    limit: 12,
+    limit: 100, // Fetch all for sidebar
   });
 
-  const { categories, categoryCounts } = useCategories();
+  // Fetch selected content by slug
+  const {
+    data: selectedContent,
+    isLoading: isLoadingContent,
+    isError: isContentError,
+    refetch: refetchContent,
+  } = useContentBySlug(slug);
+
+  // Auto-select first item if no slug specified and content is available
+  useEffect(() => {
+    if (!slug && allContent?.items && allContent.items.length > 0 && !isLoadingList) {
+      const firstItem = allContent.items[0];
+      navigate(`/library/${firstItem.slug}`, { replace: true });
+    }
+  }, [slug, allContent?.items, isLoadingList, navigate]);
 
   // Update URL params
   const updateParams = useCallback(
@@ -37,7 +47,7 @@ export default function Library() {
       setSearchParams((prev) => {
         const next = new URLSearchParams(prev);
         Object.entries(updates).forEach(([key, value]) => {
-          if (value === null || value === '' || value === 'all' || (key === 'page' && value === '1')) {
+          if (value === null || value === '' || value === 'all') {
             next.delete(key);
           } else {
             next.set(key, value);
@@ -51,38 +61,36 @@ export default function Library() {
 
   const handleTypeChange = useCallback(
     (value: ContentType) => {
-      updateParams({ type: value, page: null });
-    },
-    [updateParams]
-  );
-
-  const handleCategoryChange = useCallback(
-    (value: string) => {
-      updateParams({ category: value === '' ? null : value, page: null });
+      updateParams({ type: value });
     },
     [updateParams]
   );
 
   const handleSearchChange = useCallback(
     (value: string) => {
-      updateParams({ q: value, page: null });
-    },
-    [updateParams]
-  );
-
-  const handlePageChange = useCallback(
-    (newPage: number) => {
-      updateParams({ page: String(newPage) });
+      updateParams({ q: value });
     },
     [updateParams]
   );
 
   const handleClearFilters = useCallback(() => {
-    updateParams({ type: null, category: null, q: null, page: null });
+    updateParams({ type: null, q: null });
   }, [updateParams]);
 
-  const totalPages = data ? Math.ceil(data.total / data.limit) : 0;
-  const hasActiveFilters = type !== 'all' || category !== '' || search !== '';
+  const hasActiveFilters = type !== 'all' || search !== '';
+  const items = allContent?.items ?? [];
+
+  // Get markdown body for TOC
+  const markdownBody = selectedContent?.currentVersion?.body || '';
+
+  // Prepare metadata for right sidebar
+  const publishedDate = selectedContent?.publishedAt
+    ? new Date(selectedContent.publishedAt).toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : undefined;
 
   return (
     <DocumentationLayout
@@ -92,34 +100,33 @@ export default function Library() {
           onSearchChange={handleSearchChange}
           contentType={type}
           onContentTypeChange={handleTypeChange}
-          category={category}
-          onCategoryChange={handleCategoryChange}
-          categories={categories}
-          categoryCounts={categoryCounts}
+          items={items}
+          selectedSlug={slug}
           onClearFilters={handleClearFilters}
           hasActiveFilters={hasActiveFilters}
         />
       }
-    >
-      {/* Content Grid */}
-      <LibraryGrid
-        items={data?.items ?? []}
-        isLoading={isLoading}
-        isError={isError}
-        onRetry={() => refetch()}
-      />
-
-      {/* Pagination */}
-      {data && totalPages > 1 && (
-        <div style={{ marginTop: 'var(--space-6)' }}>
-          <Pagination
-            page={page}
-            totalPages={totalPages}
-            totalItems={data.total}
-            onPageChange={handlePageChange}
+      rightSidebar={
+        selectedContent ? (
+          <ContentMetadataSidebar
+            author={{
+              name: selectedContent.createdBy.displayName,
+              avatarUrl: selectedContent.createdBy.avatarUrl,
+            }}
+            publishedDate={publishedDate}
+            category={selectedContent.category}
+            tags={selectedContent.tags}
+            markdown={markdownBody}
           />
-        </div>
-      )}
+        ) : undefined
+      }
+    >
+      <ContentRenderer
+        content={selectedContent ?? null}
+        isLoading={isLoadingContent || (isLoadingList && !slug)}
+        isError={isContentError}
+        onRetry={() => refetchContent()}
+      />
     </DocumentationLayout>
   );
 }

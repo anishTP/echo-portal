@@ -56,7 +56,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'library/:slug',
-        element: <ContentView />,
+        element: <Library />,
       },
       {
         path: 'dashboard',

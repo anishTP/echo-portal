@@ -1,6 +1,8 @@
 import { useMemo, useCallback } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { MagnifyingGlassIcon, Cross2Icon } from '@radix-ui/react-icons';
-import { NavSection, type NavItem } from './NavSection';
+import type { ContentSummary } from '@echo-portal/shared';
+import { NavSection } from './NavSection';
 import styles from './LibrarySidebar.module.css';
 
 type ContentType = 'all' | 'guideline' | 'asset' | 'opinion';
@@ -12,22 +14,6 @@ const contentTypeFilters: { value: ContentType; label: string; color: string }[]
   { value: 'opinion', label: 'Opinions', color: 'orange' },
 ];
 
-/** Design system navigation sections */
-const designSystemSections = [
-  {
-    title: 'Foundations',
-    items: ['Color', 'Typography', 'Icons', 'Spacing', 'Grid'],
-  },
-  {
-    title: 'Components',
-    items: ['Buttons', 'Forms', 'Cards', 'Navigation', 'Modals'],
-  },
-  {
-    title: 'Patterns',
-    items: ['Layouts', 'Data Display', 'Feedback', 'Loading States'],
-  },
-];
-
 export interface LibrarySidebarProps {
   /** Current search query */
   search?: string;
@@ -37,14 +23,10 @@ export interface LibrarySidebarProps {
   contentType?: ContentType;
   /** Content type change handler */
   onContentTypeChange?: (value: ContentType) => void;
-  /** Current category filter */
-  category?: string;
-  /** Category change handler */
-  onCategoryChange?: (value: string) => void;
-  /** Available categories (from API) */
-  categories?: string[];
-  /** Category counts (from API) */
-  categoryCounts?: Record<string, number>;
+  /** Published content items to display in sidebar */
+  items?: ContentSummary[];
+  /** Currently selected content slug */
+  selectedSlug?: string;
   /** Handler to clear all filters */
   onClearFilters?: () => void;
   /** Whether any filters are active */
@@ -57,55 +39,35 @@ export interface LibrarySidebarProps {
  * Contains:
  * - Search input with keyboard shortcut badge
  * - Content type filter pills
- * - Design system navigation sections
- * - Dynamic category navigation
+ * - Content items grouped by category
  */
 export function LibrarySidebar({
   search = '',
   onSearchChange,
   contentType = 'all',
   onContentTypeChange,
-  category = '',
-  onCategoryChange,
-  categories = [],
-  categoryCounts = {},
+  items = [],
+  selectedSlug,
   onClearFilters,
   hasActiveFilters = false,
 }: LibrarySidebarProps) {
-  // Build category nav items
-  const categoryItems: NavItem[] = useMemo(() => {
-    return categories.map((cat) => ({
-      id: cat,
-      label: cat,
-      count: categoryCounts[cat],
-      onClick: () => onCategoryChange?.(cat === category ? '' : cat),
-    }));
-  }, [categories, categoryCounts, category, onCategoryChange]);
+  const location = useLocation();
 
-  // Build design system nav items with categories as items
-  const foundationItems: NavItem[] = useMemo(() => {
-    return designSystemSections[0].items.map((item) => ({
-      id: item.toLowerCase(),
-      label: item,
-      onClick: () => onCategoryChange?.(item === category ? '' : item),
-    }));
-  }, [category, onCategoryChange]);
+  // Group items by category
+  const groupedItems = useMemo(() => {
+    const groups: Record<string, ContentSummary[]> = {};
 
-  const componentItems: NavItem[] = useMemo(() => {
-    return designSystemSections[1].items.map((item) => ({
-      id: item.toLowerCase(),
-      label: item,
-      onClick: () => onCategoryChange?.(item === category ? '' : item),
-    }));
-  }, [category, onCategoryChange]);
+    items.forEach((item) => {
+      const category = item.category || 'Uncategorized';
+      if (!groups[category]) {
+        groups[category] = [];
+      }
+      groups[category].push(item);
+    });
 
-  const patternItems: NavItem[] = useMemo(() => {
-    return designSystemSections[2].items.map((item) => ({
-      id: item.toLowerCase(),
-      label: item,
-      onClick: () => onCategoryChange?.(item === category ? '' : item),
-    }));
-  }, [category, onCategoryChange]);
+    // Sort categories alphabetically
+    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+  }, [items]);
 
   const handleSearchInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,38 +125,51 @@ export function LibrarySidebar({
         ))}
       </div>
 
-      {/* Navigation Sections */}
+      {/* Content Navigation by Category */}
       <div className={styles.navSections}>
-        {/* Design System Sections */}
-        <NavSection
-          title="Foundations"
-          items={foundationItems}
-          activeItemId={category.toLowerCase()}
-          defaultOpen={true}
-        />
-
-        <NavSection
-          title="Components"
-          items={componentItems}
-          activeItemId={category.toLowerCase()}
-          defaultOpen={true}
-        />
-
-        <NavSection
-          title="Patterns"
-          items={patternItems}
-          activeItemId={category.toLowerCase()}
-          defaultOpen={false}
-        />
-
-        {/* Dynamic Categories from API */}
-        {categoryItems.length > 0 && (
+        {groupedItems.map(([category, categoryItems]) => (
           <NavSection
-            title="Categories"
-            items={categoryItems}
-            activeItemId={category}
+            key={category}
+            title={category}
+            items={[]} // We'll use custom children instead
             defaultOpen={true}
-          />
+          >
+            <ul className={styles.contentList}>
+              {categoryItems.map((item) => {
+                const isActive = selectedSlug === item.slug || location.pathname === `/library/${item.slug}`;
+                return (
+                  <li key={item.id}>
+                    <Link
+                      to={`/library/${item.slug}`}
+                      className={styles.contentItem}
+                      data-active={isActive}
+                    >
+                      <span className={styles.contentTitle}>{item.title}</span>
+                      <span
+                        className={styles.contentType}
+                        data-type={item.contentType}
+                      >
+                        {item.contentType.charAt(0).toUpperCase()}
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </NavSection>
+        ))}
+
+        {/* Empty state when no items */}
+        {groupedItems.length === 0 && !hasActiveFilters && (
+          <div className={styles.emptyNav}>
+            <p>No published content yet.</p>
+          </div>
+        )}
+
+        {groupedItems.length === 0 && hasActiveFilters && (
+          <div className={styles.emptyNav}>
+            <p>No content matches your filters.</p>
+          </div>
         )}
       </div>
 
