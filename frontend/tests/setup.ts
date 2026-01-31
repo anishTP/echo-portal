@@ -1,5 +1,6 @@
 // Test setup for frontend
 import '@testing-library/jest-dom';
+import 'fake-indexeddb/auto';
 
 // Mock matchMedia for theme tests
 Object.defineProperty(window, 'matchMedia', {

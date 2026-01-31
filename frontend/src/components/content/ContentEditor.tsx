@@ -1,21 +1,48 @@
-import { useState, useCallback, useEffect } from 'react';
-import { Button, TextArea, TextField, Callout } from '@radix-ui/themes';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { Button, TextArea, TextField, Callout, SegmentedControl, Box } from '@radix-ui/themes';
 import { ContentTypeSelector } from './ContentTypeSelector';
 import { ContentMetadata } from './ContentMetadata';
 import { DeleteContentDialog } from './DeleteContentDialog';
+import { InlineEditor } from '../editor/InlineEditor';
+import { EditorToolbar } from '../editor/EditorToolbar';
+import { EditorStatusBar } from '../editor/EditorStatusBar';
+import { DraftRecoveryBanner } from '../editor/DraftRecoveryBanner';
 import { useContentStore } from '../../stores/contentStore';
 import { useCreateContent, useUpdateContent, useDeleteContent } from '../../hooks/useContent';
+import { useAutoSave, type DraftContent } from '../../hooks/useAutoSave';
+import { useDraftSync } from '../../hooks/useDraftSync';
+import { useEditSession } from '../../hooks/useEditSession';
+import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import type { ContentTypeValue, ContentDetail } from '@echo-portal/shared';
+import type { Draft } from '../../services/draft-db';
+
+type EditorMode = 'wysiwyg' | 'markdown';
 
 interface ContentEditorProps {
   branchId: string;
+  branchName?: string;
   content?: ContentDetail | null;
   onSave?: (content: ContentDetail) => void;
   onCancel?: () => void;
   onDelete?: () => void;
+  defaultEditorMode?: EditorMode;
+  /** Enable auto-save to IndexedDB (default: true for editing) */
+  enableAutoSave?: boolean;
+  /** User ID for session tracking */
+  userId?: string;
 }
 
-export function ContentEditor({ branchId, content, onSave, onCancel, onDelete }: ContentEditorProps) {
+export function ContentEditor({
+  branchId,
+  branchName,
+  content,
+  onSave,
+  onCancel,
+  onDelete,
+  defaultEditorMode = 'wysiwyg',
+  enableAutoSave = true,
+  userId,
+}: ContentEditorProps) {
   const [title, setTitle] = useState(content?.title ?? '');
   const [contentType, setContentType] = useState<ContentTypeValue>(
     content?.contentType ?? 'guideline'
@@ -27,6 +54,10 @@ export function ContentEditor({ branchId, content, onSave, onCancel, onDelete }:
   const [changeDescription, setChangeDescription] = useState('');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [editorMode, setEditorMode] = useState<EditorMode>(defaultEditorMode);
+  const [recoveredDraft, setRecoveredDraft] = useState<Draft | null>(null);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const initializedRef = useRef(false);
 
   const setIsDirty = useContentStore((s) => s.setIsDirty);
   const createMutation = useCreateContent();
@@ -36,14 +67,116 @@ export function ContentEditor({ branchId, content, onSave, onCancel, onDelete }:
   const isEditing = !!content;
   const isSaving = createMutation.isPending || updateMutation.isPending;
   const isDeleting = deleteMutation.isPending;
+  const contentId = content?.id ?? 'new';
 
-  // Track dirty state
+  // Online status
+  const { isOnline } = useOnlineStatus();
+
+  // Auto-save hook (only for editing existing content)
+  const autoSave = useAutoSave({
+    contentId,
+    branchId,
+    delay: 2000,
+    onSave: () => {
+      // Trigger server sync after local save
+      if (isEditing && enableAutoSave) {
+        draftSync.sync('Auto-saved changes');
+      }
+    },
+  });
+
+  // Server sync hook
+  const draftSync = useDraftSync({
+    contentId,
+    branchId,
+    onSync: (result) => {
+      if (result.newVersionTimestamp) {
+        autoSave.markSynced(result.newVersionTimestamp);
+      }
+    },
+    onConflict: (conflict) => {
+      // For now, show conflict in console. TODO: Add conflict resolution UI
+      console.warn('Sync conflict detected:', conflict);
+    },
+  });
+
+  // Edit session tracking
+  const editSession = useEditSession({
+    contentId,
+    branchId,
+    userId: userId ?? 'anonymous',
+    onStaleSession: (sessions) => {
+      console.log('Stale sessions detected:', sessions);
+    },
+  });
+
+  // Load existing draft and start session on mount
+  useEffect(() => {
+    if (!initializedRef.current && isEditing && enableAutoSave) {
+      initializedRef.current = true;
+
+      // Check for recovered draft
+      autoSave.loadDraft().then((draft) => {
+        if (draft && !draft.synced) {
+          // Found unsynced draft - offer recovery
+          setRecoveredDraft(draft);
+        }
+      });
+
+      // Start edit session
+      editSession.startSession();
+    }
+
+    return () => {
+      if (isEditing) {
+        editSession.endSession();
+      }
+    };
+  }, [isEditing, enableAutoSave]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Handle draft restore
+  const handleRestoreDraft = useCallback(() => {
+    if (recoveredDraft) {
+      setIsRestoring(true);
+      setTitle(recoveredDraft.title);
+      setBody(recoveredDraft.body);
+      if (recoveredDraft.metadata.category) setCategory(recoveredDraft.metadata.category);
+      if (recoveredDraft.metadata.tags) setTags(recoveredDraft.metadata.tags);
+      if (recoveredDraft.metadata.description) setDescription(recoveredDraft.metadata.description);
+      setRecoveredDraft(null);
+      setIsRestoring(false);
+    }
+  }, [recoveredDraft]);
+
+  // Handle draft discard
+  const handleDiscardDraft = useCallback(() => {
+    setRecoveredDraft(null);
+  }, []);
+
+  // Track dirty state and trigger auto-save
   useEffect(() => {
     const isDirty = isEditing
       ? body !== (content?.currentVersion?.body ?? '')
       : body.length > 0 || title.length > 0;
     setIsDirty(isDirty);
-  }, [body, title, content, isEditing, setIsDirty]);
+
+    // Auto-save when content changes (only for editing existing content)
+    if (isEditing && enableAutoSave && isDirty && title && body) {
+      const draftContent: DraftContent = {
+        title,
+        body,
+        metadata: {
+          category: category || undefined,
+          tags: tags.length > 0 ? tags : undefined,
+          description: description || undefined,
+        },
+      };
+      autoSave.save(draftContent);
+
+      // Record activity for session tracking
+      editSession.recordActivity();
+    }
+  }, [body, title, category, tags, description, content, isEditing, enableAutoSave, setIsDirty]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = useCallback(async () => {
     if (!title.trim() || !body.trim() || !changeDescription.trim()) return;
@@ -111,6 +244,16 @@ export function ContentEditor({ branchId, content, onSave, onCancel, onDelete }:
 
   return (
     <div className="space-y-6">
+      {/* Draft recovery banner */}
+      {recoveredDraft && (
+        <DraftRecoveryBanner
+          draft={recoveredDraft}
+          onRestore={handleRestoreDraft}
+          onDiscard={handleDiscardDraft}
+          isRestoring={isRestoring}
+        />
+      )}
+
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">
           {isEditing ? 'Edit Content' : 'New Content'}
@@ -159,17 +302,36 @@ export function ContentEditor({ branchId, content, onSave, onCancel, onDelete }:
       />
 
       <div>
-        <label htmlFor="content-body" className="block text-sm font-medium mb-1">
-          Content Body <span className="text-red-500">*</span>
-        </label>
-        <TextArea
-          id="content-body"
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          rows={20}
-          placeholder="Write your content in Markdown..."
-          style={{ fontFamily: 'monospace' }}
-        />
+        <div className="flex items-center justify-between mb-2">
+          <label htmlFor="content-body" className="block text-sm font-medium">
+            Content Body <span className="text-red-500">*</span>
+          </label>
+          <SegmentedControl.Root
+            value={editorMode}
+            onValueChange={(value) => setEditorMode(value as EditorMode)}
+            size="1"
+          >
+            <SegmentedControl.Item value="wysiwyg">WYSIWYG</SegmentedControl.Item>
+            <SegmentedControl.Item value="markdown">Markdown</SegmentedControl.Item>
+          </SegmentedControl.Root>
+        </div>
+
+        {editorMode === 'wysiwyg' ? (
+          <InlineEditor
+            defaultValue={body}
+            onChange={setBody}
+            placeholder="Start writing..."
+          />
+        ) : (
+          <TextArea
+            id="content-body"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            rows={20}
+            placeholder="Write your content in Markdown..."
+            style={{ fontFamily: 'monospace' }}
+          />
+        )}
       </div>
 
       <div>
@@ -191,6 +353,21 @@ export function ContentEditor({ branchId, content, onSave, onCancel, onDelete }:
             {(createMutation.error || updateMutation.error)?.message || 'An error occurred'}
           </Callout.Text>
         </Callout.Root>
+      )}
+
+      {/* Editor status bar (only for editing with auto-save) */}
+      {isEditing && enableAutoSave && (
+        <Box mt="4">
+          <EditorStatusBar
+            saveStatus={autoSave.state.status}
+            syncStatus={draftSync.state.status}
+            isOnline={isOnline}
+            branchName={branchName}
+            versionNumber={autoSave.state.localVersion || undefined}
+            pendingSyncCount={draftSync.state.queuedItems}
+            lastSyncedAt={draftSync.state.lastSyncAt ? new Date(draftSync.state.lastSyncAt) : null}
+          />
+        </Box>
       )}
     </div>
   );
