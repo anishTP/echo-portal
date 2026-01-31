@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Button, TextField, TextArea, Select, Callout } from '@radix-ui/themes';
 import { useBranch, useUpdateBranch } from '../hooks/useBranch';
@@ -17,7 +17,7 @@ type ContentView =
   | { mode: 'diff'; contentId: string; fromTimestamp: string; toTimestamp: string };
 
 export default function BranchWorkspace() {
-  const { id } = useParams<{ id: string }>();
+  const { id, contentId: urlContentId } = useParams<{ id: string; contentId?: string }>();
   const { user } = useAuth();
   const { data: branch, isLoading, error } = useBranch(id);
   const updateBranch = useUpdateBranch();
@@ -25,6 +25,13 @@ export default function BranchWorkspace() {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<BranchUpdateInput>({});
   const [contentView, setContentView] = useState<ContentView>({ mode: 'list' });
+
+  // If contentId is in URL, automatically switch to edit mode
+  useEffect(() => {
+    if (urlContentId) {
+      setContentView({ mode: 'edit', contentId: urlContentId });
+    }
+  }, [urlContentId]);
 
   const selectedContentId = contentView.mode === 'edit' || contentView.mode === 'diff'
     ? contentView.contentId

@@ -72,6 +72,11 @@ const router = createBrowserRouter([
         path: 'branches/:id',
         element: <BranchWorkspace />,
       },
+      // Content edit route (Phase 5 - Inline Edit)
+      {
+        path: 'branches/:id/content/:contentId/edit',
+        element: <BranchWorkspace />,
+      },
       // Publish routes (Phase 5 - US3)
       {
         path: 'branches/:id/publish',
