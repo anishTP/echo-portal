@@ -9,6 +9,8 @@ export interface DocumentationLayoutProps {
   children: ReactNode;
   /** Optional right sidebar content (TOC, metadata) */
   rightSidebar?: ReactNode;
+  /** Optional header content (e.g., edit mode banner) */
+  header?: ReactNode;
 }
 
 /**
@@ -17,6 +19,7 @@ export interface DocumentationLayoutProps {
  * - Left sidebar (280px): Navigation, search, filters
  * - Main content (flexible): Primary content area
  * - Right sidebar (240px, optional): TOC, metadata
+ * - Header (optional): Banner above main content (e.g., edit mode indicator)
  *
  * Mobile: Left sidebar collapses with hamburger menu
  * Tablet: Right sidebar hidden
@@ -25,6 +28,7 @@ export function DocumentationLayout({
   sidebar,
   children,
   rightSidebar,
+  header,
 }: DocumentationLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -57,6 +61,7 @@ export function DocumentationLayout({
 
       {/* Main Content */}
       <main className={styles.main}>
+        {header && <div className={styles.contentHeader}>{header}</div>}
         <div className={styles.mainContent}>{children}</div>
       </main>
 

@@ -27,6 +27,12 @@ export interface BranchListOptions {
   limit?: number;
 }
 
+export interface EditBranchCreateInput {
+  sourceContentId: string;
+  name: string;
+  slug: string;
+}
+
 export interface BranchListResult {
   branches: BranchModel[];
   total: number;
@@ -625,6 +631,63 @@ export class BranchService {
     }
 
     return createBranchModel(updated);
+  }
+
+  /**
+   * Create a branch for editing published content.
+   * Creates a new branch forked from main and copies the specified content.
+   */
+  async createEditBranch(
+    input: EditBranchCreateInput,
+    ownerId: string
+  ): Promise<{ branch: ReturnType<BranchModel['toJSON']>; content: any }> {
+    // Import content service dynamically to avoid circular dependency
+    const { contentService } = await import('../content/content-service.js');
+
+    // Verify source content exists and is published
+    const sourceContent = await contentService.getPublishedById(input.sourceContentId);
+    if (!sourceContent) {
+      throw new NotFoundError('Published content', input.sourceContentId);
+    }
+
+    // Create the branch
+    const branch = await this.create(
+      {
+        name: input.name,
+        baseRef: 'main',
+        visibility: 'private',
+        labels: [],
+      },
+      ownerId
+    );
+
+    // Copy the content to the new branch
+    const copiedContent = await contentService.create(
+      {
+        branchId: branch.id,
+        title: sourceContent.title,
+        contentType: sourceContent.contentType,
+        category: sourceContent.category,
+        tags: sourceContent.tags,
+        description: sourceContent.description,
+        body: sourceContent.currentVersion.body,
+        bodyFormat: sourceContent.currentVersion.bodyFormat,
+        changeDescription: 'Forked from published version for editing',
+      },
+      { userId: ownerId }
+    );
+
+    // Update the copied content to reference the source
+    const { contents } = await import('../../db/schema/contents.js');
+    await db
+      .update(contents)
+      .set({ sourceContentId: input.sourceContentId })
+      .where(eq(contents.id, copiedContent.id));
+
+    return {
+      branch: branch.toJSON(),
+      content: { ...copiedContent, sourceContentId: input.sourceContentId },
+    };
   }
 }
 

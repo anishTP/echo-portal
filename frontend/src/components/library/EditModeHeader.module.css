@@ -1,0 +1,50 @@
+/* EditModeHeader.module.css */
+/* Header banner for Library edit mode */
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--accent-2);
+  border-bottom: 1px solid var(--accent-6);
+  padding: var(--space-3) var(--space-4);
+}
+
+.content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 100%;
+}
+
+.info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+  flex: 1;
+}
+
+.branchBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  background: var(--accent-3);
+  border-radius: var(--radius-2);
+  color: var(--accent-11);
+  flex-shrink: 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.unsavedIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}

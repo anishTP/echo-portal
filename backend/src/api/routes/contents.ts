@@ -22,6 +22,7 @@ import {
   diffQuerySchema,
   versionListQuerySchema,
   validateBodySize,
+  draftSyncInputSchema,
 } from '../schemas/contents.js';
 
 const contentRoutes = new Hono<AuthEnv>();
@@ -526,6 +527,57 @@ contentRoutes.post(
     // Return updated content
     const updatedContent = await contentService.getById(contentId);
     return success(c, updatedContent);
+  }
+);
+
+/**
+ * POST /api/v1/contents/:contentId/sync - Sync draft changes from client
+ * Uses optimistic concurrency control via expectedServerVersion.
+ */
+contentRoutes.post(
+  '/:contentId/sync',
+  requireAuth,
+  zValidator('param', contentIdParamSchema),
+  zValidator('json', draftSyncInputSchema),
+  async (c) => {
+    const user = c.get('user')!;
+    const { contentId } = c.req.valid('param');
+    const body = c.req.valid('json');
+
+    // Size limit check
+    const sizeCheck = validateBodySize(body.body);
+    if (!sizeCheck.valid) {
+      return c.json(
+        { error: { code: 'CONTENT_TOO_LARGE', message: 'Content body exceeds 50 MB size limit' } },
+        413
+      );
+    }
+
+    // Get content to verify it exists and get branch context
+    const existing = await contentService.getById(contentId);
+    if (!existing) {
+      return c.json({ error: { code: 'NOT_FOUND', message: 'Content not found' } }, 404);
+    }
+
+    // Verify branch ID matches
+    if (existing.branchId !== body.branchId) {
+      return c.json(
+        { error: { code: 'BRANCH_MISMATCH', message: 'Content does not belong to specified branch' } },
+        400
+      );
+    }
+
+    // Authorization check
+    await assertCanEditBranchContent(existing.branchId, user);
+
+    // Sync with conflict detection
+    const result = await contentService.syncDraft(contentId, body, { userId: user.id });
+
+    if (result.conflict) {
+      return c.json({ data: result }, 409);
+    }
+
+    return success(c, result);
   }
 );
 

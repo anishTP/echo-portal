@@ -138,3 +138,77 @@ export interface ContentLineage {
   versions: ContentVersionDetail[];
   sourceContent?: ContentSummary;
 }
+
+/**
+ * Input for syncing a draft from client to server.
+ * Used by auto-save and manual "Save Draft" operations.
+ */
+export interface DraftSyncInput {
+  /** Branch UUID context */
+  branchId: string;
+  /** Updated title (optional - only if changed) */
+  title?: string;
+  /** Updated markdown body */
+  body: string;
+  /** Updated metadata (optional) */
+  metadata?: {
+    category?: string;
+    tags?: string[];
+    description?: string;
+  };
+  /** Last known server version for conflict detection */
+  expectedServerVersion: string | null;
+  /** Description for version history */
+  changeDescription: string;
+}
+
+/**
+ * Response from draft sync operation.
+ */
+export interface DraftSyncResult {
+  /** Whether sync succeeded */
+  success: boolean;
+  /** New version timestamp if successful */
+  newVersionTimestamp?: string;
+  /** Conflict details if version mismatch */
+  conflict?: {
+    /** Current server version timestamp */
+    serverVersionTimestamp: string;
+    /** Server version author */
+    serverVersionAuthor: UserSummary;
+    /** Server version content for merge UI */
+    serverBody: string;
+  };
+}
+
+/**
+ * Input for creating a branch from published content.
+ * Initiates the "Edit" workflow from Library view.
+ */
+export interface EditBranchCreateInput {
+  /** Published content to fork */
+  sourceContentId: string;
+  /** Human-readable branch name */
+  name: string;
+  /** URL-safe branch slug */
+  slug: string;
+}
+
+/**
+ * Response when branch is created for editing.
+ */
+export interface EditBranchCreateResult {
+  /** Created branch details */
+  branch: BranchSummary;
+  /** Copied content in the new branch */
+  content: ContentDetail;
+}
+
+export interface BranchSummary {
+  id: string;
+  name: string;
+  slug: string;
+  state: string;
+  ownerId: string;
+  createdAt: string;
+}

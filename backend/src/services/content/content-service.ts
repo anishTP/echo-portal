@@ -3,6 +3,16 @@ import { db, schema } from '../../db/index.js';
 import { generateContentSlug, computeChecksum, computeByteSize, createMetadataSnapshot, MAX_CONTENT_BYTE_SIZE } from '../../models/content.js';
 import type { ContentDetail, ContentSummary, UserSummary } from '@echo-portal/shared';
 
+interface DraftSyncResultInternal {
+  success: boolean;
+  newVersionTimestamp?: string;
+  conflict?: {
+    serverVersionTimestamp: string;
+    serverVersionAuthor: UserSummary;
+    serverBody: string;
+  };
+}
+
 export interface CreateContentInput {
   branchId: string;
   title: string;
@@ -24,6 +34,19 @@ export interface UpdateContentInput {
   bodyFormat?: string;
   changeDescription: string;
   currentVersionTimestamp?: string;
+}
+
+export interface DraftSyncInput {
+  branchId: string;
+  title?: string;
+  body: string;
+  metadata?: {
+    category?: string;
+    tags?: string[];
+    description?: string;
+  };
+  expectedServerVersion: string | null;
+  changeDescription: string;
 }
 
 interface ActorContext {
@@ -555,5 +578,137 @@ export const contentService = {
 
     const createdBySummary = await getUserSummary(content.createdBy);
     return formatContentResponse(content, version ?? null, authorSummary, createdBySummary);
+  },
+
+  /**
+   * Get published content by ID.
+   */
+  async getPublishedById(contentId: string): Promise<ContentDetail | null> {
+    const content = await db.query.contents.findFirst({
+      where: and(
+        eq(schema.contents.id, contentId),
+        eq(schema.contents.isPublished, true)
+      ),
+    });
+    if (!content) return null;
+
+    let version = null;
+    let authorSummary = null;
+    if (content.currentVersionId) {
+      version = await db.query.contentVersions.findFirst({
+        where: eq(schema.contentVersions.id, content.currentVersionId),
+      });
+      if (version) {
+        authorSummary = await getUserSummary(version.authorId);
+      }
+    }
+
+    const createdBySummary = await getUserSummary(content.createdBy);
+    return formatContentResponse(content, version ?? null, authorSummary, createdBySummary);
+  },
+
+  /**
+   * Sync draft changes from client with conflict detection.
+   * Used by auto-save and manual save operations.
+   */
+  async syncDraft(
+    contentId: string,
+    input: DraftSyncInput,
+    actor: ActorContext
+  ): Promise<DraftSyncResultInternal> {
+    const byteSize = computeByteSize(input.body);
+    if (byteSize > MAX_CONTENT_BYTE_SIZE) {
+      throw new Error('Content body exceeds 50 MB size limit');
+    }
+
+    const content = await db.query.contents.findFirst({
+      where: eq(schema.contents.id, contentId),
+    });
+    if (!content) {
+      throw new Error('Content not found');
+    }
+    if (content.isPublished) {
+      throw new Error('Published content cannot be modified');
+    }
+
+    // Validate branch state
+    const branch = await db.query.branches.findFirst({
+      where: eq(schema.branches.id, content.branchId),
+    });
+    if (!branch || branch.state !== 'draft') {
+      throw new Error('Content can only be modified in draft branches');
+    }
+
+    // Conflict detection: check if server version matches expected
+    let currentVersion = null;
+    if (content.currentVersionId) {
+      currentVersion = await db.query.contentVersions.findFirst({
+        where: eq(schema.contentVersions.id, content.currentVersionId),
+      });
+    }
+
+    if (input.expectedServerVersion !== null && currentVersion) {
+      const currentTimestamp = currentVersion.versionTimestamp.toISOString();
+      if (currentTimestamp !== input.expectedServerVersion) {
+        // Conflict detected - return server state for merge UI
+        const serverAuthor = await getUserSummary(currentVersion.authorId);
+        return {
+          success: false,
+          conflict: {
+            serverVersionTimestamp: currentTimestamp,
+            serverVersionAuthor: serverAuthor,
+            serverBody: currentVersion.body,
+          },
+        };
+      }
+    }
+
+    // No conflict - create new version
+    const checksum = computeChecksum(input.body);
+    const updatedTitle = input.title ?? content.title;
+    const updatedCategory = input.metadata?.category !== undefined ? input.metadata.category : content.category;
+    const updatedTags = input.metadata?.tags ?? content.tags ?? [];
+    const metadataSnapshot = createMetadataSnapshot({
+      title: updatedTitle,
+      category: updatedCategory,
+      tags: updatedTags,
+    });
+
+    const result = await db.transaction(async (tx) => {
+      const [version] = await tx
+        .insert(schema.contentVersions)
+        .values({
+          contentId: content.id,
+          parentVersionId: content.currentVersionId,
+          body: input.body,
+          bodyFormat: 'markdown',
+          metadataSnapshot,
+          changeDescription: input.changeDescription,
+          authorId: actor.userId,
+          authorType: actor.authorType ?? 'user',
+          byteSize,
+          checksum,
+        })
+        .returning();
+
+      await tx
+        .update(schema.contents)
+        .set({
+          currentVersionId: version.id,
+          title: updatedTitle,
+          category: updatedCategory,
+          tags: updatedTags,
+          description: input.metadata?.description !== undefined ? input.metadata.description : content.description,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.contents.id, content.id));
+
+      return version;
+    });
+
+    return {
+      success: true,
+      newVersionTimestamp: result.versionTimestamp.toISOString(),
+    };
   },
 };

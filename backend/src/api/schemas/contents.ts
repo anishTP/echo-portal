@@ -142,3 +142,23 @@ export function validateBodySize(body: string): { valid: boolean; byteSize: numb
     byteSize,
   };
 }
+
+/**
+ * Schema for draft sync input (auto-save and manual save)
+ */
+export const draftSyncInputSchema = z.object({
+  branchId: uuidSchema,
+  title: z.string().min(1).max(200).optional(),
+  body: z.string().max(MAX_BODY_BYTES),
+  metadata: z
+    .object({
+      category: z.string().optional(),
+      tags: z.array(z.string()).optional(),
+      description: z.string().max(500).optional(),
+    })
+    .optional(),
+  expectedServerVersion: z.string().datetime().nullable(),
+  changeDescription: z.string().min(1).max(500),
+});
+
+export type DraftSyncInput = z.infer<typeof draftSyncInputSchema>;

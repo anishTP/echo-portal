@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { contentApi } from '../services/content-api';
-import { draftDb, createDraftId, type Draft, type SyncQueueItem } from '../services/draft-db';
+import { draftDb, createDraftId } from '../services/draft-db';
 import { useOnlineStatus, subscribeToOnlineStatus } from './useOnlineStatus';
 import type { DraftSyncInput, DraftSyncResult } from '@echo-portal/shared';
 
@@ -53,6 +53,8 @@ export interface UseDraftSyncReturn {
   getQueueCount: () => Promise<number>;
   /** Check if there are unsynced changes in the draft */
   hasUnsyncedChanges: () => Promise<boolean>;
+  /** Clear all queue items for this draft */
+  clearQueue: () => Promise<void>;
 }
 
 /**
@@ -129,6 +131,11 @@ export function useDraftSync(options: DraftSyncOptions): UseDraftSyncReturn {
       return null;
     }
 
+    // Don't sync if no valid contentId
+    if (!contentId) {
+      return null;
+    }
+
     if (!isOnline) {
       setState(prev => ({ ...prev, status: 'queued', error: 'Offline - changes queued' }));
       return null;
@@ -150,7 +157,6 @@ export function useDraftSync(options: DraftSyncOptions): UseDraftSyncReturn {
       }
 
       const input: DraftSyncInput = {
-        contentId,
         branchId,
         title: draft.title,
         body: draft.body,
@@ -207,14 +213,34 @@ export function useDraftSync(options: DraftSyncOptions): UseDraftSyncReturn {
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Sync failed');
 
-      // Queue for retry
-      await addToQueue(error.message);
+      // Check if this is a 404 error (content doesn't exist)
+      // Don't retry 404s - the content is gone, remove from queue and clear draft
+      const is404 = (err as { status?: number }).status === 404 ||
+        error.message.includes('404') ||
+        error.message.includes('not found') ||
+        error.message.includes('NOT_FOUND');
 
-      setState(prev => ({
-        ...prev,
-        status: 'error',
-        error: error.message,
-      }));
+      if (is404) {
+        // Remove from queue - no point retrying
+        await removeFromQueue();
+        // Clear the orphaned draft
+        await draftDb.drafts.delete(draftId);
+
+        setState(prev => ({
+          ...prev,
+          status: 'error',
+          error: 'Content no longer exists',
+        }));
+      } else {
+        // Queue for retry on other errors
+        await addToQueue(error.message);
+
+        setState(prev => ({
+          ...prev,
+          status: 'error',
+          error: error.message,
+        }));
+      }
 
       onError?.(error);
       syncInProgress.current = false;
@@ -255,8 +281,18 @@ export function useDraftSync(options: DraftSyncOptions): UseDraftSyncReturn {
     return draft ? !draft.synced : false;
   }, [draftId]);
 
+  // Clear all queue items for this draft
+  const clearQueue = useCallback(async () => {
+    await draftDb.syncQueue.where('draftId').equals(draftId).delete();
+    const count = await draftDb.syncQueue.count();
+    setState(prev => ({ ...prev, queuedItems: count, status: 'idle', error: null }));
+  }, [draftId]);
+
   // Subscribe to online status changes to trigger queue processing
   useEffect(() => {
+    // Don't process queue if no valid contentId
+    if (!contentId) return;
+
     const unsubscribe = subscribeToOnlineStatus((online) => {
       if (online) {
         retryQueue();
@@ -264,14 +300,30 @@ export function useDraftSync(options: DraftSyncOptions): UseDraftSyncReturn {
     });
 
     return unsubscribe;
-  }, [retryQueue]);
+  }, [contentId, retryQueue]);
 
-  // Load initial queue count
+  // Clean up orphaned queue entries and load initial queue count
   useEffect(() => {
-    getQueueCount().then(count => {
+    // Don't process if no valid contentId
+    if (!contentId) return;
+
+    const cleanupAndLoadCount = async () => {
+      // Clean up queue entries that reference non-existent drafts
+      const queueItems = await draftDb.syncQueue.toArray();
+      for (const item of queueItems) {
+        const draft = await draftDb.drafts.get(item.draftId);
+        if (!draft) {
+          // Draft no longer exists, remove from queue
+          await draftDb.syncQueue.delete(item.id!);
+        }
+      }
+
+      const count = await draftDb.syncQueue.count();
       setState(prev => ({ ...prev, queuedItems: count }));
-    });
-  }, [getQueueCount]);
+    };
+
+    cleanupAndLoadCount();
+  }, [contentId]);
 
   return {
     state,
@@ -280,5 +332,6 @@ export function useDraftSync(options: DraftSyncOptions): UseDraftSyncReturn {
     clearConflict,
     getQueueCount,
     hasUnsyncedChanges,
+    clearQueue,
   };
 }

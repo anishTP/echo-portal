@@ -3,6 +3,7 @@ import { Button, Spinner } from '@radix-ui/themes';
 import { useAuth } from '../../context/AuthContext';
 import { LoginButton, LogoutButton, RoleBadge } from '../auth';
 import { ThemeToggle } from './ThemeToggle';
+import { BranchSelector } from './BranchSelector';
 
 export function AppHeader() {
   const { user, isAuthenticated, isLoading, loginDev } = useAuth();
@@ -30,7 +31,7 @@ export function AppHeader() {
             </Link>
 
             {/* Navigation */}
-            <nav className="hidden md:flex items-center gap-6">
+            <nav className="flex items-center gap-6">
               <Link
                 to="/"
                 className="text-sm font-medium transition-colors"
@@ -48,6 +49,9 @@ export function AppHeader() {
                 </Link>
               )}
             </nav>
+
+            {/* Branch Selector - only visible when authenticated */}
+            {isAuthenticated && <BranchSelector />}
           </div>
 
           {/* Auth State */}

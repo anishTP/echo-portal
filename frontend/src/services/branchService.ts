@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { Branch, BranchCreateInput, BranchUpdateInput } from '@echo-portal/shared';
+import type { Branch, BranchCreateInput, BranchUpdateInput, EditBranchCreateInput, EditBranchCreateResult } from '@echo-portal/shared';
 import type { ReviewResponse } from './reviewService';
 
 export interface BranchResponse extends Branch {
@@ -65,16 +65,19 @@ export const branchService = {
     const queryString = searchParams.toString();
     const endpoint = queryString ? `/branches?${queryString}` : '/branches';
 
-    const response = await fetch(
-      `${import.meta.env.VITE_API_URL || '/api/v1'}${endpoint}`,
-      { credentials: 'include' }
-    );
+    // Use api.getPaginated to include dev auth headers
+    const result = await api.getPaginated<BranchResponse>(endpoint);
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch branches');
-    }
-
-    return response.json();
+    // Transform to PaginatedResponse format expected by consumers
+    return {
+      data: result.items,
+      meta: {
+        page: result.page,
+        limit: result.limit,
+        total: result.total,
+        hasMore: result.hasMore,
+      },
+    };
   },
 
   /**
@@ -140,6 +143,14 @@ export const branchService = {
    */
   publish: (id: string): Promise<any> => {
     return api.post(`/branches/${id}/publish`);
+  },
+
+  /**
+   * Create a branch for editing published content.
+   * Creates a new branch forked from main, copying the specified content.
+   */
+  createEditBranch: (input: EditBranchCreateInput): Promise<EditBranchCreateResult> => {
+    return api.post<EditBranchCreateResult>('/branches/edit', input);
   },
 };
 

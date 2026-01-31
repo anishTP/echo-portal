@@ -1,3 +1,4 @@
+import React, { useCallback, useRef } from 'react';
 import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react';
 import { Editor, rootCtx, defaultValueCtx } from '@milkdown/core';
 import { commonmark } from '@milkdown/preset-commonmark';
@@ -22,19 +23,25 @@ export interface InlineEditorProps {
 function MilkdownEditor({
   defaultValue = '',
   onChange,
-  readonly = false,
 }: InlineEditorProps) {
-  const { get } = useEditor((root) =>
+  // Store the initial value in a ref so it doesn't change on re-renders
+  // This prevents the editor from being recreated on every keystroke
+  const initialValueRef = useRef(defaultValue);
+
+  // Store onChange in a ref to avoid recreating the editor when the callback changes
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
+  useEditor((root) =>
     Editor.make()
       .config((ctx) => {
         ctx.set(rootCtx, root);
-        ctx.set(defaultValueCtx, defaultValue);
+        ctx.set(defaultValueCtx, initialValueRef.current);
 
-        if (onChange) {
-          ctx.get(listenerCtx).markdownUpdated((_, markdown) => {
-            onChange(markdown);
-          });
-        }
+        // Use ref for onChange to avoid dependency issues
+        ctx.get(listenerCtx).markdownUpdated((_, markdown) => {
+          onChangeRef.current?.(markdown);
+        });
       })
       .config(nord)
       .use(commonmark)
@@ -42,7 +49,7 @@ function MilkdownEditor({
       .use(history)
       .use(clipboard)
       .use(listener),
-    [defaultValue]
+    [] // Empty dependency array - editor is created once and manages its own state
   );
 
   return <Milkdown />;
@@ -55,8 +62,20 @@ function MilkdownEditor({
 export function InlineEditor(props: InlineEditorProps) {
   const { className = '' } = props;
 
+  // Stop keyboard event propagation to prevent Vimium and other browser extensions
+  // from capturing keystrokes meant for the editor
+  const stopKeyPropagation = useCallback((e: React.KeyboardEvent) => {
+    e.stopPropagation();
+  }, []);
+
   return (
-    <div className={`inline-editor ${className}`}>
+    <div
+      className={`inline-editor ${className}`}
+      data-vimium-ignore
+      onKeyDown={stopKeyPropagation}
+      onKeyUp={stopKeyPropagation}
+      onKeyPress={stopKeyPropagation}
+    >
       <MilkdownProvider>
         <MilkdownEditor {...props} />
       </MilkdownProvider>

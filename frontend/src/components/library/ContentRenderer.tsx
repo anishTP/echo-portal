@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
 import Markdown from 'react-markdown';
 import { Badge, Button, Callout } from '@radix-ui/themes';
+import { Pencil1Icon } from '@radix-ui/react-icons';
 import type { ContentDetail } from '@echo-portal/shared';
 import styles from './ContentRenderer.module.css';
+import { useAuth } from '../../hooks/useAuth';
 
 const typeBadgeColors: Record<string, 'green' | 'purple' | 'orange' | 'gray'> = {
   guideline: 'green',
@@ -15,6 +17,10 @@ interface ContentRendererProps {
   isLoading: boolean;
   isError: boolean;
   onRetry?: () => void;
+  /** Callback when user clicks Edit button. If not provided, edit button is hidden. */
+  onEditRequest?: () => void;
+  /** Whether viewing content from a draft branch (enables Edit button for unpublished content) */
+  branchMode?: boolean;
 }
 
 /**
@@ -128,7 +134,16 @@ export function ContentRenderer({
   isLoading,
   isError,
   onRetry,
+  onEditRequest,
+  branchMode = false,
 }: ContentRendererProps) {
+  const { isAuthenticated, user } = useAuth();
+
+  // Check if user can edit (authenticated with contributor role)
+  const canEdit = isAuthenticated && user?.roles?.some(
+    (role: string) => ['contributor', 'reviewer', 'publisher', 'administrator'].includes(role)
+  );
+
   if (isLoading) {
     return <LoadingSkeleton />;
   }
@@ -154,9 +169,22 @@ export function ContentRenderer({
         </div>
       )}
 
-      {/* Header */}
+      {/* Header with Edit button */}
       <header className={styles.header}>
-        <h1 className={styles.title}>{content.title}</h1>
+        <div className={styles.headerRow}>
+          <h1 className={styles.title}>{content.title}</h1>
+          {canEdit && (content.isPublished || branchMode) && onEditRequest && (
+            <Button
+              variant="soft"
+              size="2"
+              onClick={onEditRequest}
+              className={styles.editButton}
+            >
+              <Pencil1Icon />
+              Edit
+            </Button>
+          )}
+        </div>
         {content.description && (
           <p className={styles.description}>{content.description}</p>
         )}

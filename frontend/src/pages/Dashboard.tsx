@@ -1,15 +1,29 @@
 import { useState } from 'react';
 import { Button } from '@radix-ui/themes';
 import { useAuth } from '../context/AuthContext';
-import { useMyBranches, useReviewBranches } from '../hooks/useBranch';
+import { useMyBranches, useReviewBranches, useBranchList } from '../hooks/useBranch';
 import { BranchList, BranchCreate } from '../components/branch';
 
 export default function Dashboard() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  // Check if user can publish (admin or publisher role)
+  const canPublish = user?.roles?.some(
+    (role: string) => role === 'administrator' || role === 'publisher'
+  );
 
   const { data: myBranches = [], isLoading: loadingMyBranches } = useMyBranches();
   const { data: reviewBranches = [], isLoading: loadingReviews } = useReviewBranches();
+
+  // Fetch approved branches ready for publishing (only for admins/publishers)
+  // The hook is only enabled when user has publish permission
+  const { data: approvedBranchesData, isLoading: loadingApproved } = useBranchList({
+    state: ['approved'],
+    limit: 20,
+  });
+  // Only show approved branches to users with publish permission
+  const approvedBranches = canPublish ? (approvedBranchesData?.data ?? []) : [];
 
   const draftCount = myBranches.filter((b) => b.state === 'draft').length;
   const inReviewCount = myBranches.filter((b) => b.state === 'review').length;
@@ -27,7 +41,7 @@ export default function Dashboard() {
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+            <div className={`grid grid-cols-1 gap-4 ${canPublish ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
               <div className="rounded-lg bg-white p-6 shadow">
                 <h3 className="font-medium text-gray-900">Draft Branches</h3>
                 <p className="mt-2 text-3xl font-bold text-gray-600">{draftCount}</p>
@@ -43,12 +57,36 @@ export default function Dashboard() {
                 <p className="mt-2 text-3xl font-bold text-blue-600">{reviewBranches.length}</p>
                 <p className="text-sm text-gray-500">Assigned to you</p>
               </div>
+              {canPublish && (
+                <div className="rounded-lg bg-white p-6 shadow">
+                  <h3 className="font-medium text-gray-900">Ready to Publish</h3>
+                  <p className="mt-2 text-3xl font-bold text-purple-600">{approvedBranches.length}</p>
+                  <p className="text-sm text-gray-500">Approved & waiting</p>
+                </div>
+              )}
               <div className="rounded-lg bg-white p-6 shadow">
                 <h3 className="font-medium text-gray-900">Published</h3>
                 <p className="mt-2 text-3xl font-bold text-green-600">{publishedCount}</p>
                 <p className="text-sm text-gray-500">Live on main</p>
               </div>
             </div>
+
+            {/* Ready to Publish Section (for admins/publishers) */}
+            {canPublish && approvedBranches.length > 0 && (
+              <section>
+                <div className="mb-4">
+                  <h2 className="text-xl font-semibold text-gray-900">Ready to Publish</h2>
+                  <p className="text-sm text-gray-500">
+                    These branches have been approved and are waiting for publication.
+                  </p>
+                </div>
+                <BranchList
+                  branches={approvedBranches}
+                  isLoading={loadingApproved}
+                  showOwner
+                />
+              </section>
+            )}
 
             {/* My Branches Section */}
             <section>

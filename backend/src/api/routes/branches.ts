@@ -25,6 +25,7 @@ import {
   updateApprovalThresholdBodySchema,
   validateStateFilter,
   validateVisibilityFilter,
+  editBranchCreateBodySchema,
 } from '../schemas/branches.js';
 import { transitionBranchBodySchema } from '../schemas/reviews.js';
 import { TransitionEvent, type TransitionEventType } from '@echo-portal/shared';
@@ -73,6 +74,31 @@ branchRoutes.post(
 
     const branch = await branchService.create(body, user.id);
     return created(c, branch.toResponseForUser(getBranchUserContext(c)));
+  }
+);
+
+/**
+ * POST /api/v1/branches/edit - Create a branch for editing published content
+ * Creates a new branch forked from main, copying the specified content.
+ */
+branchRoutes.post(
+  '/edit',
+  requireAuth,
+  zValidator('json', editBranchCreateBodySchema),
+  async (c) => {
+    const user = c.get('user')!;
+    const body = c.req.valid('json');
+
+    // Verify source content exists and is published
+    const sourceContent = await contentService.getPublishedById(body.sourceContentId);
+    if (!sourceContent) {
+      throw new NotFoundError('Published content', body.sourceContentId);
+    }
+
+    // Create the edit branch with copied content
+    const result = await branchService.createEditBranch(body, user.id);
+
+    return created(c, result);
   }
 );
 

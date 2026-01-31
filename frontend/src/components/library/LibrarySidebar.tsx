@@ -23,20 +23,48 @@ export interface LibrarySidebarProps {
   contentType?: ContentType;
   /** Content type change handler */
   onContentTypeChange?: (value: ContentType) => void;
-  /** Published content items to display in sidebar */
+  /** Content items to display in sidebar */
   items?: ContentSummary[];
-  /** Currently selected content slug */
+  /** Currently selected content slug (for published mode) */
   selectedSlug?: string;
+  /** Currently selected content ID (for branch mode) */
+  selectedContentId?: string;
+  /** Handler for content selection in branch mode */
+  onSelectContent?: (content: ContentSummary) => void;
   /** Handler to clear all filters */
   onClearFilters?: () => void;
   /** Whether any filters are active */
   hasActiveFilters?: boolean;
+  /** Whether we're in branch mode */
+  branchMode?: boolean;
+  /** Name of the current branch (when in branch mode) */
+  branchName?: string;
 }
+
+// Git branch icon for branch mode indicator
+const BranchIcon = () => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <line x1="6" y1="3" x2="6" y2="15" />
+    <circle cx="18" cy="6" r="3" />
+    <circle cx="6" cy="18" r="3" />
+    <path d="M18 9a9 9 0 0 1-9 9" />
+  </svg>
+);
 
 /**
  * Library left sidebar
  *
  * Contains:
+ * - Branch mode indicator (when viewing branch content)
  * - Search input with keyboard shortcut badge
  * - Content type filter pills
  * - Content items grouped by category
@@ -48,8 +76,12 @@ export function LibrarySidebar({
   onContentTypeChange,
   items = [],
   selectedSlug,
+  selectedContentId,
+  onSelectContent,
   onClearFilters,
   hasActiveFilters = false,
+  branchMode = false,
+  branchName,
 }: LibrarySidebarProps) {
   const location = useLocation();
 
@@ -85,8 +117,28 @@ export function LibrarySidebar({
     [onSearchChange]
   );
 
+  const handleContentClick = useCallback(
+    (e: React.MouseEvent, item: ContentSummary) => {
+      // In branch mode, prevent default link behavior and use callback
+      if (branchMode && onSelectContent) {
+        e.preventDefault();
+        onSelectContent(item);
+      }
+    },
+    [branchMode, onSelectContent]
+  );
+
   return (
     <nav className={styles.sidebar} aria-label="Library navigation">
+      {/* Branch Mode Indicator */}
+      {branchMode && branchName && (
+        <div className={styles.branchIndicator}>
+          <BranchIcon />
+          <span className={styles.branchName}>{branchName}</span>
+          <span className={styles.branchBadge}>Draft</span>
+        </div>
+      )}
+
       {/* Search */}
       <div className={styles.searchSection}>
         <div className={styles.searchWrapper}>
@@ -136,13 +188,18 @@ export function LibrarySidebar({
           >
             <ul className={styles.contentList}>
               {categoryItems.map((item) => {
-                const isActive = selectedSlug === item.slug || location.pathname === `/library/${item.slug}`;
+                // Determine if this item is active based on mode
+                const isActive = branchMode
+                  ? selectedContentId === item.id
+                  : selectedSlug === item.slug || location.pathname === `/library/${item.slug}`;
+
                 return (
                   <li key={item.id}>
                     <Link
-                      to={`/library/${item.slug}`}
+                      to={branchMode ? '#' : `/library/${item.slug}`}
                       className={styles.contentItem}
                       data-active={isActive}
+                      onClick={(e) => handleContentClick(e, item)}
                     >
                       <span className={styles.contentTitle}>{item.title}</span>
                       <span
@@ -162,7 +219,7 @@ export function LibrarySidebar({
         {/* Empty state when no items */}
         {groupedItems.length === 0 && !hasActiveFilters && (
           <div className={styles.emptyNav}>
-            <p>No published content yet.</p>
+            <p>{branchMode ? 'No content in this branch yet.' : 'No published content yet.'}</p>
           </div>
         )}
 

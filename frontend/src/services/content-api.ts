@@ -10,6 +10,8 @@ import type {
   ContentCreateInput,
   ContentUpdateInput,
   ContentRevertInput,
+  DraftSyncInput,
+  DraftSyncResult,
 } from '@echo-portal/shared';
 
 export const contentApi = {
@@ -139,6 +141,14 @@ export const contentApi = {
   /** Get incoming references (referenced by) */
   getReferencedBy(contentId: string): Promise<ContentReference[]> {
     return api.get<ContentReference[]>(`/contents/${contentId}/referenced-by`);
+  },
+
+  /**
+   * Sync draft changes to server.
+   * Uses optimistic concurrency control via expectedServerVersion.
+   */
+  syncDraft(contentId: string, input: DraftSyncInput): Promise<DraftSyncResult> {
+    return api.post<DraftSyncResult>(`/contents/${contentId}/sync`, input);
   },
 };
 

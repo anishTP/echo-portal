@@ -8,3 +8,6 @@ export { NavSection, type NavItem, type NavSectionProps } from './NavSection';
 export { LibrarySidebar, type LibrarySidebarProps } from './LibrarySidebar';
 export { ContentMetadataSidebar, type ContentMetadataSidebarProps } from './ContentMetadataSidebar';
 export { ContentRenderer } from './ContentRenderer';
+export { InlineEditView, type InlineEditViewProps } from './InlineEditView';
+export { EditMetadataSidebar, type EditMetadataSidebarProps } from './EditMetadataSidebar';
+export { EditModeHeader, type EditModeHeaderProps } from './EditModeHeader';

@@ -190,3 +190,18 @@ export function validateVisibilityFilter(
     validVisibility.includes(v as any)
   );
 }
+
+/**
+ * Schema for creating a branch from published content (edit workflow)
+ */
+export const editBranchCreateBodySchema = z.object({
+  sourceContentId: uuidSchema,
+  name: z.string().min(1).max(100),
+  slug: z
+    .string()
+    .min(1)
+    .max(100)
+    .regex(/^[a-z0-9-]+$/, 'Slug must contain only lowercase letters, numbers, and hyphens'),
+});
+
+export type EditBranchCreateBody = z.infer<typeof editBranchCreateBodySchema>;
