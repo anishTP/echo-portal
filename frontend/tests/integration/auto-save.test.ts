@@ -19,14 +19,14 @@ describe('auto-save flow', () => {
   let db: DraftDatabase;
 
   beforeEach(async () => {
-    vi.useFakeTimers();
+    // Use real timers for IndexedDB integration tests
     db = new DraftDatabase();
     await db.open();
   });
 
   afterEach(async () => {
-    vi.useRealTimers();
     await db.drafts.clear();
+    await db.editSessions.clear();
     await db.syncQueue.clear();
     db.close();
     vi.clearAllMocks();
@@ -34,8 +34,7 @@ describe('auto-save flow', () => {
 
   describe('edit → debounce → IndexedDB save', () => {
     it('should save draft to IndexedDB after debounce delay', async () => {
-      vi.useRealTimers(); // Use real timers for this test
-
+      
       const contentId = 'test-content-id';
       const branchId = 'test-branch-id';
       const draftId = createDraftId(contentId, branchId);
@@ -65,7 +64,6 @@ describe('auto-save flow', () => {
     });
 
     it('should increment localVersion on each save', async () => {
-      vi.useRealTimers();
 
       const draftId = createDraftId('content-1', 'branch-1');
 
@@ -97,7 +95,6 @@ describe('auto-save flow', () => {
     });
 
     it('should preserve metadata across saves', async () => {
-      vi.useRealTimers();
 
       const draftId = createDraftId('content-1', 'branch-1');
 
@@ -133,7 +130,6 @@ describe('auto-save flow', () => {
 
   describe('IndexedDB save → server sync', () => {
     it('should mark draft as synced after successful server sync', async () => {
-      vi.useRealTimers();
 
       const draftId = createDraftId('content-1', 'branch-1');
 
@@ -165,7 +161,6 @@ describe('auto-save flow', () => {
     });
 
     it('should queue failed syncs for retry', async () => {
-      vi.useRealTimers();
 
       const draftId = createDraftId('content-1', 'branch-1');
 
@@ -201,13 +196,11 @@ describe('auto-save flow', () => {
     });
 
     it('should use exponential backoff for retries', async () => {
-      vi.useRealTimers();
-
       const draftId = createDraftId('content-1', 'branch-1');
       const now = Date.now();
 
       // First retry: 1 minute
-      await db.syncQueue.add({
+      const id = await db.syncQueue.add({
         draftId,
         operation: 'sync',
         attempts: 1,
@@ -217,18 +210,17 @@ describe('auto-save flow', () => {
       });
 
       // Simulate second retry: 2 minutes
-      await db.syncQueue.update(1, {
+      await db.syncQueue.update(id, {
         attempts: 2,
         nextRetryAt: now + 120000, // 2 min
       });
 
-      const item = await db.syncQueue.get(1);
+      const item = await db.syncQueue.get(id);
       expect(item?.attempts).toBe(2);
       expect(item?.nextRetryAt).toBe(now + 120000);
     });
 
     it('should stop retrying after max attempts', async () => {
-      vi.useRealTimers();
 
       const draftId = createDraftId('content-1', 'branch-1');
 
@@ -251,7 +243,6 @@ describe('auto-save flow', () => {
 
   describe('offline → online sync', () => {
     it('should find all unsynced drafts', async () => {
-      vi.useRealTimers();
 
       // Create mix of synced and unsynced drafts
       await db.drafts.bulkPut([
@@ -291,7 +282,6 @@ describe('auto-save flow', () => {
     });
 
     it('should process sync queue in order', async () => {
-      vi.useRealTimers();
 
       const now = Date.now();
 
@@ -326,7 +316,6 @@ describe('auto-save flow', () => {
 
   describe('conflict detection', () => {
     it('should detect version mismatch', async () => {
-      vi.useRealTimers();
 
       const draftId = createDraftId('content-1', 'branch-1');
       const clientVersion = '2024-01-01T10:00:00.000Z';
@@ -353,7 +342,6 @@ describe('auto-save flow', () => {
     });
 
     it('should preserve both versions for merge UI', async () => {
-      vi.useRealTimers();
 
       const draftId = createDraftId('content-1', 'branch-1');
       const clientBody = 'Client changes';
@@ -381,7 +369,6 @@ describe('auto-save flow', () => {
 
   describe('crash recovery', () => {
     it('should restore unsynced drafts after browser restart', async () => {
-      vi.useRealTimers();
 
       const draftId = createDraftId('content-1', 'branch-1');
 
@@ -402,20 +389,16 @@ describe('auto-save flow', () => {
 
       // Simulate "browser restart" by creating new db connection
       db.close();
-      const newDb = new DraftDatabase();
-      await newDb.open();
+      db = new DraftDatabase();
+      await db.open();
 
-      const recovered = await newDb.drafts.get(draftId);
+      const recovered = await db.drafts.get(draftId);
       expect(recovered).toBeDefined();
       expect(recovered?.title).toBe('Unsaved Work');
       expect(recovered?.synced).toBe(false);
-
-      await newDb.drafts.clear();
-      newDb.close();
     });
 
     it('should detect active sessions for crash recovery UI', async () => {
-      vi.useRealTimers();
 
       // Create stale session (simulates browser crash)
       await db.editSessions.put({
