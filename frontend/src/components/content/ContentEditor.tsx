@@ -1,12 +1,13 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Button, TextArea, TextField, Callout, SegmentedControl, Box } from '@radix-ui/themes';
+import { ArchiveIcon } from '@radix-ui/react-icons';
 import { ContentTypeSelector } from './ContentTypeSelector';
 import { ContentMetadata } from './ContentMetadata';
 import { DeleteContentDialog } from './DeleteContentDialog';
 import { InlineEditor } from '../editor/InlineEditor';
-import { EditorToolbar } from '../editor/EditorToolbar';
 import { EditorStatusBar } from '../editor/EditorStatusBar';
 import { DraftRecoveryBanner } from '../editor/DraftRecoveryBanner';
+import { SaveDraftDialog } from '../editor/SaveDraftDialog';
 import { useContentStore } from '../../stores/contentStore';
 import { useCreateContent, useUpdateContent, useDeleteContent } from '../../hooks/useContent';
 import { useAutoSave, type DraftContent } from '../../hooks/useAutoSave';
@@ -57,6 +58,9 @@ export function ContentEditor({
   const [editorMode, setEditorMode] = useState<EditorMode>(defaultEditorMode);
   const [recoveredDraft, setRecoveredDraft] = useState<Draft | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [showSaveDraftDialog, setShowSaveDraftDialog] = useState(false);
+  const [saveDraftError, setSaveDraftError] = useState<string | null>(null);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
   const initializedRef = useRef(false);
 
   const setIsDirty = useContentStore((s) => s.setIsDirty);
@@ -152,6 +156,41 @@ export function ContentEditor({
   const handleDiscardDraft = useCallback(() => {
     setRecoveredDraft(null);
   }, []);
+
+  // Handle manual save draft with change description
+  const handleSaveDraft = useCallback(async (changeDescription: string) => {
+    if (!isEditing || !enableAutoSave) return;
+
+    setIsSavingDraft(true);
+    setSaveDraftError(null);
+
+    try {
+      // First, ensure current content is saved to IndexedDB
+      const draftContent: DraftContent = {
+        title,
+        body,
+        metadata: {
+          category: category || undefined,
+          tags: tags.length > 0 ? tags : undefined,
+          description: description || undefined,
+        },
+      };
+      await autoSave.saveNow(draftContent);
+
+      // Then sync to server with the custom change description
+      const result = await draftSync.sync(changeDescription);
+
+      if (result?.success) {
+        setShowSaveDraftDialog(false);
+      } else if (result?.conflict) {
+        setSaveDraftError('Conflict detected. Please resolve before saving.');
+      }
+    } catch (err) {
+      setSaveDraftError(err instanceof Error ? err.message : 'Failed to save draft');
+    } finally {
+      setIsSavingDraft(false);
+    }
+  }, [isEditing, enableAutoSave, title, body, category, tags, description, autoSave, draftSync]);
 
   // Track dirty state and trigger auto-save
   useEffect(() => {
@@ -264,6 +303,18 @@ export function ContentEditor({
               Delete
             </Button>
           )}
+          {isEditing && enableAutoSave && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSaveDraftError(null);
+                setShowSaveDraftDialog(true);
+              }}
+            >
+              <ArchiveIcon />
+              Save Draft
+            </Button>
+          )}
           {onCancel && (
             <Button variant="outline" onClick={onCancel}>
               Cancel
@@ -283,6 +334,17 @@ export function ContentEditor({
           error={deleteError}
           onConfirm={handleDelete}
           onCancel={() => setShowDeleteDialog(false)}
+        />
+      )}
+
+      {isEditing && enableAutoSave && (
+        <SaveDraftDialog
+          isOpen={showSaveDraftDialog}
+          onClose={() => setShowSaveDraftDialog(false)}
+          onSave={handleSaveDraft}
+          hasChanges={autoSave.state.isDirty || !draftSync.state.status.includes('synced')}
+          isSaving={isSavingDraft}
+          error={saveDraftError}
         />
       )}
 

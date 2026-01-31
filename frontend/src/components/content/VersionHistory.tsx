@@ -1,6 +1,7 @@
 import { useState, memo, useCallback } from 'react';
 import { Button, Badge } from '@radix-ui/themes';
 import { useVersionHistory, useRevertContent } from '../../hooks/useVersionHistory';
+import { RevertDialog } from './RevertDialog';
 import type { ContentVersionSummary } from '@echo-portal/shared';
 
 interface VersionHistoryProps {
@@ -13,6 +14,8 @@ export function VersionHistory({ contentId, onSelectDiff, isReadOnly }: VersionH
   const { data, isLoading } = useVersionHistory(contentId);
   const revertMutation = useRevertContent(contentId);
   const [selectedVersions, setSelectedVersions] = useState<string[]>([]);
+  const [revertVersion, setRevertVersion] = useState<ContentVersionSummary | null>(null);
+  const [revertError, setRevertError] = useState<string | null>(null);
 
   const handleToggleSelect = useCallback(
     (timestamp: string) => {
@@ -36,21 +39,32 @@ export function VersionHistory({ contentId, onSelectDiff, isReadOnly }: VersionH
     }
   }, [selectedVersions, onSelectDiff]);
 
-  const handleRevert = useCallback(
-    async (version: ContentVersionSummary) => {
-      const description = window.prompt(
-        `Revert to version from ${new Date(version.versionTimestamp).toLocaleString()}?`,
-        `Reverted to version from ${version.versionTimestamp}`
-      );
-      if (description) {
+  const handleRevertClick = useCallback((version: ContentVersionSummary) => {
+    setRevertError(null);
+    setRevertVersion(version);
+  }, []);
+
+  const handleRevertConfirm = useCallback(
+    async (description: string) => {
+      if (!revertVersion) return;
+      setRevertError(null);
+      try {
         await revertMutation.mutateAsync({
-          targetVersionTimestamp: version.versionTimestamp,
+          targetVersionTimestamp: revertVersion.versionTimestamp,
           changeDescription: description,
         });
+        setRevertVersion(null);
+      } catch (err) {
+        setRevertError(err instanceof Error ? err.message : 'Failed to revert');
       }
     },
-    [revertMutation]
+    [revertMutation, revertVersion]
   );
+
+  const handleRevertClose = useCallback(() => {
+    setRevertVersion(null);
+    setRevertError(null);
+  }, []);
 
   if (isLoading) {
     return <div className="animate-pulse space-y-3 p-4">Loading version history...</div>;
@@ -79,10 +93,19 @@ export function VersionHistory({ contentId, onSelectDiff, isReadOnly }: VersionH
             isLatest={idx === 0}
             isSelected={selectedVersions.includes(version.versionTimestamp)}
             onToggleSelect={() => handleToggleSelect(version.versionTimestamp)}
-            onRevert={!isReadOnly && idx > 0 ? () => handleRevert(version) : undefined}
+            onRevert={!isReadOnly && idx > 0 ? () => handleRevertClick(version) : undefined}
           />
         ))}
       </div>
+
+      <RevertDialog
+        isOpen={!!revertVersion}
+        version={revertVersion}
+        onClose={handleRevertClose}
+        onRevert={handleRevertConfirm}
+        isReverting={revertMutation.isPending}
+        error={revertError}
+      />
     </div>
   );
 }

@@ -51,6 +51,8 @@ export interface UseDraftSyncReturn {
   clearConflict: () => void;
   /** Get pending queue items count */
   getQueueCount: () => Promise<number>;
+  /** Check if there are unsynced changes in the draft */
+  hasUnsyncedChanges: () => Promise<boolean>;
 }
 
 /**
@@ -247,6 +249,12 @@ export function useDraftSync(options: DraftSyncOptions): UseDraftSyncReturn {
     return draftDb.syncQueue.count();
   }, []);
 
+  // Check if there are unsynced changes
+  const hasUnsyncedChanges = useCallback(async (): Promise<boolean> => {
+    const draft = await draftDb.drafts.get(draftId);
+    return draft ? !draft.synced : false;
+  }, [draftId]);
+
   // Subscribe to online status changes to trigger queue processing
   useEffect(() => {
     const unsubscribe = subscribeToOnlineStatus((online) => {
@@ -271,5 +279,6 @@ export function useDraftSync(options: DraftSyncOptions): UseDraftSyncReturn {
     retryQueue,
     clearConflict,
     getQueueCount,
+    hasUnsyncedChanges,
   };
 }
