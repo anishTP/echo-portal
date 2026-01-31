@@ -68,3 +68,8 @@ data/
 /blob-report/
 /playwright/.cache/
 
+
+# AI workspace files
+.claude/
+.beads/
+specs/
