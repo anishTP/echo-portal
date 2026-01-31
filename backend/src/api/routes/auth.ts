@@ -273,6 +273,24 @@ async function findOrCreateUser(
 }
 
 /**
+ * Health check endpoint for auth service
+ * GET /auth/health
+ */
+authRoutes.get('/health', async (c) => {
+  // Check if OAuth providers are configured
+  const githubConfigured = !!(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET);
+  const googleConfigured = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+
+  return c.json({
+    status: 'ok',
+    providers: {
+      github: githubConfigured,
+      google: googleConfigured,
+    },
+  });
+});
+
+/**
  * T033: OAuth login initiation route
  * GET /auth/login/:provider
  */
