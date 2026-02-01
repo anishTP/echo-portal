@@ -401,6 +401,7 @@ export const contentService = {
 
   /**
    * List published public content.
+   * Only returns content from the main branch to avoid duplicates.
    */
   async listPublished(options: {
     contentType?: string;
@@ -412,11 +413,22 @@ export const contentService = {
     const limit = Math.min(options.limit ?? 20, 100);
     const offset = (page - 1) * limit;
 
+    // Get main branch to filter by - published content should only come from main
+    const mainBranch = await db.query.branches.findFirst({
+      where: eq(schema.branches.slug, 'main'),
+    });
+
     const conditions = [
       eq(schema.contents.isPublished, true),
       eq(schema.contents.visibility, 'public'),
       isNull(schema.contents.archivedAt),
     ];
+
+    // Only show content from main branch if it exists
+    if (mainBranch) {
+      conditions.push(eq(schema.contents.branchId, mainBranch.id));
+    }
+
     if (options.contentType) {
       conditions.push(eq(schema.contents.contentType, options.contentType as 'guideline' | 'asset' | 'opinion'));
     }
@@ -494,6 +506,9 @@ export const contentService = {
 
   /**
    * Mark all content in a branch as published.
+   * Sets isPublished=true and records publish metadata.
+   * NOTE: This does NOT set visibility='public' - that should only be done
+   * on main branch content via mergeContentIntoMain during convergence.
    */
   async markPublished(branchId: string, publishedBy: string): Promise<void> {
     const branchContents = await db.query.contents.findMany({
@@ -554,14 +569,26 @@ export const contentService = {
 
   /**
    * Get published content by slug.
+   * Only returns content from main branch.
    */
   async getPublishedBySlug(slug: string): Promise<ContentDetail | null> {
+    // Get main branch - published content should only come from main
+    const mainBranch = await db.query.branches.findFirst({
+      where: eq(schema.branches.slug, 'main'),
+    });
+
+    const conditions = [
+      eq(schema.contents.slug, slug),
+      eq(schema.contents.isPublished, true),
+      eq(schema.contents.visibility, 'public'),
+    ];
+
+    if (mainBranch) {
+      conditions.push(eq(schema.contents.branchId, mainBranch.id));
+    }
+
     const content = await db.query.contents.findFirst({
-      where: and(
-        eq(schema.contents.slug, slug),
-        eq(schema.contents.isPublished, true),
-        eq(schema.contents.visibility, 'public')
-      ),
+      where: and(...conditions),
     });
     if (!content) return null;
 

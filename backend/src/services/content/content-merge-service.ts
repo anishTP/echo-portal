@@ -569,7 +569,94 @@ export const contentMergeService = {
             slug: content.slug,
           });
         } else {
-          // New content - copy to main
+          // New content - check if slug already exists in main first
+          const existingInMain = await db.query.contents.findFirst({
+            where: and(
+              eq(schema.contents.branchId, mainBranchId),
+              eq(schema.contents.slug, content.slug)
+            ),
+          });
+
+          if (existingInMain) {
+            // Content with same slug already exists in main - update it instead of creating duplicate
+            await db.transaction(async (tx) => {
+              const metadataSnapshot = createMetadataSnapshot({
+                title: content.title,
+                category: content.category ?? undefined,
+                tags: content.tags ?? [],
+              });
+
+              // Create new version for existing main content
+              const [newVersion] = await tx
+                .insert(schema.contentVersions)
+                .values({
+                  contentId: existingInMain.id,
+                  parentVersionId: existingInMain.currentVersionId,
+                  body: currentVersion.body,
+                  bodyFormat: currentVersion.bodyFormat,
+                  metadataSnapshot,
+                  changeDescription: `Merged from branch: ${currentVersion.changeDescription || 'content update'}`,
+                  authorId: actorId,
+                  authorType: 'user',
+                  byteSize: currentVersion.byteSize,
+                  checksum: currentVersion.checksum,
+                })
+                .returning();
+
+              // Update existing main content
+              await tx
+                .update(schema.contents)
+                .set({
+                  currentVersionId: newVersion.id,
+                  publishedVersionId: newVersion.id,
+                  title: content.title,
+                  category: content.category,
+                  tags: content.tags,
+                  description: content.description,
+                  visibility: 'public',
+                  isPublished: true,
+                  publishedAt: new Date(),
+                  publishedBy: actorId,
+                  updatedAt: new Date(),
+                })
+                .where(eq(schema.contents.id, existingInMain.id));
+
+              // Update source content to link to main
+              await tx
+                .update(schema.contents)
+                .set({
+                  isPublished: true,
+                  publishedVersionId: currentVersion.id,
+                  publishedAt: new Date(),
+                  publishedBy: actorId,
+                  sourceContentId: existingInMain.id,
+                })
+                .where(eq(schema.contents.id, content.id));
+
+              // Record in merge history
+              await tx.insert(schema.contentMergeHistory).values({
+                contentId: existingInMain.id,
+                operationType: 'merge',
+                sourceBranchId: branchId,
+                targetBranchId: mainBranchId,
+                sourceVersionId: currentVersion.id,
+                resultVersionId: newVersion.id,
+                hadConflict: false,
+                conflictResolution: 'auto',
+                actorId,
+                metadata: { mergedFromContentId: content.id, wasOrphanedContent: true },
+              });
+            });
+
+            mergedContent.push({
+              sourceContentId: content.id,
+              targetContentId: existingInMain.id,
+              slug: content.slug,
+            });
+            continue;
+          }
+
+          // Truly new content - copy to main
           await db.transaction(async (tx) => {
             const metadataSnapshot = createMetadataSnapshot({
               title: content.title,
