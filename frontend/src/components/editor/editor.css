@@ -178,6 +178,7 @@
 
 /* Video embed styling */
 .video-embed {
+  display: block;
   position: relative;
   width: 100%;
   margin: var(--space-3) 0;
@@ -225,6 +226,7 @@
   padding: var(--space-4);
   color: var(--gray-11);
   text-align: center;
+  width: 100%;
 }
 
 .video-embed--error .video-error-content svg {

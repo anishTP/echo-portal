@@ -6,6 +6,8 @@ import { Pencil1Icon } from '@radix-ui/react-icons';
 import type { ContentDetail } from '@echo-portal/shared';
 import styles from './ContentRenderer.module.css';
 import { useAuth } from '../../hooks/useAuth';
+import { VideoEmbed, detectVideoType } from '../editor/VideoEmbed';
+import '../editor/editor.css'; // For video embed styles
 
 const typeBadgeColors: Record<string, 'green' | 'purple' | 'orange' | 'gray'> = {
   guideline: 'green',
@@ -242,6 +244,13 @@ export function ContentRenderer({
                   </span>
                 );
               }
+
+              // Check if this is a video URL - render VideoEmbed instead
+              const videoType = detectVideoType(src);
+              if (videoType !== 'unknown') {
+                return <VideoEmbed src={src} alt={alt} />;
+              }
+
               return (
                 <img
                   src={src}
@@ -250,8 +259,6 @@ export function ContentRenderer({
                   className={styles.image}
                   loading="lazy"
                   onError={(e) => {
-                    // Log error for debugging
-                    console.error('Image failed to load:', src?.substring(0, 100));
                     const target = e.target as HTMLImageElement;
                     target.style.display = 'none';
                     // Insert error placeholder after the image

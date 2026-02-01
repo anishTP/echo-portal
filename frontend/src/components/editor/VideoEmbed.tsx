@@ -85,15 +85,13 @@ export function VideoEmbed({ src, alt, className = '' }: VideoEmbedProps) {
     }
 
     return (
-      <div className={`video-embed video-embed--youtube ${className}`}>
+      <span className={`video-embed video-embed--youtube ${className}`}>
         <iframe
           src={getYouTubeEmbedUrl(videoId)}
           title={alt || 'YouTube video'}
-          frameBorder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
         />
-      </div>
+      </span>
     );
   }
 
@@ -104,27 +102,25 @@ export function VideoEmbed({ src, alt, className = '' }: VideoEmbedProps) {
     }
 
     return (
-      <div className={`video-embed video-embed--vimeo ${className}`}>
+      <span className={`video-embed video-embed--vimeo ${className}`}>
         <iframe
           src={getVimeoEmbedUrl(videoId)}
           title={alt || 'Vimeo video'}
-          frameBorder="0"
           allow="autoplay; fullscreen; picture-in-picture"
-          allowFullScreen
         />
-      </div>
+      </span>
     );
   }
 
   if (videoType === 'direct') {
     return (
-      <div className={`video-embed video-embed--direct ${className}`}>
+      <span className={`video-embed video-embed--direct ${className}`}>
         <video controls preload="metadata">
           <source src={src} type={getVideoMimeType(src)} />
           {alt && <track kind="captions" label={alt} />}
           Your browser does not support the video tag.
         </video>
-      </div>
+      </span>
     );
   }
 
@@ -149,8 +145,8 @@ interface VideoErrorProps {
 
 function VideoError({ src, message }: VideoErrorProps) {
   return (
-    <div className="video-embed video-embed--error">
-      <div className="video-error-content">
+    <span className="video-embed video-embed--error">
+      <span className="video-error-content">
         <svg
           width="24"
           height="24"
@@ -165,8 +161,8 @@ function VideoError({ src, message }: VideoErrorProps) {
         </svg>
         <span>{message}</span>
         <code>{src}</code>
-      </div>
-    </div>
+      </span>
+    </span>
   );
 }
 
