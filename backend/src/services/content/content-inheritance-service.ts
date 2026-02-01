@@ -1,4 +1,4 @@
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { db, schema } from '../../db/index.js';
 import {
   computeChecksum,
@@ -26,6 +26,18 @@ export interface ContentManifestEntry {
 }
 
 export type ContentManifest = Record<string, ContentManifestEntry>;
+
+export interface BranchDiffResult {
+  branchId: string;
+  snapshotId: string | null;
+  hasChanges: boolean;
+  summary: { added: number; modified: number; deleted: number; total: number };
+  changes: Array<{
+    slug: string;
+    changeType: 'added' | 'modified' | 'deleted';
+    contentId?: string;
+  }>;
+}
 
 /**
  * Service for copying published content when creating a branch
@@ -214,5 +226,89 @@ export const contentInheritanceService = {
     const snapshot = await this.getSnapshot(branchId);
     if (!snapshot) return null;
     return snapshot.contentManifest as ContentManifest;
+  },
+
+  /**
+   * Compute the diff between current branch state and its creation snapshot.
+   * Detects added, modified, and deleted content.
+   */
+  async computeBranchDiff(branchId: string): Promise<BranchDiffResult> {
+    const snapshot = await this.getSnapshot(branchId);
+
+    // No snapshot = main branch, return no changes
+    if (!snapshot) {
+      return {
+        branchId,
+        snapshotId: null,
+        hasChanges: false,
+        summary: { added: 0, modified: 0, deleted: 0, total: 0 },
+        changes: [],
+      };
+    }
+
+    const snapshotManifest = snapshot.contentManifest as ContentManifest;
+
+    // Get ALL branch content (including archived for deletion detection)
+    const allContent = await db.query.contents.findMany({
+      where: eq(schema.contents.branchId, branchId),
+    });
+
+    // Build maps
+    const activeContent = new Map<string, (typeof allContent)[0]>();
+    for (const c of allContent) {
+      if (!c.archivedAt) {
+        activeContent.set(c.slug, c);
+      }
+    }
+
+    // Get current checksums for active content
+    const versionIds = [...activeContent.values()]
+      .filter((c) => c.currentVersionId)
+      .map((c) => c.currentVersionId!);
+    const versions =
+      versionIds.length > 0
+        ? await db.query.contentVersions.findMany({
+            where: inArray(schema.contentVersions.id, versionIds),
+          })
+        : [];
+    const checksums = new Map(versions.map((v) => [v.contentId, v.checksum]));
+
+    const changes: BranchDiffResult['changes'] = [];
+    const snapshotSlugs = new Set(Object.keys(snapshotManifest));
+
+    // Deleted: in snapshot but not active
+    for (const slug of Object.keys(snapshotManifest)) {
+      if (!activeContent.has(slug)) {
+        changes.push({ slug, changeType: 'deleted' });
+      }
+    }
+
+    // Added: active but not in snapshot
+    for (const [slug, content] of activeContent) {
+      if (!snapshotSlugs.has(slug)) {
+        changes.push({ slug, changeType: 'added', contentId: content.id });
+      }
+    }
+
+    // Modified: in both but different checksum
+    for (const [slug, content] of activeContent) {
+      const entry = snapshotManifest[slug];
+      if (entry && checksums.get(content.id) !== entry.checksum) {
+        changes.push({ slug, changeType: 'modified', contentId: content.id });
+      }
+    }
+
+    return {
+      branchId,
+      snapshotId: snapshot.id,
+      hasChanges: changes.length > 0,
+      summary: {
+        added: changes.filter((c) => c.changeType === 'added').length,
+        modified: changes.filter((c) => c.changeType === 'modified').length,
+        deleted: changes.filter((c) => c.changeType === 'deleted').length,
+        total: changes.length,
+      },
+      changes,
+    };
   },
 };

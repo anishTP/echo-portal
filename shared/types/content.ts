@@ -16,6 +16,8 @@ export interface ContentSummary {
   createdBy: UserSummary;
   createdAt: string;
   updatedAt: string;
+  /** Whether content has been edited since creation (createdAt !== updatedAt) */
+  hasEdits: boolean;
 }
 
 export interface ContentDetail extends ContentSummary {

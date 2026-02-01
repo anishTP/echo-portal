@@ -11,7 +11,7 @@ export interface SyncConflict {
   serverBody: string;
   serverAuthor: {
     id: string;
-    username: string;
+    displayName: string;
   };
   clientBody: string;
 }
@@ -200,7 +200,7 @@ export function useDraftSync(options: DraftSyncOptions): UseDraftSyncReturn {
           serverBody: result.conflict.serverBody,
           serverAuthor: {
             id: result.conflict.serverVersionAuthor.id,
-            username: result.conflict.serverVersionAuthor.username,
+            displayName: result.conflict.serverVersionAuthor.displayName,
           },
           clientBody: draft.body,
         };

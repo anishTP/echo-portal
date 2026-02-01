@@ -74,18 +74,18 @@ export function useDebouncedCallback<T extends (...args: unknown[]) => unknown>(
  * @param delay - Delay in milliseconds (default: 2000ms)
  * @returns Object with { trigger, cancel, isPending }
  */
-export function useDebouncedSave<T extends (...args: unknown[]) => unknown>(
-  callback: T,
+export function useDebouncedSave<Args extends unknown[], R>(
+  callback: (...args: Args) => R,
   delay: number = DEFAULT_DELAY
 ): {
-  trigger: (...args: Parameters<T>) => void;
+  trigger: (...args: Args) => void;
   cancel: () => void;
   flush: () => void;
   isPending: boolean;
 } {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const callbackRef = useRef(callback);
-  const pendingArgsRef = useRef<Parameters<T> | null>(null);
+  const pendingArgsRef = useRef<Args | null>(null);
   const [isPending, setIsPending] = useState(false);
 
   // Keep callback ref updated
@@ -121,7 +121,7 @@ export function useDebouncedSave<T extends (...args: unknown[]) => unknown>(
     }
   }, []);
 
-  const trigger = useCallback((...args: Parameters<T>) => {
+  const trigger = useCallback((...args: Args) => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }

@@ -1,9 +1,10 @@
 import { useMemo, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { MagnifyingGlassIcon, Cross2Icon } from '@radix-ui/react-icons';
+import { MagnifyingGlassIcon, Cross2Icon, Pencil1Icon } from '@radix-ui/react-icons';
 import type { ContentSummary, BranchStateType } from '@echo-portal/shared';
 import { NavSection } from './NavSection';
 import { LifecycleStatus } from '../branch/LifecycleStatus';
+import { SubmitForReviewButton } from '../branch/SubmitForReviewButton';
 import styles from './LibrarySidebar.module.css';
 
 type ContentType = 'all' | 'guideline' | 'asset' | 'opinion';
@@ -42,6 +43,14 @@ export interface LibrarySidebarProps {
   branchName?: string;
   /** State of the current branch (when in branch mode) */
   branchState?: BranchStateType;
+  /** ID of the current branch (when in branch mode, for submit for review) */
+  branchId?: string;
+  /** Whether the user is the branch owner (required for submit for review) */
+  isOwner?: boolean;
+  /** Whether the branch can be submitted for review (from API permissions) */
+  canSubmitForReview?: boolean;
+  /** Callback when submit for review succeeds */
+  onSubmitForReviewSuccess?: () => void;
 }
 
 // Git branch icon for branch mode indicator
@@ -86,8 +95,25 @@ export function LibrarySidebar({
   branchMode = false,
   branchName,
   branchState,
+  branchId,
+  isOwner = false,
+  canSubmitForReview = false,
+  onSubmitForReviewSuccess,
 }: LibrarySidebarProps) {
   const location = useLocation();
+
+  // Check if any content has been edited (for visual indicator in items list)
+  // This is only used for the per-item edit indicator, not for the submit button
+  const hasAnyEditedItem = useMemo(() => {
+    return items.some(item => item.hasEdits);
+  }, [items]);
+
+  // For submit button: use API-provided canSubmitForReview which properly detects
+  // all branch changes (additions, modifications, deletions) via snapshot diff
+  const hasEditedContent = canSubmitForReview || hasAnyEditedItem;
+
+  // Show submit button for draft branches owned by user
+  const showSubmitButton = branchMode && branchId && branchState === 'draft' && isOwner;
 
   // Group items by category
   const groupedItems = useMemo(() => {
@@ -140,6 +166,21 @@ export function LibrarySidebar({
           <BranchIcon />
           <span className={styles.branchName}>{branchName}</span>
           {branchState && <LifecycleStatus state={branchState} size="sm" />}
+        </div>
+      )}
+
+      {/* Submit for Review Button (branch mode only) */}
+      {showSubmitButton && branchId && (
+        <div className={styles.submitSection}>
+          <SubmitForReviewButton
+            branchId={branchId}
+            disabled={!hasEditedContent}
+            inlineReviewerSelection={true}
+            onSuccess={onSubmitForReviewSuccess}
+          />
+          {!hasEditedContent && (
+            <p className={styles.submitHint}>Edit content to enable submission</p>
+          )}
         </div>
       )}
 
@@ -203,8 +244,13 @@ export function LibrarySidebar({
                       to={branchMode ? '#' : `/library/${item.slug}`}
                       className={styles.contentItem}
                       data-active={isActive}
+                      data-edited={branchMode && item.hasEdits}
                       onClick={(e) => handleContentClick(e, item)}
                     >
+                      {/* Edited indicator for branch mode */}
+                      {branchMode && item.hasEdits && (
+                        <Pencil1Icon className={styles.editedIcon} width={12} height={12} />
+                      )}
                       <span className={styles.contentTitle}>{item.title}</span>
                       <span
                         className={styles.contentType}

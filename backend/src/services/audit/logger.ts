@@ -8,7 +8,7 @@ export interface AuditLogInput {
   actorType: ActorTypeValue;
   actorIp?: string;
   actorUserAgent?: string;
-  resourceType: 'branch' | 'review' | 'convergence' | 'user' | 'permission' | 'auth' | 'session';
+  resourceType: 'branch' | 'review' | 'convergence' | 'user' | 'permission' | 'auth' | 'session' | 'content';
   resourceId: string;
   metadata?: Record<string, unknown>;
   requestId?: string;
@@ -301,6 +301,74 @@ export class AuditLogger {
       actorIp: requestContext?.ip,
       actorUserAgent: requestContext?.userAgent,
       requestId: requestContext?.requestId,
+    });
+  }
+
+  /**
+   * Log content edit-related events (005-inline-edit)
+   * - edit_branch_created: Branch created from published content for editing
+   * - draft_saved: Content draft saved (manual or auto-save sync)
+   * - content_submitted: Content submitted for review as part of branch
+   */
+  async logContentEditEvent(
+    action: 'edit_branch_created' | 'draft_saved' | 'content_submitted',
+    contentId: string,
+    actorId: string,
+    metadata?: {
+      branchId?: string;
+      branchName?: string;
+      sourceContentId?: string;
+      changeDescription?: string;
+      versionTimestamp?: string;
+      syncType?: 'auto' | 'manual';
+      [key: string]: unknown;
+    },
+    requestContext?: { ip?: string; userAgent?: string; requestId?: string }
+  ): Promise<string> {
+    return this.log({
+      action: `content.${action}`,
+      actorId,
+      actorType: 'user',
+      resourceType: 'content',
+      resourceId: contentId,
+      outcome: 'success',
+      initiatingUserId: actorId,
+      metadata: metadata || {},
+      actorIp: requestContext?.ip,
+      actorUserAgent: requestContext?.userAgent,
+      requestId: requestContext?.requestId,
+    });
+  }
+
+  /**
+   * Log edit session events (005-inline-edit)
+   * Tracks when users start/end editing sessions
+   */
+  async logEditSessionEvent(
+    action: 'edit_session_started' | 'edit_session_ended',
+    sessionId: string,
+    actorId: string,
+    metadata?: {
+      contentId?: string;
+      branchId?: string;
+      duration?: number;
+      [key: string]: unknown;
+    },
+    requestContext?: { ip?: string; userAgent?: string; requestId?: string }
+  ): Promise<string> {
+    return this.log({
+      action: `session.${action}`,
+      actorId,
+      actorType: 'user',
+      resourceType: 'session',
+      resourceId: sessionId,
+      outcome: 'success',
+      initiatingUserId: actorId,
+      metadata: metadata || {},
+      actorIp: requestContext?.ip,
+      actorUserAgent: requestContext?.userAgent,
+      requestId: requestContext?.requestId,
+      sessionId,
     });
   }
 }

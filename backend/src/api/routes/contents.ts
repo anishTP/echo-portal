@@ -8,6 +8,7 @@ import { conflictResolutionService } from '../../services/content/conflict-resol
 import { requireAuth, type AuthEnv } from '../middleware/auth.js';
 import { success, created, paginated, getPagination } from '../utils/responses.js';
 import { branchService } from '../../services/branch/branch-service.js';
+import { auditLogger } from '../../services/audit/logger.js';
 import { ForbiddenError, NotFoundError, ValidationError } from '../utils/errors.js';
 import {
   createContentBodySchema,
@@ -576,6 +577,19 @@ contentRoutes.post(
     if (result.conflict) {
       return c.json({ data: result }, 409);
     }
+
+    // Audit log: draft saved (T055)
+    await auditLogger.logContentEditEvent(
+      'draft_saved',
+      contentId,
+      user.id,
+      {
+        branchId: existing.branchId,
+        changeDescription: body.changeDescription,
+        versionTimestamp: result.newVersionTimestamp,
+        syncType: body.changeDescription ? 'manual' : 'auto',
+      }
+    );
 
     return success(c, result);
   }

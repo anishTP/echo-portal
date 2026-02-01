@@ -317,9 +317,11 @@ export class BranchModel {
 
   /**
    * Get a serializable representation with user-aware permissions
+   * @param hasContent - Whether branch has any content (for basic checks)
+   * @param hasEditedContent - Whether branch has content that has been edited (for canSubmitForReview)
    */
-  toResponseForUser(context: { userId: string | null; roles: string[]; hasContent?: boolean }): Record<string, unknown> {
-    const { userId, roles, hasContent = true } = context;
+  toResponseForUser(context: { userId: string | null; roles: string[]; hasContent?: boolean; hasEditedContent?: boolean }): Record<string, unknown> {
+    const { userId, roles, hasContent = true, hasEditedContent = hasContent } = context;
     const isOwner = !!userId && this.ownerId === userId;
     const isCollaborator = !!userId && this.collaborators.includes(userId);
     const isAssignedReviewer = !!userId && this.reviewers.includes(userId);
@@ -328,14 +330,16 @@ export class BranchModel {
 
     const userPermissions = {
       canEdit: (isOwner || isCollaborator || isAdmin) && this.state === BranchState.DRAFT,
-      canSubmitForReview: isOwner && this.state === BranchState.DRAFT && hasContent,
+      // canSubmitForReview requires edited content, not just copied content
+      canSubmitForReview: isOwner && this.state === BranchState.DRAFT && hasEditedContent,
       canApprove: (isAssignedReviewer || isAdmin) && !isOwner && this.state === BranchState.REVIEW,
       canPublish: (isPublisher || isAdmin) && this.state === BranchState.APPROVED,
       canArchive: (isOwner || isAdmin) && this.state !== BranchState.ARCHIVED,
       validTransitions: this.getValidTransitions().filter((target) => {
         switch (target) {
           case BranchState.REVIEW:
-            return isOwner && hasContent;
+            // Transition to review requires edited content
+            return isOwner && hasEditedContent;
           case BranchState.DRAFT:
             // Return to draft (request changes) — reviewer or admin, not owner
             return (isAssignedReviewer || isAdmin) && !isOwner;

@@ -71,6 +71,12 @@ function formatContentResponse(
   author: UserSummary | null,
   createdByUser: UserSummary
 ): ContentDetail {
+  // Content has edits if updatedAt is after createdAt (robust check for inherited content)
+  // Handle both Date objects and ISO string timestamps
+  const createdTime = content.createdAt instanceof Date ? content.createdAt.getTime() : new Date(content.createdAt).getTime();
+  const updatedTime = content.updatedAt instanceof Date ? content.updatedAt.getTime() : new Date(content.updatedAt).getTime();
+  const hasEdits = updatedTime > createdTime;
+
   return {
     id: content.id,
     branchId: content.branchId,
@@ -87,6 +93,7 @@ function formatContentResponse(
     createdBy: createdByUser,
     createdAt: content.createdAt.toISOString(),
     updatedAt: content.updatedAt.toISOString(),
+    hasEdits,
     currentVersion: version
       ? {
           id: version.id,
@@ -124,6 +131,12 @@ function formatContentSummary(
   content: typeof schema.contents.$inferSelect,
   createdByUser: UserSummary
 ): ContentSummary {
+  // Content has edits if updatedAt is after createdAt (robust check for inherited content)
+  // Handle both Date objects and ISO string timestamps
+  const createdTime = content.createdAt instanceof Date ? content.createdAt.getTime() : new Date(content.createdAt).getTime();
+  const updatedTime = content.updatedAt instanceof Date ? content.updatedAt.getTime() : new Date(content.updatedAt).getTime();
+  const hasEdits = updatedTime > createdTime;
+
   return {
     id: content.id,
     branchId: content.branchId,
@@ -140,6 +153,7 @@ function formatContentSummary(
     createdBy: createdByUser,
     createdAt: content.createdAt.toISOString(),
     updatedAt: content.updatedAt.toISOString(),
+    hasEdits,
   };
 }
 

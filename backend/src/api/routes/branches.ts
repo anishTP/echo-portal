@@ -9,6 +9,8 @@ import { diffService } from '../../services/git/diff.js';
 import { contentMergeService } from '../../services/content/content-merge-service.js';
 import { conflictResolutionService } from '../../services/content/conflict-resolution-service.js';
 import { contentService } from '../../services/content/content-service.js';
+import { contentInheritanceService } from '../../services/content/content-inheritance-service.js';
+import { auditLogger } from '../../services/audit/logger.js';
 import { requireAuth, type AuthEnv } from '../middleware/auth.js';
 import { success, created, paginated, noContent } from '../utils/responses.js';
 import { NotFoundError, ForbiddenError, ValidationError } from '../utils/errors.js';
@@ -55,14 +57,24 @@ function getBranchUserContext(c: any): { userId: string | null; roles: string[] 
 
 /**
  * Helper to check if a branch has content and edited content (for canSubmitForReview permission)
- * Returns hasContent (any content exists) and hasEditedContent (content that was modified since creation)
+ * Returns hasContent (any content exists), hasEditedContent (backward compat), and hasBranchChanges
+ * (true if content was added, modified, or deleted compared to branch creation snapshot)
  */
-async function checkBranchHasContent(branchId: string): Promise<{ hasContent: boolean; hasEditedContent: boolean }> {
-  const contentResult = await contentService.listByBranch(branchId, { limit: 100 });
-  const hasContent = contentResult.total > 0;
-  // Check if any content has been edited (hasEdits = true means createdAt !== updatedAt)
-  const hasEditedContent = contentResult.items.some(item => item.hasEdits);
-  return { hasContent, hasEditedContent };
+async function checkBranchHasContent(branchId: string): Promise<{
+  hasContent: boolean;
+  hasEditedContent: boolean;
+  hasBranchChanges: boolean;
+}> {
+  const [contentResult, branchDiff] = await Promise.all([
+    contentService.listByBranch(branchId, { limit: 1 }),
+    contentInheritanceService.computeBranchDiff(branchId),
+  ]);
+
+  return {
+    hasContent: contentResult.total > 0,
+    hasEditedContent: branchDiff.hasChanges, // Use diff for backward compat
+    hasBranchChanges: branchDiff.hasChanges,
+  };
 }
 
 /**
@@ -101,6 +113,18 @@ branchRoutes.post(
 
     // Create the edit branch with copied content
     const result = await branchService.createEditBranch(body, user.id);
+
+    // Audit log: edit branch created (T055)
+    await auditLogger.logContentEditEvent(
+      'edit_branch_created',
+      result.content.id,
+      user.id,
+      {
+        branchId: result.branch.id,
+        branchName: result.branch.name,
+        sourceContentId: body.sourceContentId,
+      }
+    );
 
     return created(c, result);
   }
@@ -186,9 +210,9 @@ branchRoutes.get('/:id', zValidator('param', branchIdParamSchema), async (c) => 
   visibilityService.assertAccess(branch.toJSON(), context);
 
   // Check if branch has content and edited content (for canSubmitForReview permission)
-  const { hasContent, hasEditedContent } = await checkBranchHasContent(id);
+  const { hasContent, hasBranchChanges } = await checkBranchHasContent(id);
 
-  const response = branch.toResponseForUser({ ...getBranchUserContext(c), hasContent, hasEditedContent });
+  const response = branch.toResponseForUser({ ...getBranchUserContext(c), hasContent, hasEditedContent: hasBranchChanges });
 
   // Embed review records from the reviews table so the branch page
   // shows the same review data as the review queue (single source of truth)
@@ -212,8 +236,8 @@ branchRoutes.patch(
     const body = c.req.valid('json');
 
     const branch = await branchService.update(id, body, user.id);
-    const { hasContent, hasEditedContent } = await checkBranchHasContent(id);
-    return success(c, branch.toResponseForUser({ ...getBranchUserContext(c), hasContent, hasEditedContent }));
+    const { hasContent, hasBranchChanges } = await checkBranchHasContent(id);
+    return success(c, branch.toResponseForUser({ ...getBranchUserContext(c), hasContent, hasEditedContent: hasBranchChanges }));
   }
 );
 
@@ -480,6 +504,20 @@ branchRoutes.post(
       )
     );
 
+    // Audit log: branch submitted for review (T055)
+    await auditLogger.logBranchEvent(
+      'branch_state_transitioned',
+      id,
+      user.id,
+      'user',
+      {
+        fromState: 'draft',
+        toState: 'in_review',
+        reviewerIds: allReviewerIds,
+        reason,
+      }
+    );
+
     return success(c, result);
   }
 );
@@ -516,8 +554,8 @@ branchRoutes.patch(
       user.id
     );
 
-    const { hasContent, hasEditedContent } = await checkBranchHasContent(id);
-    return success(c, updated.toResponseForUser({ ...getBranchUserContext(c), hasContent, hasEditedContent }));
+    const { hasContent, hasBranchChanges } = await checkBranchHasContent(id);
+    return success(c, updated.toResponseForUser({ ...getBranchUserContext(c), hasContent, hasEditedContent: hasBranchChanges }));
   }
 );
 
@@ -865,10 +903,10 @@ branchRoutes.post(
     // Directly repair the branch state (bypassing normal transition guards)
     const updatedBranch = await branchService.repairStuckBranch(id, user.id);
 
-    const { hasContent, hasEditedContent } = await checkBranchHasContent(id);
+    const { hasContent, hasBranchChanges } = await checkBranchHasContent(id);
     return success(c, {
       message: 'Branch repaired successfully. Branch is now in draft state.',
-      branch: updatedBranch.toResponseForUser({ ...getBranchUserContext(c), hasContent, hasEditedContent }),
+      branch: updatedBranch.toResponseForUser({ ...getBranchUserContext(c), hasContent, hasEditedContent: hasBranchChanges }),
     });
   }
 );
