@@ -1,4 +1,4 @@
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, isNull } from 'drizzle-orm';
 import { db, schema } from '../../db/index.js';
 import {
   computeChecksum,
@@ -62,11 +62,12 @@ export const contentInheritanceService = {
     const inheritedContent: InheritanceResult['inheritedContent'] = [];
     const manifest: ContentManifest = {};
 
-    // Query all published content from source branch
+    // Query all published content from source branch (excluding archived/deleted)
     const publishedContent = await db.query.contents.findMany({
       where: and(
         eq(schema.contents.branchId, sourceBranchId),
-        eq(schema.contents.isPublished, true)
+        eq(schema.contents.isPublished, true),
+        isNull(schema.contents.archivedAt)
       ),
     });
 

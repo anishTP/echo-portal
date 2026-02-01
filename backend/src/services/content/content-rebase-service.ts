@@ -1,4 +1,4 @@
-import { eq, and } from 'drizzle-orm';
+import { eq, and, isNull } from 'drizzle-orm';
 import { db, schema } from '../../db/index.js';
 import { threeWayMerge, type ContentConflict } from './content-merge-service.js';
 import {
@@ -65,11 +65,12 @@ export const contentRebaseService = {
     const snapshot = await contentInheritanceService.getSnapshot(branchId);
     const baseManifest: ContentManifest = (snapshot?.contentManifest as ContentManifest) || {};
 
-    // Get current main published content
+    // Get current main published content (excluding archived/deleted)
     const mainContent = await db.query.contents.findMany({
       where: and(
         eq(schema.contents.branchId, mainBranch.id),
-        eq(schema.contents.isPublished, true)
+        eq(schema.contents.isPublished, true),
+        isNull(schema.contents.archivedAt)
       ),
     });
 
