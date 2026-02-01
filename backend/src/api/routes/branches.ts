@@ -601,8 +601,25 @@ branchRoutes.post(
       throw new ValidationError(result.error || 'Transition failed');
     }
 
-    // If this was a PUBLISH transition, mark all content as published
+    // If this was a PUBLISH transition, merge content to main and mark as published
     if (event === TransitionEvent.PUBLISH) {
+      // Get main branch to merge content into
+      const mainBranch = await branchService.getMainBranch();
+      if (mainBranch) {
+        // Merge content to main branch with visibility='public'
+        const mergeResult = await contentMergeService.mergeContentIntoMain(
+          id,
+          mainBranch.id,
+          user.id
+        );
+
+        if (!mergeResult.success) {
+          console.error('Content merge failed during publish:', mergeResult.conflicts);
+          // Continue anyway - content is published but may need manual merge
+        }
+      }
+
+      // Mark branch content as published (for tracking purposes)
       await contentService.markPublished(id, user.id);
     }
 
