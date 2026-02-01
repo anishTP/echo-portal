@@ -15,6 +15,7 @@ import { usersRoutes } from './routes/users.js';
 import { contentRoutes } from './routes/contents.js';
 import { notificationRoutes } from './routes/notifications.js';
 import { rebaseRoutes } from './routes/rebase.js';
+import { uploadRoutes } from './routes/uploads.js';
 
 // Create Hono app
 const app = new Hono();
@@ -82,6 +83,7 @@ api.route('/contents', contentRoutes);
 api.route('/notifications', notificationRoutes);
 // Rebase routes are mounted on branches path for convenience
 api.route('/branches', rebaseRoutes);
+api.route('/uploads', uploadRoutes);
 
 app.route('/api/v1', api);
 

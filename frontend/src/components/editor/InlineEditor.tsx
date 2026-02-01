@@ -1,5 +1,6 @@
 import React, { useCallback, useRef } from 'react';
 import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react';
+import { ProsemirrorAdapterProvider } from '@prosemirror-adapter/react';
 import { Editor, rootCtx, defaultValueCtx } from '@milkdown/core';
 import { commonmark } from '@milkdown/preset-commonmark';
 import { gfm } from '@milkdown/preset-gfm';
@@ -7,6 +8,9 @@ import { nord } from '@milkdown/theme-nord';
 import { history } from '@milkdown/plugin-history';
 import { clipboard } from '@milkdown/plugin-clipboard';
 import { listener, listenerCtx } from '@milkdown/plugin-listener';
+import { upload, uploadConfig } from '@milkdown/plugin-upload';
+import { defaultImageUploader } from './milkdown-config';
+import { useVideoEmbedView } from './video-embed-plugin';
 import '@milkdown/theme-nord/style.css';
 import './editor.css';
 
@@ -32,6 +36,9 @@ function MilkdownEditor({
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
+  // Get the video embed view plugin (uses useNodeViewFactory internally)
+  const videoEmbedView = useVideoEmbedView();
+
   useEditor((root) =>
     Editor.make()
       .config((ctx) => {
@@ -42,14 +49,23 @@ function MilkdownEditor({
         ctx.get(listenerCtx).markdownUpdated((_, markdown) => {
           onChangeRef.current?.(markdown);
         });
+
+        // Configure upload plugin for drag-and-drop and paste image handling
+        ctx.update(uploadConfig.key, (prev) => ({
+          ...prev,
+          uploader: defaultImageUploader,
+          enableHtmlFileUploader: true,
+        }));
       })
       .config(nord)
       .use(commonmark)
       .use(gfm)
       .use(history)
       .use(clipboard)
-      .use(listener),
-    [] // Empty dependency array - editor is created once and manages its own state
+      .use(listener)
+      .use(upload)
+      .use(videoEmbedView),
+    [] // Empty dependency - videoEmbedView is memoized and stable
   );
 
   return <Milkdown />;
@@ -77,7 +93,9 @@ export function InlineEditor(props: InlineEditorProps) {
       onKeyPress={stopKeyPropagation}
     >
       <MilkdownProvider>
-        <MilkdownEditor {...props} />
+        <ProsemirrorAdapterProvider>
+          <MilkdownEditor {...props} />
+        </ProsemirrorAdapterProvider>
       </MilkdownProvider>
     </div>
   );

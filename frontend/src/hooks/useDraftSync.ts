@@ -165,6 +165,13 @@ export function useDraftSync(options: DraftSyncOptions): UseDraftSyncReturn {
         changeDescription,
       };
 
+      // Check content size before syncing (50 MB limit)
+      const MAX_BODY_SIZE = 52_428_800;
+      if (draft.body.length > MAX_BODY_SIZE) {
+        const sizeMB = (draft.body.length / (1024 * 1024)).toFixed(1);
+        throw new Error(`Content too large (${sizeMB} MB). Maximum size is 50 MB. Try removing some images.`);
+      }
+
       const result = await contentApi.syncDraft(contentId, input);
 
       if (result.success && result.newVersionTimestamp) {

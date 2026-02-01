@@ -132,6 +132,111 @@
   margin-right: var(--space-2);
 }
 
+/* Image styling */
+.inline-editor .milkdown img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-2);
+  margin: var(--space-3) 0;
+  display: block;
+}
+
+.inline-editor .milkdown img.loading {
+  opacity: 0.5;
+}
+
+.inline-editor .milkdown img.error {
+  display: none;
+}
+
+/* Image container for error handling */
+.inline-editor .milkdown .image-container {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.inline-editor .milkdown .image-error-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 200px;
+  min-height: 100px;
+  background: var(--gray-3);
+  border: 1px dashed var(--gray-6);
+  border-radius: var(--radius-2);
+  color: var(--gray-11);
+  font-size: var(--font-size-1);
+  padding: var(--space-3);
+  margin: var(--space-3) 0;
+}
+
+.inline-editor .milkdown .image-error-placeholder svg {
+  margin-right: var(--space-2);
+  opacity: 0.5;
+}
+
+/* Video embed styling */
+.video-embed {
+  position: relative;
+  width: 100%;
+  margin: var(--space-3) 0;
+  border-radius: var(--radius-2);
+  overflow: hidden;
+  background: var(--gray-2);
+}
+
+.video-embed--youtube,
+.video-embed--vimeo {
+  /* 16:9 aspect ratio */
+  padding-bottom: 56.25%;
+}
+
+.video-embed--youtube iframe,
+.video-embed--vimeo iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.video-embed--direct video {
+  width: 100%;
+  max-height: 500px;
+  display: block;
+}
+
+.video-embed--error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 150px;
+  background: var(--gray-3);
+  border: 1px dashed var(--gray-6);
+}
+
+.video-embed--error .video-error-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  color: var(--gray-11);
+  text-align: center;
+}
+
+.video-embed--error .video-error-content svg {
+  opacity: 0.5;
+}
+
+.video-embed--error .video-error-content code {
+  font-size: var(--font-size-1);
+  word-break: break-all;
+  max-width: 100%;
+}
+
 /* EditorToolbar */
 .editor-toolbar {
   display: flex;
@@ -202,4 +307,103 @@
 
 .editor-status-bar .save-status.offline {
   color: var(--gray-11);
+}
+
+/* MediaErrorPlaceholder styling */
+.media-error-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 200px;
+  min-height: 120px;
+  background: var(--gray-3);
+  border: 1px dashed var(--gray-6);
+  border-radius: var(--radius-2);
+  margin: var(--space-3) 0;
+}
+
+.media-error-placeholder .media-error-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  color: var(--gray-11);
+  text-align: center;
+  max-width: 100%;
+}
+
+.media-error-placeholder .media-error-content svg {
+  opacity: 0.4;
+  color: var(--gray-10);
+}
+
+.media-error-placeholder .media-error-message {
+  font-size: var(--font-size-2);
+  font-weight: 500;
+}
+
+.media-error-placeholder .media-error-url {
+  font-size: var(--font-size-1);
+  color: var(--gray-10);
+  word-break: break-all;
+  max-width: 100%;
+  background: var(--gray-4);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-1);
+}
+
+.media-error-placeholder .media-error-retry {
+  margin-top: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-1);
+  color: var(--accent-11);
+  background: transparent;
+  border: 1px solid var(--accent-6);
+  border-radius: var(--radius-2);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.media-error-placeholder .media-error-retry:hover {
+  background: var(--accent-3);
+  border-color: var(--accent-8);
+}
+
+/* Image upload placeholder (for dropped images without URL) */
+.image-upload-placeholder {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  margin: var(--space-3) 0;
+  background: var(--blue-2);
+  border: 2px dashed var(--blue-6);
+  border-radius: var(--radius-2);
+  color: var(--blue-11);
+}
+
+.image-upload-placeholder svg {
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.image-upload-placeholder .image-upload-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.image-upload-placeholder .image-upload-info strong {
+  font-size: var(--font-size-2);
+}
+
+.image-upload-placeholder .image-upload-info span {
+  font-size: var(--font-size-1);
+  opacity: 0.8;
+}
+
+.image-upload-placeholder .image-upload-hint {
+  font-style: italic;
+  opacity: 0.6;
 }

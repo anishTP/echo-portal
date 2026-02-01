@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import Markdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
 import { Badge, Button, Callout } from '@radix-ui/themes';
 import { Pencil1Icon } from '@radix-ui/react-icons';
 import type { ContentDetail } from '@echo-portal/shared';
@@ -156,7 +157,11 @@ export function ContentRenderer({
     return <EmptyState />;
   }
 
-  const body = content.currentVersion?.body || '';
+  const rawBody = content.currentVersion?.body || '';
+
+  // Fix potential markdown issues from Milkdown serialization
+  // Pattern: ![alt]\n(url) -> ![alt](url) (URL on new line with parens)
+  let body = rawBody.replace(/!\[([^\]]*)\]\s*\n\s*\(/g, '![$1](');
 
   return (
     <article className={styles.article}>
@@ -193,6 +198,7 @@ export function ContentRenderer({
       {/* Body */}
       <div className={styles.body}>
         <Markdown
+          rehypePlugins={[rehypeRaw]}
           components={{
             h1: ({ children }) => <HeadingRenderer level={1}>{children}</HeadingRenderer>,
             h2: ({ children }) => <HeadingRenderer level={2}>{children}</HeadingRenderer>,
@@ -228,6 +234,35 @@ export function ContentRenderer({
             blockquote: ({ children }) => (
               <blockquote className={styles.blockquote}>{children}</blockquote>
             ),
+            img: ({ node, src, alt, ...props }) => {
+              if (!src || src === '') {
+                return (
+                  <span className={styles.imagePlaceholder}>
+                    [Image: {alt || 'no alt text'} - missing src]
+                  </span>
+                );
+              }
+              return (
+                <img
+                  src={src}
+                  alt={alt}
+                  {...props}
+                  className={styles.image}
+                  loading="lazy"
+                  onError={(e) => {
+                    // Log error for debugging
+                    console.error('Image failed to load:', src?.substring(0, 100));
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    // Insert error placeholder after the image
+                    const placeholder = document.createElement('span');
+                    placeholder.className = styles.imagePlaceholder || '';
+                    placeholder.textContent = `[Image failed to load: ${alt || 'unknown'}]`;
+                    target.parentNode?.insertBefore(placeholder, target.nextSibling);
+                  }}
+                />
+              );
+            },
           }}
         >
           {body}

@@ -13,6 +13,8 @@ export interface InlineEditViewHandle {
   getContent: () => DraftContent;
   /** Save the current content immediately */
   saveNow: () => Promise<void>;
+  /** Cancel any pending debounced saves */
+  cancelPendingSave: () => void;
 }
 
 export interface InlineEditViewProps {
@@ -54,7 +56,7 @@ const InlineEditViewComponent = forwardRef<InlineEditViewHandle, InlineEditViewP
   const initialBody = useRef(content.currentVersion?.body || '');
 
   // Self-contained auto-save - no callbacks to parent, no state sync issues
-  const { state: autoSaveState, save: autoSaveFn, saveNow, loadDraft } = useAutoSave({
+  const { state: autoSaveState, save: autoSaveFn, saveNow, loadDraft, cancel: cancelAutoSave } = useAutoSave({
     contentId: content.id,
     branchId,
   });
@@ -118,7 +120,10 @@ const InlineEditViewComponent = forwardRef<InlineEditViewHandle, InlineEditViewP
     saveNow: async () => {
       await saveNow(contentRef.current);
     },
-  }), [saveNow]);
+    cancelPendingSave: () => {
+      cancelAutoSave();
+    },
+  }), [saveNow, cancelAutoSave]);
 
   // Record activity on editor focus
   const handleEditorFocus = useCallback(() => {

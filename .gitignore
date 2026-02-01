@@ -73,3 +73,6 @@ data/
 .claude/
 .beads/
 specs/
+
+# Uploaded files
+backend/uploads/

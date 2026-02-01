@@ -19,10 +19,14 @@
     "@milkdown/plugin-history": "^7.18.0",
     "@milkdown/plugin-listener": "^7.18.0",
     "@milkdown/plugin-prism": "^7.18.0",
+    "@milkdown/plugin-upload": "^7.18.0",
     "@milkdown/preset-commonmark": "^7.18.0",
     "@milkdown/preset-gfm": "^7.18.0",
+    "@milkdown/prose": "^7.18.0",
     "@milkdown/react": "^7.18.0",
     "@milkdown/theme-nord": "^7.18.0",
+    "@milkdown/utils": "^7.18.0",
+    "@prosemirror-adapter/react": "^0.5.1",
     "@radix-ui/react-collapsible": "^1.1.12",
     "@radix-ui/react-icons": "^1.3.2",
     "@radix-ui/themes": "^3.2.1",
@@ -36,6 +40,7 @@
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.5.3",
+    "rehype-raw": "^7.0.0",
     "zustand": "^5.0.4"
   },
   "devDependencies": {

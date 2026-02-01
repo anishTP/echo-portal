@@ -18,6 +18,7 @@ import { useContent, useContentList, useDeleteContent, contentKeys } from '../ho
 import { useAutoSave } from '../hooks/useAutoSave';
 import { useDraftSync } from '../hooks/useDraftSync';
 import { useBranchStore } from '../stores/branchStore';
+import { useAuth } from '../context/AuthContext';
 import type { ContentSummary } from '@echo-portal/shared';
 
 type ContentType = 'all' | 'guideline' | 'asset' | 'opinion';
@@ -27,6 +28,7 @@ export default function Library() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   // Get current branch from store (set by BranchSelector)
   const currentBranch = useBranchStore((s) => s.currentBranch);
@@ -41,7 +43,7 @@ export default function Library() {
   const contentIdParam = searchParams.get('contentId') || undefined;
 
   // Determine if we're in inline edit mode (editing branch content)
-  const isEditMode = mode === 'edit' && branchId && contentIdParam;
+  const isEditMode = mode === 'edit' && !!branchId && !!contentIdParam;
 
   // Effective branch ID for content list (from store or URL params in edit mode)
   const effectiveBranchId = currentBranch?.id || (isEditMode ? branchId : undefined);
@@ -109,8 +111,9 @@ export default function Library() {
   const isLoadingContent = isInBranchMode ? isLoadingBranchContent : isLoadingPublishedContent;
   const isContentError = isInBranchMode ? isBranchContentError : isPublishedContentError;
 
-  // Fetch branch data when in edit mode
-  const { data: editBranch } = useBranch(branchId);
+  // Fetch branch data for the effective branch (either from URL in edit mode, or from store in branch mode)
+  // This ensures the query is active so invalidation after submit-for-review triggers a refetch
+  const { data: activeBranch } = useBranch(effectiveBranchId);
 
   // Fetch branch content when in edit mode
   const { data: editModeContent } = useContent(contentIdParam);
@@ -326,6 +329,9 @@ export default function Library() {
   // Handle save draft - merges body from editor with metadata from sidebar
   const handleSaveDraft = useCallback(async () => {
     if (inlineEditViewRef.current && currentDraft) {
+      // Cancel any pending debounced saves from InlineEditView to prevent race conditions
+      inlineEditViewRef.current.cancelPendingSave();
+
       const editorContent = inlineEditViewRef.current.getContent();
       const mergedContent: DraftContent = {
         title: currentDraft.title,
@@ -339,7 +345,8 @@ export default function Library() {
         await queryClient.invalidateQueries({ queryKey: contentKeys.detail(contentIdParam) });
       }
       if (branchId) {
-        await queryClient.invalidateQueries({ queryKey: contentKeys.list(branchId) });
+        // Use prefix ['contents', 'list', branchId] to match any filter variations
+        await queryClient.invalidateQueries({ queryKey: [...contentKeys.lists(), branchId] });
       }
     }
   }, [currentDraft, autoSave, draftSync, contentIdParam, branchId, queryClient]);
@@ -350,6 +357,9 @@ export default function Library() {
     const currentContentId = contentIdParam;
 
     if (inlineEditViewRef.current && currentDraft) {
+      // Cancel any pending debounced saves from InlineEditView to prevent race conditions
+      inlineEditViewRef.current.cancelPendingSave();
+
       const editorContent = inlineEditViewRef.current.getContent();
       const mergedContent: DraftContent = {
         title: currentDraft.title,
@@ -363,7 +373,8 @@ export default function Library() {
         await queryClient.invalidateQueries({ queryKey: contentKeys.detail(currentContentId) });
       }
       if (currentBranchId) {
-        await queryClient.invalidateQueries({ queryKey: contentKeys.list(currentBranchId) });
+        // Use prefix ['contents', 'list', branchId] to match any filter variations
+        await queryClient.invalidateQueries({ queryKey: [...contentKeys.lists(), currentBranchId] });
       }
     }
 
@@ -487,8 +498,15 @@ export default function Library() {
           onClearFilters={handleClearFilters}
           hasActiveFilters={hasActiveFilters}
           branchMode={showBranchContent}
-          branchName={currentBranch?.name || editBranch?.name}
-          branchState={editBranch?.state || currentBranch?.state}
+          branchName={currentBranch?.name || activeBranch?.name}
+          branchState={activeBranch?.state || currentBranch?.state}
+          branchId={currentBranch?.id || activeBranch?.id}
+          isOwner={!!user && (currentBranch?.ownerId === user.id || activeBranch?.ownerId === user.id)}
+          canSubmitForReview={activeBranch?.permissions?.canSubmitForReview}
+          onSubmitForReviewSuccess={() => {
+            // Branch query is already invalidated by SubmitForReviewButton via invalidateWorkflowQueries
+            // This callback can be used for any additional UI updates if needed
+          }}
         />
       }
       rightSidebar={
@@ -498,7 +516,7 @@ export default function Library() {
             category={currentDraft.metadata?.category}
             tags={currentDraft.metadata?.tags || []}
             description={currentDraft.metadata?.description}
-            branchName={editBranch?.name || 'Edit Branch'}
+            branchName={activeBranch?.name || 'Edit Branch'}
             saveStatus={autoSave.state.status}
             syncStatus={draftSync.state.status}
             isDirty={isDirty || autoSave.state.isDirty}
@@ -528,9 +546,9 @@ export default function Library() {
         ) : undefined
       }
       header={
-        isEditMode && editBranch ? (
+        isEditMode && activeBranch ? (
           <EditModeHeader
-            branchName={editBranch.name}
+            branchName={activeBranch.name}
             contentTitle={currentDraft?.title || selectedContent?.title || 'Untitled'}
             hasUnsavedChanges={isDirty}
             onDone={handleDoneEditing}
@@ -545,7 +563,7 @@ export default function Library() {
           ref={inlineEditViewRef}
           content={editModeContent}
           branchId={branchId}
-          branchName={editBranch?.name || 'Edit Branch'}
+          branchName={activeBranch?.name || 'Edit Branch'}
           onExitEditMode={exitEditMode}
         />
       ) : (

@@ -183,6 +183,27 @@
   margin: 0;
 }
 
+/* Images */
+.image {
+  max-width: 100%;
+  height: auto;
+  margin: var(--space-4) 0;
+  border-radius: var(--radius-2);
+  display: block;
+}
+
+.imagePlaceholder {
+  display: block;
+  padding: var(--space-3) var(--space-4);
+  margin: var(--space-4) 0;
+  background: var(--gray-3);
+  border: 1px dashed var(--gray-6);
+  border-radius: var(--radius-2);
+  color: var(--gray-10);
+  font-size: var(--font-size-2);
+  font-style: italic;
+}
+
 /* Footer */
 .footer {
   margin-top: var(--space-8);
