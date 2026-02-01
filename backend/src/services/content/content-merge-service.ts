@@ -7,6 +7,15 @@ import {
   createMetadataSnapshot,
 } from '../../models/content.js';
 
+// Conditional debug logging for content merge operations
+const DEBUG_MERGE = process.env.DEBUG_CONTENT_MERGE === 'true';
+const debugLog = (...args: unknown[]) => {
+  if (DEBUG_MERGE) console.log(...args);
+};
+const debugError = (...args: unknown[]) => {
+  if (DEBUG_MERGE) console.error(...args);
+};
+
 // Types for merge operations
 export interface ContentConflict {
   contentId: string;
@@ -43,16 +52,27 @@ export interface MergePreviewResult {
     contentId: string;
     slug: string;
   }>;
+  deletedInBranch: Array<{
+    branchContentId: string;
+    mainContentId: string;
+    slug: string;
+  }>;
 }
 
 export interface MergeResult {
   success: boolean;
   mergedCount: number;
+  deletedCount: number;
   conflictCount: number;
   conflicts: ContentConflict[];
   mergedContent: Array<{
     sourceContentId: string;
     targetContentId: string;
+    slug: string;
+  }>;
+  deletedContent: Array<{
+    branchContentId: string;
+    mainContentId: string;
     slug: string;
   }>;
 }
@@ -312,11 +332,27 @@ export const contentMergeService = {
     const conflicts: ContentConflict[] = [];
     const autoMergeable: MergePreviewResult['autoMergeable'] = [];
     const newInBranch: MergePreviewResult['newInBranch'] = [];
+    const deletedInBranch: MergePreviewResult['deletedInBranch'] = [];
 
     // Get all content in the source branch
-    const branchContent = await db.query.contents.findMany({
+    const allBranchContent = await db.query.contents.findMany({
       where: eq(schema.contents.branchId, branchId),
     });
+
+    // Separate active from archived (deleted) content
+    const branchContent = allBranchContent.filter(c => !c.archivedAt);
+    const deletedContent = allBranchContent.filter(c => c.archivedAt && c.sourceContentId);
+
+    // Track deletions (archived content that was inherited from main)
+    for (const deleted of deletedContent) {
+      if (deleted.sourceContentId) {
+        deletedInBranch.push({
+          branchContentId: deleted.id,
+          mainContentId: deleted.sourceContentId,
+          slug: deleted.slug,
+        });
+      }
+    }
 
     for (const content of branchContent) {
       // Get current version
@@ -418,6 +454,7 @@ export const contentMergeService = {
       conflicts,
       autoMergeable,
       newInBranch,
+      deletedInBranch,
     };
   },
 
@@ -431,23 +468,106 @@ export const contentMergeService = {
   ): Promise<MergeResult> {
     const conflicts: ContentConflict[] = [];
     const mergedContent: MergeResult['mergedContent'] = [];
+    const deletedContent: MergeResult['deletedContent'] = [];
 
     // First detect conflicts
     const preview = await this.detectConflicts(branchId, mainBranchId);
+
+    // Debug logging for conflict detection
+    debugLog(`[mergeContentIntoMain] Conflict preview: canMerge=${preview.canMerge}, conflicts=${preview.conflicts.length}, deletions=${preview.deletedInBranch.length}`);
+
     if (!preview.canMerge) {
+      debugLog(`[mergeContentIntoMain] EARLY RETURN - conflicts detected:`, preview.conflicts.map(c => c.slug));
       return {
         success: false,
         mergedCount: 0,
+        deletedCount: 0,
         conflictCount: preview.conflicts.length,
         conflicts: preview.conflicts,
         mergedContent: [],
+        deletedContent: [],
       };
     }
 
-    // Get all content in the branch
-    const branchContent = await db.query.contents.findMany({
+    // Get all content in the branch (including archived for deletion detection)
+    const allBranchContent = await db.query.contents.findMany({
       where: eq(schema.contents.branchId, branchId),
     });
+
+    // Separate active content from deleted (archived) content
+    const branchContent = allBranchContent.filter(c => !c.archivedAt);
+    const deletedBranchContent = allBranchContent.filter(c => c.archivedAt && c.sourceContentId);
+
+    // Debug logging for deletion candidates
+    debugLog(`[mergeContentIntoMain] Branch ${branchId} -> Main ${mainBranchId}`);
+    debugLog(`[mergeContentIntoMain] Total content: ${allBranchContent.length}, Active: ${branchContent.length}, Deleted: ${deletedBranchContent.length}`);
+    for (const d of deletedBranchContent) {
+      debugLog(`[mergeContentIntoMain] Deletion candidate: slug=${d.slug}, id=${d.id}, sourceContentId=${d.sourceContentId}, archivedAt=${d.archivedAt}`);
+    }
+
+    // Handle deletions: archive content on main that was deleted in branch
+    for (const deleted of deletedBranchContent) {
+      if (!deleted.sourceContentId) continue;
+
+      try {
+        // Verify the source content exists and belongs to main
+        const sourceContent = await db.query.contents.findFirst({
+          where: eq(schema.contents.id, deleted.sourceContentId),
+        });
+
+        if (!sourceContent) {
+          debugError(`[mergeContentIntoMain] Source content ${deleted.sourceContentId} not found - skipping deletion`);
+          continue;
+        }
+
+        if (sourceContent.branchId !== mainBranchId) {
+          debugError(`[mergeContentIntoMain] Source content ${deleted.sourceContentId} not on main (branch: ${sourceContent.branchId}) - skipping`);
+          continue;
+        }
+
+        debugLog(`[mergeContentIntoMain] Archiving main content: id=${sourceContent.id}, slug=${sourceContent.slug}`);
+
+        // Archive the source content on main
+        const updateResult = await db
+          .update(schema.contents)
+          .set({
+            archivedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(schema.contents.id, deleted.sourceContentId))
+          .returning({ id: schema.contents.id });
+
+        if (updateResult.length === 0) {
+          debugError(`[mergeContentIntoMain] No rows updated for sourceContentId ${deleted.sourceContentId}`);
+          continue;
+        }
+
+        debugLog(`[mergeContentIntoMain] Successfully archived content ${deleted.sourceContentId}`);
+
+        // Record in merge history (using 'merge' type with deletion flag in metadata)
+        await db.insert(schema.contentMergeHistory).values({
+          contentId: deleted.sourceContentId,
+          operationType: 'merge',
+          sourceBranchId: branchId,
+          targetBranchId: mainBranchId,
+          actorId,
+          hadConflict: false,
+          metadata: {
+            isDeletion: true,
+            deletedFromBranchContentId: deleted.id,
+            slug: deleted.slug,
+          },
+        });
+
+        deletedContent.push({
+          branchContentId: deleted.id,
+          mainContentId: deleted.sourceContentId,
+          slug: deleted.slug,
+        });
+      } catch (error) {
+        console.error(`Failed to delete content ${deleted.id} from main:`, error);
+      }
+    }
 
     for (const content of branchContent) {
       const currentVersion = content.currentVersionId
@@ -749,9 +869,11 @@ export const contentMergeService = {
     return {
       success: true,
       mergedCount: mergedContent.length,
+      deletedCount: deletedContent.length,
       conflictCount: 0,
       conflicts: [],
       mergedContent,
+      deletedContent,
     };
   },
 
