@@ -561,6 +561,15 @@ branchRoutes.post(
     // Mark all content in the branch as published
     await contentService.markPublished(id, user.id);
 
+    // Auto-archive the branch after publishing (no further edits allowed)
+    await transitionService.executeTransition({
+      branchId: id,
+      event: TransitionEvent.ARCHIVE,
+      actorId: user.id,
+      actorRoles: user.roles || [],
+      reason: 'Auto-archived after publishing',
+    });
+
     return success(c, result);
   }
 );
@@ -621,6 +630,15 @@ branchRoutes.post(
 
       // Mark branch content as published (for tracking purposes)
       await contentService.markPublished(id, user.id);
+
+      // Auto-archive the branch after publishing (no further edits allowed)
+      await transitionService.executeTransition({
+        branchId: id,
+        event: TransitionEvent.ARCHIVE,
+        actorId: user.id,
+        actorRoles: user.roles || [],
+        reason: 'Auto-archived after publishing',
+      });
     }
 
     return success(c, result);

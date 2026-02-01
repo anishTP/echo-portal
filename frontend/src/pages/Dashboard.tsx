@@ -13,7 +13,7 @@ export default function Dashboard() {
     (role: string) => role === 'administrator' || role === 'publisher'
   );
 
-  const { data: myBranches = [], isLoading: loadingMyBranches } = useMyBranches();
+  const { data: myBranches = [], isLoading: loadingMyBranches } = useMyBranches(true);
   const { data: reviewBranches = [], isLoading: loadingReviews } = useReviewBranches();
 
   // Fetch approved branches ready for publishing (only for admins/publishers)
@@ -27,7 +27,9 @@ export default function Dashboard() {
 
   const draftCount = myBranches.filter((b) => b.state === 'draft').length;
   const inReviewCount = myBranches.filter((b) => b.state === 'review').length;
-  const publishedCount = myBranches.filter((b) => b.state === 'published').length;
+  const archivedBranches = myBranches.filter((b) => b.state === 'archived');
+  const archivedCount = archivedBranches.length;
+  const activeBranches = myBranches.filter((b) => b.state !== 'archived');
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -65,9 +67,9 @@ export default function Dashboard() {
                 </div>
               )}
               <div className="rounded-lg bg-white p-6 shadow">
-                <h3 className="font-medium text-gray-900">Published</h3>
-                <p className="mt-2 text-3xl font-bold text-green-600">{publishedCount}</p>
-                <p className="text-sm text-gray-500">Live on main</p>
+                <h3 className="font-medium text-gray-900">Archived</h3>
+                <p className="mt-2 text-3xl font-bold text-gray-400">{archivedCount}</p>
+                <p className="text-sm text-gray-500">Completed work</p>
               </div>
             </div>
 
@@ -97,7 +99,7 @@ export default function Dashboard() {
                 </Button>
               </div>
               <BranchList
-                branches={myBranches}
+                branches={activeBranches}
                 isLoading={loadingMyBranches}
                 emptyMessage="You don't have any branches yet. Create one to get started!"
               />
@@ -113,6 +115,22 @@ export default function Dashboard() {
                   branches={reviewBranches.slice(0, 5)}
                   isLoading={loadingReviews}
                   showOwner
+                />
+              </section>
+            )}
+
+            {/* Archived Branches Section */}
+            {archivedBranches.length > 0 && (
+              <section>
+                <div className="mb-4">
+                  <h2 className="text-xl font-semibold text-gray-500">Archived Branches</h2>
+                  <p className="text-sm text-gray-400">
+                    These branches have been published and archived. No further edits are possible.
+                  </p>
+                </div>
+                <BranchList
+                  branches={archivedBranches}
+                  isLoading={loadingMyBranches}
                 />
               </section>
             )}
