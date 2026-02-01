@@ -40,6 +40,12 @@ export default function Library() {
   const branchId = searchParams.get('branchId') || undefined;
   const contentIdParam = searchParams.get('contentId') || undefined;
 
+  // Determine if we're in inline edit mode (editing branch content)
+  const isEditMode = mode === 'edit' && branchId && contentIdParam;
+
+  // Effective branch ID for content list (from store or URL params in edit mode)
+  const effectiveBranchId = currentBranch?.id || (isEditMode ? branchId : undefined);
+
   // Extract filters from URL
   const type = (searchParams.get('type') as ContentType) || 'all';
   const search = searchParams.get('q') || '';
@@ -64,17 +70,21 @@ export default function Library() {
     limit: 100,
   });
 
-  // Fetch branch content for sidebar (when in branch mode)
+  // Fetch branch content for sidebar (when in branch mode OR edit mode)
   const {
     data: branchContentList,
     isLoading: isLoadingBranchList,
-  } = useContentList(currentBranch?.id, {
+  } = useContentList(effectiveBranchId, {
     contentType: type === 'all' ? undefined : type,
   });
 
   // Determine which content list to use
-  const isLoadingList = isInBranchMode ? isLoadingBranchList : isLoadingPublished;
-  const items: ContentSummary[] = isInBranchMode
+  // In edit mode, we show branch content (the content being edited)
+  // In branch mode (via BranchSelector), we show branch content
+  // Otherwise, show published content
+  const showBranchContent = isInBranchMode || isEditMode;
+  const isLoadingList = showBranchContent ? isLoadingBranchList : isLoadingPublished;
+  const items: ContentSummary[] = showBranchContent
     ? (branchContentList?.items ?? [])
     : (publishedContent?.items ?? []);
 
@@ -442,7 +452,6 @@ export default function Library() {
     : undefined;
 
   // Determine content to display
-  const isEditMode = mode === 'edit' && branchId && contentIdParam;
   const contentForView = selectedContent;
 
   return (
@@ -454,13 +463,13 @@ export default function Library() {
           contentType={type}
           onContentTypeChange={handleTypeChange}
           items={items}
-          selectedSlug={isInBranchMode ? undefined : slug}
-          selectedContentId={isInBranchMode ? selectedBranchContentId ?? undefined : undefined}
-          onSelectContent={isInBranchMode ? handleSelectBranchContent : undefined}
+          selectedSlug={showBranchContent ? undefined : slug}
+          selectedContentId={showBranchContent ? (contentIdParam || selectedBranchContentId) ?? undefined : undefined}
+          onSelectContent={showBranchContent ? handleSelectBranchContent : undefined}
           onClearFilters={handleClearFilters}
           hasActiveFilters={hasActiveFilters}
-          branchMode={isInBranchMode}
-          branchName={currentBranch?.name}
+          branchMode={showBranchContent}
+          branchName={currentBranch?.name || editBranch?.name}
         />
       }
       rightSidebar={
