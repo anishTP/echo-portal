@@ -635,7 +635,8 @@ export class BranchService {
 
   /**
    * Create a branch for editing published content.
-   * Creates a new branch forked from main and copies the specified content.
+   * Creates a new branch forked from main which inherits all published content.
+   * Returns the inherited content that matches the source content ID.
    */
   async createEditBranch(
     input: EditBranchCreateInput,
@@ -650,7 +651,7 @@ export class BranchService {
       throw new NotFoundError('Published content', input.sourceContentId);
     }
 
-    // Create the branch
+    // Create the branch (this triggers inheritContent which copies all published content from main)
     const branch = await this.create(
       {
         name: input.name,
@@ -661,32 +662,30 @@ export class BranchService {
       ownerId
     );
 
-    // Copy the content to the new branch
-    const copiedContent = await contentService.create(
-      {
-        branchId: branch.id,
-        title: sourceContent.title,
-        contentType: sourceContent.contentType,
-        category: sourceContent.category,
-        tags: sourceContent.tags,
-        description: sourceContent.description,
-        body: sourceContent.currentVersion.body,
-        bodyFormat: sourceContent.currentVersion.bodyFormat,
-        changeDescription: 'Forked from published version for editing',
-      },
-      { userId: ownerId }
-    );
-
-    // Update the copied content to reference the source
+    // Find the inherited content (created by inheritContent during branch creation)
+    // The inheritance service sets sourceContentId to the original content's ID
     const { contents } = await import('../../db/schema/contents.js');
-    await db
-      .update(contents)
-      .set({ sourceContentId: input.sourceContentId })
-      .where(eq(contents.id, copiedContent.id));
+    const inheritedContentRecord = await db.query.contents.findFirst({
+      where: and(
+        eq(contents.branchId, branch.id),
+        eq(contents.sourceContentId, input.sourceContentId)
+      ),
+    });
+
+    if (!inheritedContentRecord) {
+      // This shouldn't happen if inheritance worked correctly
+      throw new Error(`Content inheritance failed for source ${input.sourceContentId}`);
+    }
+
+    // Use contentService.getById to get the fully populated ContentDetail
+    const inheritedContent = await contentService.getById(inheritedContentRecord.id);
+    if (!inheritedContent) {
+      throw new Error(`Failed to retrieve inherited content ${inheritedContentRecord.id}`);
+    }
 
     return {
       branch: branch.toJSON(),
-      content: { ...copiedContent, sourceContentId: input.sourceContentId },
+      content: inheritedContent,
     };
   }
 }
