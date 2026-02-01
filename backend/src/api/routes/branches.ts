@@ -54,11 +54,15 @@ function getBranchUserContext(c: any): { userId: string | null; roles: string[] 
 }
 
 /**
- * Helper to check if a branch has content (for canSubmitForReview permission)
+ * Helper to check if a branch has content and edited content (for canSubmitForReview permission)
+ * Returns hasContent (any content exists) and hasEditedContent (content that was modified since creation)
  */
-async function checkBranchHasContent(branchId: string): Promise<boolean> {
-  const contentResult = await contentService.listByBranch(branchId, { limit: 1 });
-  return contentResult.total > 0;
+async function checkBranchHasContent(branchId: string): Promise<{ hasContent: boolean; hasEditedContent: boolean }> {
+  const contentResult = await contentService.listByBranch(branchId, { limit: 100 });
+  const hasContent = contentResult.total > 0;
+  // Check if any content has been edited (hasEdits = true means createdAt !== updatedAt)
+  const hasEditedContent = contentResult.items.some(item => item.hasEdits);
+  return { hasContent, hasEditedContent };
 }
 
 /**
@@ -181,10 +185,10 @@ branchRoutes.get('/:id', zValidator('param', branchIdParamSchema), async (c) => 
   // Check access
   visibilityService.assertAccess(branch.toJSON(), context);
 
-  // Check if branch has content (for canSubmitForReview permission)
-  const hasContent = await checkBranchHasContent(id);
+  // Check if branch has content and edited content (for canSubmitForReview permission)
+  const { hasContent, hasEditedContent } = await checkBranchHasContent(id);
 
-  const response = branch.toResponseForUser({ ...getBranchUserContext(c), hasContent });
+  const response = branch.toResponseForUser({ ...getBranchUserContext(c), hasContent, hasEditedContent });
 
   // Embed review records from the reviews table so the branch page
   // shows the same review data as the review queue (single source of truth)
@@ -208,8 +212,8 @@ branchRoutes.patch(
     const body = c.req.valid('json');
 
     const branch = await branchService.update(id, body, user.id);
-    const hasContent = await checkBranchHasContent(id);
-    return success(c, branch.toResponseForUser({ ...getBranchUserContext(c), hasContent }));
+    const { hasContent, hasEditedContent } = await checkBranchHasContent(id);
+    return success(c, branch.toResponseForUser({ ...getBranchUserContext(c), hasContent, hasEditedContent }));
   }
 );
 
@@ -512,8 +516,8 @@ branchRoutes.patch(
       user.id
     );
 
-    const hasContent = await checkBranchHasContent(id);
-    return success(c, updated.toResponseForUser({ ...getBranchUserContext(c), hasContent }));
+    const { hasContent, hasEditedContent } = await checkBranchHasContent(id);
+    return success(c, updated.toResponseForUser({ ...getBranchUserContext(c), hasContent, hasEditedContent }));
   }
 );
 
@@ -556,6 +560,16 @@ branchRoutes.post(
 
     if (!result.success) {
       throw new ValidationError(result.error || 'Failed to publish branch');
+    }
+
+    // Merge content to main branch
+    const mainBranch = await branchService.getMainBranch();
+    if (mainBranch) {
+      await contentMergeService.mergeContentIntoMain(
+        id,
+        mainBranch.id,
+        user.id
+      );
     }
 
     // Mark all content in the branch as published
@@ -616,16 +630,11 @@ branchRoutes.post(
       const mainBranch = await branchService.getMainBranch();
       if (mainBranch) {
         // Merge content to main branch with visibility='public'
-        const mergeResult = await contentMergeService.mergeContentIntoMain(
+        await contentMergeService.mergeContentIntoMain(
           id,
           mainBranch.id,
           user.id
         );
-
-        if (!mergeResult.success) {
-          console.error('Content merge failed during publish:', mergeResult.conflicts);
-          // Continue anyway - content is published but may need manual merge
-        }
       }
 
       // Mark branch content as published (for tracking purposes)
@@ -856,10 +865,10 @@ branchRoutes.post(
     // Directly repair the branch state (bypassing normal transition guards)
     const updatedBranch = await branchService.repairStuckBranch(id, user.id);
 
-    const hasContent = await checkBranchHasContent(id);
+    const { hasContent, hasEditedContent } = await checkBranchHasContent(id);
     return success(c, {
       message: 'Branch repaired successfully. Branch is now in draft state.',
-      branch: updatedBranch.toResponseForUser({ ...getBranchUserContext(c), hasContent }),
+      branch: updatedBranch.toResponseForUser({ ...getBranchUserContext(c), hasContent, hasEditedContent }),
     });
   }
 );
