@@ -14,7 +14,7 @@ import { BranchCreateDialog } from '../components/editor/BranchCreateDialog';
 import { usePublishedContent, useContentBySlug } from '../hooks/usePublishedContent';
 import { useEditBranch } from '../hooks/useEditBranch';
 import { useBranch } from '../hooks/useBranch';
-import { useContent, useContentList, contentKeys } from '../hooks/useContent';
+import { useContent, useContentList, useDeleteContent, contentKeys } from '../hooks/useContent';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { useDraftSync } from '../hooks/useDraftSync';
 import { useBranchStore } from '../stores/branchStore';
@@ -56,6 +56,7 @@ export default function Library() {
   // Edit state
   const [currentDraft, setCurrentDraft] = useState<DraftContent | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Ref to access InlineEditView's content
   const inlineEditViewRef = useRef<InlineEditViewHandle>(null);
@@ -121,6 +122,9 @@ export default function Library() {
     error: branchError,
     reset: resetBranchError,
   } = useEditBranch();
+
+  // Delete content mutation
+  const deleteMutation = useDeleteContent(branchId);
 
   // Auto-save and sync for edit mode
   const autoSave = useAutoSave({
@@ -383,6 +387,20 @@ export default function Library() {
     handleDiscard();
   }, [handleDiscard]);
 
+  // Handle delete content
+  const handleDeleteContent = useCallback(async () => {
+    if (!contentIdParam) return;
+    setDeleteError(null);
+    try {
+      await deleteMutation.mutateAsync(contentIdParam);
+      // After successful delete, exit edit mode and go back to library
+      exitEditMode();
+      navigate('/library');
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete content');
+    }
+  }, [contentIdParam, deleteMutation, exitEditMode, navigate]);
+
   // Filter handlers
   const handleTypeChange = useCallback(
     (value: ContentType) => {
@@ -470,6 +488,7 @@ export default function Library() {
           hasActiveFilters={hasActiveFilters}
           branchMode={showBranchContent}
           branchName={currentBranch?.name || editBranch?.name}
+          branchState={editBranch?.state || currentBranch?.state}
         />
       }
       rightSidebar={
@@ -491,6 +510,9 @@ export default function Library() {
             onDoneEditing={handleDoneEditing}
             onDiscard={handleDiscard}
             isSaving={autoSave.state.status === 'saving'}
+            onDelete={handleDeleteContent}
+            isDeleting={deleteMutation.isPending}
+            deleteError={deleteError}
           />
         ) : contentForView ? (
           <ContentMetadataSidebar

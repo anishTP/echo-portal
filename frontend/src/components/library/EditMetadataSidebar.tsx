@@ -10,6 +10,7 @@ import {
 } from '@radix-ui/react-icons';
 import type { SaveStatus } from '../../hooks/useAutoSave';
 import type { SyncStatus } from '../../hooks/useDraftSync';
+import { DeleteContentDialog } from '../content/DeleteContentDialog';
 import styles from './EditMetadataSidebar.module.css';
 
 export interface EditMetadataSidebarProps {
@@ -45,6 +46,12 @@ export interface EditMetadataSidebarProps {
   onDiscard: () => void;
   /** Whether save is in progress */
   isSaving?: boolean;
+  /** Callback to delete content (optional - only shown if provided) */
+  onDelete?: () => void;
+  /** Whether delete is in progress */
+  isDeleting?: boolean;
+  /** Error message from delete attempt */
+  deleteError?: string | null;
 }
 
 /**
@@ -68,8 +75,12 @@ function EditMetadataSidebarComponent({
   onDoneEditing,
   onDiscard,
   isSaving = false,
+  onDelete,
+  isDeleting = false,
+  deleteError = null,
 }: EditMetadataSidebarProps) {
   const [newTag, setNewTag] = useState('');
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [localTitle, setLocalTitle] = useState(title);
   const [localCategory, setLocalCategory] = useState(category);
   const [localDescription, setLocalDescription] = useState(description);
@@ -268,6 +279,19 @@ function EditMetadataSidebarComponent({
           Save Draft
         </Button>
 
+        {onDelete && (
+          <Button
+            variant="outline"
+            color="red"
+            onClick={() => setShowDeleteDialog(true)}
+            disabled={isSaving || isDeleting}
+            className={styles.actionButton}
+          >
+            <TrashIcon />
+            Delete Content
+          </Button>
+        )}
+
         <Button
           variant="soft"
           color="red"
@@ -275,10 +299,23 @@ function EditMetadataSidebarComponent({
           disabled={isSaving}
           className={styles.actionButton}
         >
-          <TrashIcon />
+          <Cross2Icon />
           Discard
         </Button>
       </div>
+
+      {onDelete && (
+        <DeleteContentDialog
+          contentTitle={title}
+          isOpen={showDeleteDialog}
+          isDeleting={isDeleting}
+          error={deleteError}
+          onConfirm={() => {
+            onDelete();
+          }}
+          onCancel={() => setShowDeleteDialog(false)}
+        />
+      )}
     </div>
   );
 }

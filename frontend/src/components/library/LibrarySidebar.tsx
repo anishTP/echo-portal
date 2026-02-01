@@ -1,8 +1,9 @@
 import { useMemo, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { MagnifyingGlassIcon, Cross2Icon } from '@radix-ui/react-icons';
-import type { ContentSummary } from '@echo-portal/shared';
+import type { ContentSummary, BranchStateType } from '@echo-portal/shared';
 import { NavSection } from './NavSection';
+import { LifecycleStatus } from '../branch/LifecycleStatus';
 import styles from './LibrarySidebar.module.css';
 
 type ContentType = 'all' | 'guideline' | 'asset' | 'opinion';
@@ -39,6 +40,8 @@ export interface LibrarySidebarProps {
   branchMode?: boolean;
   /** Name of the current branch (when in branch mode) */
   branchName?: string;
+  /** State of the current branch (when in branch mode) */
+  branchState?: BranchStateType;
 }
 
 // Git branch icon for branch mode indicator
@@ -82,6 +85,7 @@ export function LibrarySidebar({
   hasActiveFilters = false,
   branchMode = false,
   branchName,
+  branchState,
 }: LibrarySidebarProps) {
   const location = useLocation();
 
@@ -135,7 +139,7 @@ export function LibrarySidebar({
         <div className={styles.branchIndicator}>
           <BranchIcon />
           <span className={styles.branchName}>{branchName}</span>
-          <span className={styles.branchBadge}>Draft</span>
+          {branchState && <LifecycleStatus state={branchState} size="sm" />}
         </div>
       )}
 
