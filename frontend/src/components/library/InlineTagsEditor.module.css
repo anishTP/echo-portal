@@ -1,0 +1,97 @@
+/* InlineTagsEditor.module.css */
+/* Inline tags editor matching ContentRenderer footer/tags styles */
+
+.footer {
+  margin-top: var(--space-8);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--gray-4);
+}
+
+.tagsContainer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Tag badge - matching ContentRenderer .tag style */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  background: var(--gray-3);
+  color: var(--gray-11);
+  font-size: var(--font-size-1);
+  border-radius: var(--radius-full);
+  transition: background-color 0.15s ease;
+}
+
+.tag:hover {
+  background: var(--gray-4);
+}
+
+.tag:hover .tagRemove {
+  opacity: 1;
+}
+
+/* Remove button on tag */
+.tagRemove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  margin-left: var(--space-1);
+  border: none;
+  background: transparent;
+  color: var(--gray-9);
+  cursor: pointer;
+  border-radius: var(--radius-full);
+  opacity: 0;
+  transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.tagRemove:hover {
+  background: var(--gray-6);
+  color: var(--gray-12);
+}
+
+/* Tag input field */
+.tagInput {
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-background);
+  border: 1px solid var(--accent-7);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-1);
+  color: var(--gray-12);
+  outline: none;
+  min-width: 80px;
+  max-width: 150px;
+}
+
+.tagInput::placeholder {
+  color: var(--gray-8);
+}
+
+/* Add tag button */
+.addButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  border: 1px dashed var(--gray-6);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-1);
+  color: var(--gray-9);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+}
+
+.addButton:hover {
+  border-color: var(--accent-7);
+  color: var(--accent-11);
+  background: var(--accent-2);
+}

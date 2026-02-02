@@ -8,7 +8,6 @@ import {
   ContentMetadataSidebar,
 } from '../components/library';
 import { InlineEditView, type DraftContent, type InlineEditViewHandle } from '../components/library/InlineEditView';
-import { EditMetadataSidebar } from '../components/library/EditMetadataSidebar';
 import { EditModeHeader } from '../components/library/EditModeHeader';
 import { BranchCreateDialog } from '../components/editor/BranchCreateDialog';
 import { usePublishedContent, useContentBySlug } from '../hooks/usePublishedContent';
@@ -510,29 +509,7 @@ export default function Library() {
         />
       }
       rightSidebar={
-        isEditMode && currentDraft ? (
-          <EditMetadataSidebar
-            title={currentDraft.title}
-            category={currentDraft.metadata?.category}
-            tags={currentDraft.metadata?.tags || []}
-            description={currentDraft.metadata?.description}
-            branchName={activeBranch?.name || 'Edit Branch'}
-            saveStatus={autoSave.state.status}
-            syncStatus={draftSync.state.status}
-            isDirty={isDirty || autoSave.state.isDirty}
-            onTitleChange={handleTitleChange}
-            onCategoryChange={handleCategoryChange}
-            onTagsChange={handleTagsChange}
-            onDescriptionChange={handleDescriptionChange}
-            onSaveDraft={handleSaveDraft}
-            onDoneEditing={handleDoneEditing}
-            onDiscard={handleDiscard}
-            isSaving={autoSave.state.status === 'saving'}
-            onDelete={handleDeleteContent}
-            isDeleting={deleteMutation.isPending}
-            deleteError={deleteError}
-          />
-        ) : contentForView ? (
+        isEditMode ? undefined : contentForView ? (
           <ContentMetadataSidebar
             author={{
               name: contentForView.createdBy.displayName,
@@ -550,10 +527,15 @@ export default function Library() {
           <EditModeHeader
             branchName={activeBranch.name}
             contentTitle={currentDraft?.title || selectedContent?.title || 'Untitled'}
-            hasUnsavedChanges={isDirty}
+            hasUnsavedChanges={isDirty || autoSave.state.isDirty}
+            saveStatus={autoSave.state.status}
             onDone={handleDoneEditing}
             onCancel={handleCancel}
+            onSaveDraft={handleSaveDraft}
+            onDelete={handleDeleteContent}
             isSaving={autoSave.state.status === 'saving'}
+            isDeleting={deleteMutation.isPending}
+            deleteError={deleteError}
           />
         ) : undefined
       }
@@ -564,6 +546,14 @@ export default function Library() {
           content={editModeContent}
           branchId={branchId}
           branchName={activeBranch?.name || 'Edit Branch'}
+          title={currentDraft.title}
+          category={currentDraft.metadata?.category}
+          description={currentDraft.metadata?.description}
+          tags={currentDraft.metadata?.tags}
+          onTitleChange={handleTitleChange}
+          onCategoryChange={handleCategoryChange}
+          onDescriptionChange={handleDescriptionChange}
+          onTagsChange={handleTagsChange}
           onExitEditMode={exitEditMode}
         />
       ) : (
