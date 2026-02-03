@@ -1,4 +1,4 @@
-import { pgTable, uuid, timestamp, jsonb, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, timestamp, jsonb, index, integer } from 'drizzle-orm/pg-core';
 import { reviewStatusEnum, reviewDecisionEnum } from './enums.js';
 import { branches } from './branches.js';
 import { users } from './users.js';
@@ -16,6 +16,7 @@ export const reviews = pgTable('reviews', {
     .notNull(),
   status: reviewStatusEnum('status').default('pending').notNull(),
   decision: reviewDecisionEnum('decision'),
+  reviewCycle: integer('review_cycle').default(1).notNull(),
   comments: jsonb('comments').default([]).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

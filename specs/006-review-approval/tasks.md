@@ -211,27 +211,27 @@ bd comments {id}
 
 ---
 
-## Phase 1: Setup — ⬜ Pending
+## Phase 1: Setup — ✅ COMPLETED (2026-02-03)
 
 **Beads Phase ID**: `echo-portal-wbo`
 **Purpose**: Database migrations, schema definitions, shared types
 **Blocks**: All subsequent phases
 **Parallelism**: Most tasks can run in parallel
 
-- [ ] T001 [P] Create review_snapshots table migration `backend/src/db/migrations/XXXX_add_review_snapshots.ts`
-- [ ] T002 [P] Create review_cycle column migration `backend/src/db/migrations/XXXX_add_review_cycle.ts`
-- [ ] T003 [P] Add Drizzle schema for review_snapshots `backend/src/db/schema/review-snapshots.ts`
-- [ ] T004 [P] Update Drizzle schema index to export review-snapshots `backend/src/db/schema/index.ts`
-- [ ] T005 [P] Add shared types for ReviewSnapshot, SnapshotData, FileSummary, DiffStats `shared/types/review.ts`
-- [ ] T006 [P] Add shared types for ReviewComment enhancements (threading, outdated) `shared/types/review.ts`
-- [ ] T007 [P] Add shared types for BranchComparison, FileDiff, DiffHunk, DiffLine `shared/types/comparison.ts`
-- [ ] T008 Run migrations and verify schema `npm run db:migrate`
+- [x] T001 [P] Create review_snapshots table migration `backend/src/db/migrations/0003_add_review_snapshots.sql` — ✅
+- [x] T002 [P] Create review_cycle column migration `backend/src/db/migrations/0004_add_review_cycle.sql` — ✅
+- [x] T003 [P] Add Drizzle schema for review_snapshots `backend/src/db/schema/review-snapshots.ts` — ✅
+- [x] T004 [P] Update Drizzle schema index to export review-snapshots `backend/src/db/schema/index.ts` — ✅
+- [x] T005 [P] Add shared types for ReviewSnapshot, SnapshotData, FileSummary, DiffStats `shared/types/review.ts` — ✅
+- [x] T006 [P] Add shared types for ReviewComment enhancements (threading, outdated) `shared/types/review.ts` — ✅
+- [x] T007 [P] Add shared types for BranchComparison, FileDiff, DiffHunk, DiffLine `shared/types/comparison.ts` — ✅
+- [x] T008 Run migrations and verify schema `pnpm --filter @echo-portal/shared build` — ✅
 
-**✓ Checkpoint**: Database ready, types defined, `npm run db:migrate` succeeds
+**✓ Checkpoint**: Database ready, types defined, shared package builds successfully
 
 ---
 
-## Phase 2: Foundational — ⬜ Pending
+## Phase 2: Foundational — ✅ COMPLETED (2026-02-03)
 
 **Beads Phase ID**: `echo-portal-erg`
 **Purpose**: Core services ALL user stories depend on
@@ -240,33 +240,33 @@ bd comments {id}
 
 ### Backend Services
 
-- [ ] T009 [P] Implement SnapshotService.createSnapshot() `backend/src/services/review/snapshot-service.ts`
-- [ ] T010 [P] Implement SnapshotService.getByReviewId() `backend/src/services/review/snapshot-service.ts`
-- [ ] T011 [P] Implement ComparisonService.getBranchComparison() `backend/src/services/review/comparison-service.ts`
-- [ ] T012 [P] Implement ComparisonService.getFileDiff() `backend/src/services/review/comparison-service.ts`
-- [ ] T013 [P] Implement ComparisonService.checkBaseDivergence() `backend/src/services/review/comparison-service.ts`
-- [ ] T014 [P] Extend diff service with hunk ID generation `backend/src/services/git/diff.ts`
+- [x] T009 [P] Implement SnapshotService.createSnapshot() `backend/src/services/review/snapshot-service.ts` — ✅
+- [x] T010 [P] Implement SnapshotService.getByReviewId() `backend/src/services/review/snapshot-service.ts` — ✅
+- [x] T011 [P] Implement ComparisonService.getBranchComparison() `backend/src/services/review/comparison-service.ts` — ✅
+- [x] T012 [P] Implement ComparisonService.getFileDiff() `backend/src/services/review/comparison-service.ts` — ✅
+- [x] T013 [P] Implement ComparisonService.checkBaseDivergence() `backend/src/services/review/comparison-service.ts` — ✅
+- [x] T014 [P] Extend diff service with hunk ID generation `backend/src/services/git/diff.ts` — ✅
 
 ### Enhanced Review Service
 
-- [ ] T015 Update ReviewService.create() to create snapshot on review creation `backend/src/services/review/review-service.ts`
-- [ ] T016 Add ReviewService.getReviewCycles() for cycle history `backend/src/services/review/review-service.ts`
-- [ ] T017 Add ReviewService.deriveCycleOutcome() helper `backend/src/services/review/review-service.ts`
-- [ ] T018 Add ReviewService.deriveReviewSubState() for status derivation `backend/src/services/review/review-service.ts`
+- [x] T015 Update ReviewService.create() to create snapshot on review creation `backend/src/services/review/review-service.ts` — ✅
+- [x] T016 Add ReviewService.getReviewCycles() for cycle history `backend/src/services/review/review-service.ts` — ✅
+- [x] T017 Add ReviewService.deriveCycleOutcome() helper `backend/src/services/review/review-service.ts` — ✅
+- [x] T018 Add ReviewService.deriveReviewSubState() for status derivation `backend/src/services/review/review-service.ts` — ✅
 
 ### API Routes (Core)
 
-- [ ] T019 [P] Create comparison routes file with GET /branches/:branchId/comparison `backend/src/api/routes/comparison.ts`
-- [ ] T020 [P] Add GET /branches/:branchId/comparison/files/:filePath to comparison routes `backend/src/api/routes/comparison.ts`
-- [ ] T021 Register comparison routes in main router `backend/src/api/routes/index.ts`
+- [x] T019 [P] Create comparison routes file with GET /branches/:branchId/comparison `backend/src/api/routes/comparison.ts` — ✅
+- [x] T020 [P] Add GET /branches/:branchId/comparison/files/:filePath to comparison routes `backend/src/api/routes/comparison.ts` — ✅
+- [x] T021 Register comparison routes in main router `backend/src/api/index.ts` — ✅
 
 ### Frontend Foundation
 
-- [ ] T022 [P] Create comparison API client service `frontend/src/services/comparisonService.ts`
-- [ ] T023 [P] Create review API client service extensions `frontend/src/services/reviewService.ts`
-- [ ] T024 [P] Create useComparison hook with React Query `frontend/src/hooks/useComparison.ts`
-- [ ] T025 [P] Create useReviewComments hook with threading support `frontend/src/hooks/useReviewComments.ts`
-- [ ] T026 Create ReviewContext provider for shared review state `frontend/src/context/ReviewContext.tsx`
+- [x] T022 [P] Create comparison API client service `frontend/src/services/comparisonService.ts` — ✅
+- [x] T023 [P] Create review API client service extensions `frontend/src/services/reviewService.ts` — ✅
+- [x] T024 [P] Create useComparison hook with React Query `frontend/src/hooks/useComparison.ts` — ✅
+- [x] T025 [P] Create useReviewComments hook with threading support `frontend/src/hooks/useReviewComments.ts` — ✅
+- [x] T026 Create ReviewContext provider for shared review state `frontend/src/context/ReviewContext.tsx` — ✅
 
 **✓ Checkpoint**: Foundation ready — user stories can begin in parallel
 

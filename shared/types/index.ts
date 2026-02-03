@@ -8,3 +8,4 @@ export * from './permissions.js';
 export * from './audit.js';
 export * from './content.js';
 export * from './notification.js';
+export * from './comparison.js';

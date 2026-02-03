@@ -64,6 +64,7 @@ export class ReviewCommentService {
       content,
       path,
       line,
+      isOutdated: false,
       createdAt: now,
       updatedAt: now,
     };

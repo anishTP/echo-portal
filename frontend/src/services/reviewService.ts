@@ -2,6 +2,9 @@ import { api } from './api';
 import type {
   ReviewStatusType,
   ReviewDecisionType,
+  ReviewSnapshot,
+  ReviewCycleSummary,
+  ReviewStatusResponse,
 } from '@echo-portal/shared';
 
 export interface ReviewComment {
@@ -10,6 +13,11 @@ export interface ReviewComment {
   content: string;
   path?: string;
   line?: number;
+  hunkId?: string;
+  side?: 'old' | 'new';
+  parentId?: string;
+  isOutdated: boolean;
+  outdatedReason?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -199,6 +207,54 @@ export const reviewService = {
    */
   deleteComment: (reviewId: string, commentId: string): Promise<void> => {
     return api.delete(`/reviews/${reviewId}/comments/${commentId}`);
+  },
+
+  /**
+   * Reply to a comment (threading)
+   */
+  replyToComment: (
+    reviewId: string,
+    commentId: string,
+    content: string
+  ): Promise<ReviewComment> => {
+    return api.post<ReviewComment>(
+      `/reviews/${reviewId}/comments/${commentId}/reply`,
+      { content }
+    );
+  },
+
+  /**
+   * Refresh outdated comment status
+   */
+  refreshComments: (
+    reviewId: string
+  ): Promise<{ updatedCount: number; comments: ReviewComment[] }> => {
+    return api.post<{ updatedCount: number; comments: ReviewComment[] }>(
+      `/reviews/${reviewId}/refresh-comments`
+    );
+  },
+
+  /**
+   * Get review snapshot
+   */
+  getSnapshot: (reviewId: string): Promise<ReviewSnapshot> => {
+    return api.get<ReviewSnapshot>(`/reviews/${reviewId}/snapshot`);
+  },
+
+  /**
+   * Get review cycles for a branch
+   */
+  getReviewCycles: (branchId: string): Promise<{ branchId: string; cycles: ReviewCycleSummary[]; currentCycle: number }> => {
+    return api.get<{ branchId: string; cycles: ReviewCycleSummary[]; currentCycle: number }>(
+      `/branches/${branchId}/review-cycles`
+    );
+  },
+
+  /**
+   * Get review status for a branch
+   */
+  getReviewStatus: (branchId: string): Promise<ReviewStatusResponse> => {
+    return api.get<ReviewStatusResponse>(`/branches/${branchId}/review-status`);
   },
 };
 

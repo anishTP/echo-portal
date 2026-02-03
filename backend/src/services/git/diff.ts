@@ -10,6 +10,7 @@ export interface FileDiff {
 }
 
 export interface DiffHunk {
+  id?: string;                         // Unique hunk identifier for comment anchoring
   oldStart: number;
   oldLines: number;
   newStart: number;
