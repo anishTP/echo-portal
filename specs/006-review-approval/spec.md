@@ -3,6 +3,17 @@
 **Feature Branch**: `006-review-approval`
 **Created**: 2026-02-03
 **Status**: Draft
+
+## Clarifications
+
+### Session 2026-02-03
+
+- Q: When are multiple approvals required vs. single approval? → A: Configurable per-branch; default is 1 approval, contributor can require more when submitting for review.
+- Q: Can a contributor approve their own branch? → A: No, contributors cannot approve their own branches (established in prior spec).
+- Q: How are reviewers notified of pending reviews? → A: In-app notifications only; reviewers see pending work when they access the system.
+- Q: Do unresolved comments block approval? → A: No, comments are informational; only explicit "Request Changes" action blocks approval.
+- Q: Are review comments visible in public audit trail after publication? → A: No, audit shows review occurred (actors, timestamps, outcomes) but comment text remains private.
+
 **Input**: User description: "This feature defines how changes are reviewed, evaluated, and approved before becoming shared or consumable. Any change intended to converge, publish, or increase visibility must pass through an explicit review state. This flow is already covered in the branch isolation spec but the review experience has not been addressed. Review evaluates proposed changes relative to a branch's parent and current state. Changes under review must be comparable, inspectable, and attributable. Differences between states must be explicit and preserved for audit. Approval represents intentional acceptance of change. Only approved changes may converge or become consumable. Review outcomes must be explicit. Approval, rejection, and requested changes must be recorded and traceable. No actor—human or automated—may bypass review or approval requirements. These rules apply regardless of implementation and tooling."
 
 ## User Scenarios & Testing *(mandatory)*
@@ -87,7 +98,7 @@ A reviewer determines that changes are ready for publication. They approve the r
 **Acceptance Scenarios**:
 
 1. **Given** a reviewer has examined changes, **When** they approve the review, **Then** the branch transitions from Review to Approved state
-2. **Given** approval requires multiple reviewers, **When** not all required reviewers have approved, **Then** the branch remains in Review state until all approvals are collected
+2. **Given** the contributor configured a required approval count greater than 1, **When** not all required approvals have been collected, **Then** the branch remains in Review state until the configured threshold is met
 3. **Given** approval is complete, **When** viewing the branch, **Then** it shows as eligible for publication/convergence
 4. **Given** a review is approved, **When** viewing the audit trail, **Then** the approval is recorded with reviewer, timestamp, and any approval comments
 5. **Given** the branch is approved, **When** anyone attempts to modify it, **Then** the modification is rejected (approved branches are immutable)
@@ -106,7 +117,7 @@ A contributor or reviewer wants to understand the status of a review: who has re
 
 1. **Given** a branch is in Review state, **When** viewing review status, **Then** the user sees which reviewers have responded and which are pending
 2. **Given** multiple review cycles have occurred, **When** viewing history, **Then** each cycle shows submission date, reviewers, outcome, and feedback
-3. **Given** feedback was provided, **When** viewing status, **Then** unresolved comments are highlighted as pending items
+3. **Given** feedback was provided, **When** viewing status, **Then** unresolved comments are highlighted as pending items (informational; do not block approval)
 4. **Given** approval requirements exist, **When** viewing progress, **Then** the user sees how many approvals are required vs. received
 
 ---
@@ -159,17 +170,21 @@ The system can run automated checks as part of review (validation, compliance, q
 
 - **FR-001**: System MUST require a description when submitting a branch for review
 - **FR-002**: System MUST require at least one reviewer assignment when submitting for review
+- **FR-002a**: System MUST allow contributor to configure required approval count (default: 1) when submitting for review
 - **FR-003**: System MUST capture a snapshot of branch state and parent state at submission time for comparison
-- **FR-004**: System MUST notify all assigned reviewers when a review is submitted or updated
+- **FR-004**: System MUST notify all assigned reviewers via in-app notifications when a review is submitted or updated
 - **FR-005**: System MUST display all changes between branch state and parent state in a comparable format
 - **FR-006**: System MUST attribute each change to the actor who made it
 - **FR-007**: System MUST allow reviewers to add comments attached to specific changes
 - **FR-008**: System MUST support threaded conversations on review comments
 - **FR-009**: System MUST require a reason when requesting changes
+- **FR-009a**: System MUST treat "Request Changes" as a blocking action that prevents approval until addressed
+- **FR-009b**: System MUST treat comments as informational (unresolved comments do not block approval)
 - **FR-010**: System MUST transition branch from Review to Draft when changes are requested
 - **FR-011**: System MUST preserve all feedback when a branch returns to Draft for modification
 - **FR-012**: System MUST track review history across multiple submission cycles
 - **FR-013**: System MUST record approval with reviewer identity, timestamp, and optional comment
+- **FR-013a**: System MUST prevent contributors from approving their own branches
 - **FR-014**: System MUST enforce that approved branches cannot be modified
 - **FR-015**: System MUST enforce that only approved branches may proceed to convergence/publication
 - **FR-016**: System MUST apply the same review rules to automated processes as to human reviewers
@@ -180,9 +195,9 @@ The system can run automated checks as part of review (validation, compliance, q
 
 ### Key Entities
 
-- **Review**: A request for evaluation of a branch's changes. Contains submission description, assigned reviewers, comparison snapshot, status (pending, changes requested, approved), and history of all review cycles. Represents the formal evaluation process.
+- **Review**: A request for evaluation of a branch's changes. Contains submission description, assigned reviewers, required approval count (default: 1, configurable by contributor), comparison snapshot, status (pending, changes requested, approved), and history of all review cycles. Represents the formal evaluation process.
 
-- **Review Comment**: Feedback attached to a specific change within a review. Contains comment text, author, timestamp, thread replies, and resolution status. Linked to the specific content it references. Represents communication during review.
+- **Review Comment**: Feedback attached to a specific change within a review. Contains comment text, author, timestamp, thread replies, and resolution status (informational only—does not block approval). Linked to the specific content it references. Represents communication during review.
 
 - **Comparison Snapshot**: A preserved record of the branch state and parent state at submission time. Enables consistent comparison even if the source or parent changes. Represents the "what changed" view.
 
@@ -291,7 +306,7 @@ Approved → Changes Requested (create new review cycle instead)
 
 - All comments visible to all review participants
 - Comments remain visible even after reviewer removed (for audit purposes)
-- After publication, review comments may be included in public audit trail
+- After publication, comment text remains private; public audit trail shows only that review occurred (actors, timestamps, outcomes)
 
 ### Auditability and Traceability *(mandatory per Constitution VIII)*
 
@@ -300,8 +315,8 @@ Approved → Changes Requested (create new review cycle instead)
 - Review submitted (contributor, timestamp, description, assigned reviewers, snapshot ID)
 - Reviewer added (actor, timestamp, reviewer added)
 - Reviewer removed (actor, timestamp, reviewer removed, feedback preserved)
-- Comment added (reviewer, timestamp, comment text, linked change)
-- Comment reply added (actor, timestamp, reply text, parent comment)
+- Comment added (reviewer, timestamp, comment ID, linked change) — comment text stored privately, not in public audit
+- Comment reply added (actor, timestamp, reply ID, parent comment) — reply text stored privately, not in public audit
 - Changes requested (reviewer, timestamp, reason)
 - Approval granted (reviewer, timestamp, comments)
 - Review withdrawn (contributor, timestamp, reason)
@@ -317,7 +332,7 @@ Approved → Changes Requested (create new review cycle instead)
 - `metadata`: JSON object with context:
   - `description` (for submissions)
   - `reviewers` (for assignment changes)
-  - `comment_id` and `text` (for comments)
+  - `comment_id` (for comments — text stored separately, not in public audit)
   - `reason` (for change requests)
   - `cycle_number` (for tracking iterations)
 
