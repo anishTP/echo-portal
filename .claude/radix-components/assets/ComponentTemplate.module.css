@@ -1,0 +1,160 @@
+/* __COMPONENT_NAME__.module.css */
+/* Custom Radix Themes component styles template */
+/* Replace __COMPONENT_NAME__ with your component name */
+
+/* ============================================================================
+   Base Styles
+   ============================================================================ */
+
+.root {
+  /* Layout */
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  
+  /* Typography */
+  font-family: var(--default-font-family);
+  font-weight: var(--font-weight-medium);
+  
+  /* Shape */
+  border-radius: var(--radius-2);
+  
+  /* Transitions */
+  transition: 
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+/* ============================================================================
+   Size Variants
+   ============================================================================ */
+
+.root[data-size="1"] {
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-size-1);
+  line-height: var(--line-height-1);
+}
+
+.root[data-size="2"] {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-2);
+  line-height: var(--line-height-2);
+}
+
+.root[data-size="3"] {
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-3);
+  line-height: var(--line-height-3);
+}
+
+/* ============================================================================
+   Visual Variants
+   ============================================================================ */
+
+/* Solid variant */
+.root[data-variant="solid"] {
+  background-color: var(--accent-9);
+  color: var(--accent-contrast);
+  border: 1px solid transparent;
+}
+
+.root[data-variant="solid"]:hover:not([data-disabled]) {
+  background-color: var(--accent-10);
+}
+
+/* Soft variant */
+.root[data-variant="soft"] {
+  background-color: var(--accent-3);
+  color: var(--accent-11);
+  border: 1px solid transparent;
+}
+
+.root[data-variant="soft"]:hover:not([data-disabled]) {
+  background-color: var(--accent-4);
+}
+
+/* Outline variant */
+.root[data-variant="outline"] {
+  background-color: transparent;
+  color: var(--accent-11);
+  border: 1px solid var(--accent-7);
+}
+
+.root[data-variant="outline"]:hover:not([data-disabled]) {
+  background-color: var(--accent-2);
+  border-color: var(--accent-8);
+}
+
+/* Ghost variant */
+.root[data-variant="ghost"] {
+  background-color: transparent;
+  color: var(--accent-11);
+  border: 1px solid transparent;
+}
+
+.root[data-variant="ghost"]:hover:not([data-disabled]) {
+  background-color: var(--accent-3);
+}
+
+/* ============================================================================
+   Color Overrides
+   ============================================================================ */
+
+/* Gray color */
+.root[data-color="gray"][data-variant="solid"] {
+  background-color: var(--gray-9);
+  color: var(--gray-contrast);
+}
+
+.root[data-color="gray"][data-variant="soft"] {
+  background-color: var(--gray-3);
+  color: var(--gray-11);
+}
+
+.root[data-color="gray"][data-variant="outline"] {
+  border-color: var(--gray-7);
+  color: var(--gray-11);
+}
+
+/* Red color */
+.root[data-color="red"][data-variant="solid"] {
+  background-color: var(--red-9);
+  color: var(--red-contrast);
+}
+
+.root[data-color="red"][data-variant="soft"] {
+  background-color: var(--red-3);
+  color: var(--red-11);
+}
+
+/* Add more colors as needed: green, blue, etc. */
+
+/* ============================================================================
+   States
+   ============================================================================ */
+
+/* Focus state */
+.root:focus-visible {
+  outline: 2px solid var(--focus-8);
+  outline-offset: 2px;
+}
+
+/* Disabled state */
+.root[data-disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ============================================================================
+   Responsive (Optional)
+   ============================================================================ */
+
+@media (min-width: 768px) {
+  /* Tablet and up styles */
+}
+
+@media (min-width: 1024px) {
+  /* Desktop styles */
+}
