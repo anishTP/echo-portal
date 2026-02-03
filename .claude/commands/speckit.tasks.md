@@ -52,13 +52,66 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Parallel execution examples per story
    - Implementation strategy section (MVP first, incremental delivery)
 
-5. **Report**: Output path to generated tasks.md and summary:
+5. **Create Beads Tracking** (if `.beads/` directory exists in repo root):
+
+   a. **Create Epic**:
+      ```bash
+      bd create --title "{Feature Name}" --type epic --priority 1
+      ```
+      Save the returned ID as EPIC_ID.
+
+   b. **Create Phases** (one per phase in tasks.md):
+      ```bash
+      bd create --title "Phase 1: {Phase Title}" --type feature --priority {1|2|3}
+      ```
+      Save each phase ID. Use priority 1 for MVP phases (P1), 2 for P2, 3 for P3.
+
+   c. **Link Phases to Epic**:
+      ```bash
+      bd update {phase-id} --parent {EPIC_ID}
+      ```
+
+   d. **Set Phase Dependencies**:
+      - Phase 2 depends on Phase 1: `bd dep add {P2} {P1}`
+      - User Story phases depend on Foundational: `bd dep add {US-phase} {P2}`
+      - P2/P3 phases depend on MVP completion (last P1 phase)
+      - Integration depends on all MVP phases
+      - Polish depends on Integration
+
+   e. **Create Individual Tasks** (for each task T001, T002, etc.):
+      ```bash
+      bd create --title "T001: {Task Description}" --type task --priority {1|2|3}
+      ```
+      Use parallel subagents to create tasks efficiently (batch by phase).
+
+   f. **Link Tasks to Phases**:
+      ```bash
+      bd update {task-id} --parent {phase-id}
+      ```
+
+   g. **Set Task Dependencies** (within phases):
+      - For sequential tasks (no [P] marker), set dependencies
+      - Example: `bd dep add {T008} {T001}` if T008 depends on T001
+
+   h. **Update tasks.md** with Beads IDs:
+      - Add Task ID to Beads ID mapping table in the Beads Tracking section
+      - Update phase IDs in each phase header
+      - Add note that beads tracking is active
+
+   i. **Sync Beads**: Run `bd sync` to persist changes
+
+6. **Report**: Output path to generated tasks.md and summary:
    - Total task count
    - Task count per user story
    - Parallel opportunities identified
    - Independent test criteria for each story
    - Suggested MVP scope (typically just User Story 1)
    - Format validation: Confirm ALL tasks follow the checklist format (checkbox, ID, labels, file paths)
+   - Beads tracking status:
+     - Epic ID
+     - Phase IDs (table)
+     - Total tasks created in beads
+     - Ready work count (tasks with no blockers)
 
 Context for task generation: $ARGUMENTS
 
@@ -135,3 +188,76 @@ Every task MUST strictly follow this format:
   - Within each story: Tests (if requested) → Models → Services → Endpoints → Integration
   - Each phase should be a complete, independently testable increment
 - **Final Phase**: Polish & Cross-Cutting Concerns
+
+## Beads Tracking Workflow
+
+When beads tracking is enabled (`.beads/` directory exists), create a full issue hierarchy:
+
+### Hierarchy Structure
+
+```
+Epic: {Feature Name}
+├── Phase 1: Setup
+│   ├── T001: {task}
+│   ├── T002: {task}
+│   └── ...
+├── Phase 2: Foundational
+│   ├── T00x: {task}
+│   └── ...
+├── Phase 3: US1 - {User Story Title} (MVP)
+│   ├── T0xx: {task}
+│   └── ...
+├── Phase N: Polish
+│   └── ...
+```
+
+### Dependency Rules
+
+1. **Phase-level dependencies**:
+   - Setup → Foundational → User Stories (parallel) → Integration → Polish
+   - P2/P3 user stories depend on MVP (P1) completion
+
+2. **Task-level dependencies** (within a phase):
+   - Tasks marked `[P]` have no intra-phase dependencies
+   - Sequential tasks (no `[P]`) depend on prior tasks
+   - Example: If T008 runs migrations, it depends on T001-T004 (schema definitions)
+
+3. **Cross-phase dependencies**:
+   - All phase tasks implicitly depend on their phase
+   - Phase dependencies handle cross-phase blocking
+
+### Efficient Task Creation
+
+Use parallel subagents to create tasks by phase:
+
+```bash
+# Create all Phase 1 tasks in parallel
+for task in "T001: ..." "T002: ..." ...; do
+  bd create --title "$task" --type task --priority 1 &
+done
+wait
+
+# Link to parent phase
+for task_id in {task-ids}; do
+  bd update $task_id --parent {phase-id}
+done
+```
+
+### Required Updates to tasks.md
+
+After creating beads issues, update tasks.md:
+
+1. **Beads Tracking section**: Add task ID mapping table
+2. **Phase headers**: Update `{phase-id}` placeholders with actual IDs
+3. **Status note**: Add "Beads tracking is ACTIVE" indicator
+
+### Session Close Protocol
+
+After completing beads setup:
+
+```bash
+bd sync                          # Sync beads changes
+git add specs/{feature}/tasks.md # Stage updated tasks.md
+git commit -m "feat: Add tasks with beads tracking"
+git push
+```
