@@ -16,7 +16,107 @@
 | **Planning Details** | `specs/006-review-approval/plan.md` |
 | **Data Model** | `specs/006-review-approval/data-model.md` |
 
-> **NOTE**: Run the Beads Issue Creation Script (at end of file) after generating this tasks.md to create the epic and phase issues in beads.
+### Task ID to Beads ID Mapping
+
+<details>
+<summary>Click to expand full task mapping (90 tasks)</summary>
+
+| Task | Beads ID | Phase |
+|------|----------|-------|
+| T001 | `echo-portal-pi8c` | Phase 1 |
+| T002 | `echo-portal-wstg` | Phase 1 |
+| T003 | `echo-portal-6upz` | Phase 1 |
+| T004 | `echo-portal-bxve` | Phase 1 |
+| T005 | `echo-portal-0pfq` | Phase 1 |
+| T006 | `echo-portal-uz9z` | Phase 1 |
+| T007 | `echo-portal-yk7m` | Phase 1 |
+| T008 | `echo-portal-ajvv` | Phase 1 |
+| T009 | `echo-portal-rpi4` | Phase 2 |
+| T010 | `echo-portal-8hi1` | Phase 2 |
+| T011 | `echo-portal-qy6y` | Phase 2 |
+| T012 | `echo-portal-4p19` | Phase 2 |
+| T013 | `echo-portal-bpg1` | Phase 2 |
+| T014 | `echo-portal-z2o5` | Phase 2 |
+| T015 | `echo-portal-01bb` | Phase 2 |
+| T016 | `echo-portal-xdp0` | Phase 2 |
+| T017 | `echo-portal-ddao` | Phase 2 |
+| T018 | `echo-portal-hnis` | Phase 2 |
+| T019 | `echo-portal-8gsf` | Phase 2 |
+| T020 | `echo-portal-heio` | Phase 2 |
+| T021 | `echo-portal-wgih` | Phase 2 |
+| T022 | `echo-portal-36wc` | Phase 2 |
+| T023 | `echo-portal-8e7o` | Phase 2 |
+| T024 | `echo-portal-r0e2` | Phase 2 |
+| T025 | `echo-portal-ja61` | Phase 2 |
+| T026 | `echo-portal-diy7` | Phase 2 |
+| T027 | `echo-portal-b84p` | Phase 3 (US1) |
+| T028 | `echo-portal-acys` | Phase 3 (US1) |
+| T029 | `echo-portal-cir6` | Phase 3 (US1) |
+| T030 | `echo-portal-ltir` | Phase 3 (US1) |
+| T031 | `echo-portal-5pm2` | Phase 3 (US1) |
+| T032 | `echo-portal-a9z3` | Phase 3 (US1) |
+| T033 | `echo-portal-au8m` | Phase 4 (US2) |
+| T034 | `echo-portal-pjqz` | Phase 4 (US2) |
+| T035 | `echo-portal-zmzp` | Phase 4 (US2) |
+| T036 | `echo-portal-uri4` | Phase 4 (US2) |
+| T037 | `echo-portal-zdqv` | Phase 4 (US2) |
+| T038 | `echo-portal-e8be` | Phase 4 (US2) |
+| T039 | `echo-portal-lcp9` | Phase 4 (US2) |
+| T040 | `echo-portal-jc1s` | Phase 5 (US3) |
+| T041 | `echo-portal-bf5n` | Phase 5 (US3) |
+| T042 | `echo-portal-o2c6` | Phase 5 (US3) |
+| T043 | `echo-portal-2ue1` | Phase 5 (US3) |
+| T044 | `echo-portal-1xw1` | Phase 5 (US3) |
+| T045 | `echo-portal-tdgw` | Phase 5 (US3) |
+| T046 | `echo-portal-df1u` | Phase 5 (US3) |
+| T047 | `echo-portal-77jw` | Phase 5 (US3) |
+| T048 | `echo-portal-hi3i` | Phase 6 (US4) |
+| T049 | `echo-portal-w0vp` | Phase 6 (US4) |
+| T050 | `echo-portal-vnlk` | Phase 6 (US4) |
+| T051 | `echo-portal-9iea` | Phase 6 (US4) |
+| T052 | `echo-portal-ca5s` | Phase 6 (US4) |
+| T053 | `echo-portal-9out` | Phase 7 (US5) |
+| T054 | `echo-portal-jcth` | Phase 7 (US5) |
+| T055 | `echo-portal-b2xq` | Phase 7 (US5) |
+| T056 | `echo-portal-ze9t` | Phase 7 (US5) |
+| T057 | `echo-portal-4dko` | Phase 7 (US5) |
+| T058 | `echo-portal-px9a` | Phase 7 (US5) |
+| T059 | `echo-portal-og50` | Phase 7 (US5) |
+| T060 | `echo-portal-qd7y` | Phase 8 (US6) |
+| T061 | `echo-portal-m1px` | Phase 8 (US6) |
+| T062 | `echo-portal-xeg0` | Phase 8 (US6) |
+| T063 | `echo-portal-slmn` | Phase 8 (US6) |
+| T064 | `echo-portal-09zo` | Phase 8 (US6) |
+| T065 | `echo-portal-cwzp` | Phase 9 (US7) |
+| T066 | `echo-portal-r0oi` | Phase 9 (US7) |
+| T067 | `echo-portal-0uvn` | Phase 9 (US7) |
+| T068 | `echo-portal-14le` | Phase 9 (US7) |
+| T069 | `echo-portal-5s40` | Phase 9 (US7) |
+| T070 | `echo-portal-l3md` | Phase 10 (US8) |
+| T071 | `echo-portal-365w` | Phase 10 (US8) |
+| T072 | `echo-portal-d5nn` | Phase 10 (US8) |
+| T073 | `echo-portal-46km` | Phase 10 (US8) |
+| T074 | `echo-portal-i3kj` | Phase 11 |
+| T075 | `echo-portal-m0ka` | Phase 11 |
+| T076 | `echo-portal-bc53` | Phase 11 |
+| T077 | `echo-portal-7e9p` | Phase 11 |
+| T078 | `echo-portal-8vlf` | Phase 11 |
+| T079 | `echo-portal-sp7x` | Phase 12 |
+| T080 | `echo-portal-r2fr` | Phase 12 |
+| T081 | `echo-portal-raht` | Phase 12 |
+| T082 | `echo-portal-zgfj` | Phase 12 |
+| T083 | `echo-portal-g2dy` | Phase 12 |
+| T084 | `echo-portal-lo64` | Phase 12 |
+| T085 | `echo-portal-638r` | Phase 12 |
+| T086 | `echo-portal-oyuf` | Phase 12 |
+| T087 | `echo-portal-ud3q` | Phase 12 |
+| T088 | `echo-portal-91ez` | Phase 12 |
+| T089 | `echo-portal-ahq4` | Phase 12 |
+| T090 | `echo-portal-kp6t` | Phase 12 |
+
+</details>
+
+> **Beads tracking is ACTIVE**: Epic, phases, and all 90 tasks are created in beads with parent-child relationships and dependencies. Use `bd ready` to see available work.
 
 ---
 
@@ -27,7 +127,7 @@
 | **Epic** | In-Context Review and Approval Workflow |
 | **User Stories** | 8 from spec.md (US1-US5 P1, US6-US7 P2, US8 P3) |
 | **Priority** | P1 (MVP: US1-US5) -> P2 (US6-US7) -> P3 (US8) |
-| **Est. Tasks** | 58 |
+| **Est. Tasks** | 90 |
 
 ### Constitution Compliance
 
