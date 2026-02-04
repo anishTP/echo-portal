@@ -115,6 +115,7 @@ export default function Dashboard() {
                   branches={reviewBranches.slice(0, 5)}
                   isLoading={loadingReviews}
                   showOwner
+                  showReviewAction
                 />
               </section>
             )}

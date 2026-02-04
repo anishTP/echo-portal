@@ -14,6 +14,8 @@ import {
 } from '../../api/utils/errors.js';
 import type { ReviewComment } from '@echo-portal/shared';
 import { ReviewStatus } from '@echo-portal/shared';
+import { comparisonService } from './comparison-service.js';
+import { snapshotService } from './snapshot-service.js';
 
 export class ReviewCommentService {
   /**
@@ -238,6 +240,181 @@ export class ReviewCommentService {
   async getCommentCount(reviewId: string): Promise<number> {
     const comments = await this.getComments(reviewId);
     return comments.length;
+  }
+
+  /**
+   * Add a reply to an existing comment (threading)
+   * Max thread depth is 2 levels (comment → reply)
+   */
+  async addReply(
+    reviewId: string,
+    parentCommentId: string,
+    content: string,
+    authorId: string
+  ): Promise<ReviewComment> {
+    // Validate content
+    if (!content || content.trim().length === 0) {
+      throw new ValidationError('Reply content is required');
+    }
+
+    if (content.length > 10000) {
+      throw new ValidationError('Reply must be 10000 characters or less');
+    }
+
+    // Get the review
+    const review = await db.query.reviews.findFirst({
+      where: eq(reviews.id, reviewId),
+    });
+
+    if (!review) {
+      throw new NotFoundError('Review', reviewId);
+    }
+
+    // Check review can receive comments
+    if (review.status === ReviewStatus.CANCELLED) {
+      throw new ValidationError('Cannot add replies to a cancelled review');
+    }
+
+    // Find the parent comment
+    const existingComments = (review.comments as ReviewComment[]) || [];
+    const parent = existingComments.find((c) => c.id === parentCommentId);
+
+    if (!parent) {
+      throw new NotFoundError('Comment', parentCommentId);
+    }
+
+    // Check max depth (cannot reply to a reply)
+    if (parent.parentId) {
+      throw new ValidationError('Cannot reply to a reply (max thread depth exceeded)');
+    }
+
+    // Create the reply
+    const now = new Date().toISOString();
+    const reply: ReviewComment = {
+      id: uuidv4(),
+      authorId,
+      content,
+      parentId: parentCommentId,
+      isOutdated: false,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    // Add reply to comments array
+    const updatedComments = [...existingComments, reply];
+
+    // Update the review
+    await db
+      .update(reviews)
+      .set({
+        comments: updatedComments,
+        status:
+          review.status === ReviewStatus.PENDING
+            ? ReviewStatus.IN_PROGRESS
+            : review.status,
+        updatedAt: new Date(),
+      })
+      .where(eq(reviews.id, reviewId));
+
+    return reply;
+  }
+
+  /**
+   * Refresh outdated status for all comments in a review
+   * Marks comments as outdated when their anchored content has changed
+   *
+   * Compares each anchored comment against the current diff:
+   * - If the file is no longer in the diff, mark outdated
+   * - If the hunk ID no longer exists, mark outdated
+   * - Already outdated comments are skipped
+   * - General comments (no path) are never marked outdated
+   */
+  async refreshOutdatedStatus(
+    reviewId: string
+  ): Promise<{ updatedCount: number; comments: ReviewComment[] }> {
+    // Get the review
+    const review = await db.query.reviews.findFirst({
+      where: eq(reviews.id, reviewId),
+    });
+
+    if (!review) {
+      throw new NotFoundError('Review', reviewId);
+    }
+
+    const existingComments = (review.comments as ReviewComment[]) || [];
+
+    // Skip if no anchored comments
+    const anchoredComments = existingComments.filter(
+      (c) => c.path && !c.isOutdated
+    );
+    if (anchoredComments.length === 0) {
+      return { updatedCount: 0, comments: existingComments };
+    }
+
+    // Get current branch comparison
+    let currentComparison;
+    try {
+      currentComparison = await comparisonService.getBranchComparison(
+        review.branchId
+      );
+    } catch {
+      // If comparison fails, don't mark anything outdated
+      return { updatedCount: 0, comments: existingComments };
+    }
+
+    // Build a set of current file paths and hunk IDs for quick lookup
+    const currentFiles = new Set(currentComparison.files.map((f) => f.path));
+    const currentHunkIds = new Set<string>();
+    for (const file of currentComparison.files) {
+      for (const hunk of file.hunks) {
+        if (hunk.id) {
+          currentHunkIds.add(hunk.id);
+        }
+      }
+    }
+
+    let updatedCount = 0;
+    const updatedComments = existingComments.map((comment) => {
+      // Skip non-anchored or already outdated comments
+      if (!comment.path || comment.isOutdated) {
+        return comment;
+      }
+
+      // Check if file still exists in current diff
+      if (!currentFiles.has(comment.path)) {
+        updatedCount++;
+        return {
+          ...comment,
+          isOutdated: true,
+          outdatedReason: 'File no longer in diff',
+        };
+      }
+
+      // Check if hunk still exists (if comment has a hunk reference)
+      if (comment.hunkId && !currentHunkIds.has(comment.hunkId)) {
+        updatedCount++;
+        return {
+          ...comment,
+          isOutdated: true,
+          outdatedReason: 'Referenced code section changed',
+        };
+      }
+
+      return comment;
+    });
+
+    // Persist if any comments were updated
+    if (updatedCount > 0) {
+      await db
+        .update(reviews)
+        .set({
+          comments: updatedComments,
+          updatedAt: new Date(),
+        })
+        .where(eq(reviews.id, reviewId));
+    }
+
+    return { updatedCount, comments: updatedComments };
   }
 }
 

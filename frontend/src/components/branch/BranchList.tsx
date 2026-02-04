@@ -10,6 +10,7 @@ interface BranchListProps {
   isLoading?: boolean;
   emptyMessage?: string;
   showOwner?: boolean;
+  showReviewAction?: boolean;
 }
 
 const visibilityIcons: Record<VisibilityType, string> = {
@@ -23,6 +24,7 @@ export function BranchList({
   isLoading,
   emptyMessage = 'No branches found',
   showOwner = false,
+  showReviewAction = false,
 }: BranchListProps) {
   if (isLoading) {
     return (
@@ -51,7 +53,7 @@ export function BranchList({
   return (
     <div className="space-y-3">
       {branches.map((branch) => (
-        <BranchListItem key={branch.id} branch={branch} showOwner={showOwner} />
+        <BranchListItem key={branch.id} branch={branch} showOwner={showOwner} showReviewAction={showReviewAction} />
       ))}
     </div>
   );
@@ -60,9 +62,10 @@ export function BranchList({
 interface BranchListItemProps {
   branch: BranchResponse;
   showOwner?: boolean;
+  showReviewAction?: boolean;
 }
 
-const BranchListItem = memo(function BranchListItem({ branch, showOwner }: BranchListItemProps) {
+const BranchListItem = memo(function BranchListItem({ branch, showOwner, showReviewAction }: BranchListItemProps) {
   const formattedDate = new Date(branch.updatedAt).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -113,7 +116,16 @@ const BranchListItem = memo(function BranchListItem({ branch, showOwner }: Branc
           )}
         </div>
 
-        <div className="ml-4 flex-shrink-0">
+        <div className="ml-4 flex-shrink-0 flex items-center gap-2">
+          {showReviewAction && branch.state === 'review' && (
+            <Link
+              to={`/library?mode=review&branchId=${branch.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="text-xs text-blue-600 hover:text-blue-800 hover:underline whitespace-nowrap"
+            >
+              Review in Context
+            </Link>
+          )}
           <LifecycleStatus state={branch.state as BranchStateType} size="sm" />
         </div>
       </div>

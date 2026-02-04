@@ -10,6 +10,8 @@ import {
 import { InlineEditView, type DraftContent, type InlineEditViewHandle } from '../components/library/InlineEditView';
 import { EditModeHeader } from '../components/library/EditModeHeader';
 import { BranchCreateDialog } from '../components/editor/BranchCreateDialog';
+import { ReviewOverlay } from '../components/review/ReviewOverlay';
+import { ReviewProvider } from '../context/ReviewContext';
 import { usePublishedContent, useContentBySlug } from '../hooks/usePublishedContent';
 import { useEditBranch } from '../hooks/useEditBranch';
 import { useBranch } from '../hooks/useBranch';
@@ -36,13 +38,16 @@ export default function Library() {
   // State for selected content in branch mode (uses content ID, not slug)
   const [selectedBranchContentId, setSelectedBranchContentId] = useState<string | null>(null);
 
-  // Extract mode and branch from URL (for inline edit mode)
-  const mode = (searchParams.get('mode') as 'view' | 'edit') || 'view';
+  // Extract mode and branch from URL (for inline edit mode and review mode)
+  const mode = (searchParams.get('mode') as 'view' | 'edit' | 'review') || 'view';
   const branchId = searchParams.get('branchId') || undefined;
   const contentIdParam = searchParams.get('contentId') || undefined;
 
   // Determine if we're in inline edit mode (editing branch content)
   const isEditMode = mode === 'edit' && !!branchId && !!contentIdParam;
+
+  // Determine if we're in review mode (in-context review overlay)
+  const isReviewMode = mode === 'review' && !!branchId;
 
   // Effective branch ID for content list (from store or URL params in edit mode)
   const effectiveBranchId = currentBranch?.id || (isEditMode ? branchId : undefined);
@@ -233,6 +238,16 @@ export default function Library() {
     });
     setCurrentDraft(null);
     setIsDirty(false);
+  }, [setSearchParams]);
+
+  // Exit review mode
+  const exitReviewMode = useCallback(() => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('mode');
+      next.delete('branchId');
+      return next;
+    });
   }, [setSearchParams]);
 
   // Handle edit request from ContentRenderer
@@ -540,6 +555,16 @@ export default function Library() {
         ) : undefined
       }
     >
+      {/* Review mode overlay */}
+      {isReviewMode && branchId && (
+        <ReviewProvider branchId={branchId}>
+          <ReviewOverlay
+            branchId={branchId}
+            onClose={exitReviewMode}
+          />
+        </ReviewProvider>
+      )}
+
       {isEditMode && editModeContent && currentDraft ? (
         <InlineEditView
           ref={inlineEditViewRef}

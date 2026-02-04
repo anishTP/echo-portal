@@ -11,7 +11,6 @@ import { useReviewComments } from '../hooks/useReviewComments';
 import { useBranchReviews } from '../hooks/useReview';
 import type {
   BranchComparison,
-  FileDiff,
 } from '@echo-portal/shared';
 import type { ReviewResponse, ReviewComment } from '../services/reviewService';
 

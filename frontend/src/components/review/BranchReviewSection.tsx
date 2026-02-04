@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { ReviewPanel } from './ReviewPanel';
+import { SubmitForReviewDialog } from './SubmitForReviewDialog';
 import type { ReviewResponse } from '../../services/reviewService';
 import type { BranchStateType } from '@echo-portal/shared';
 import {
@@ -11,10 +13,26 @@ import {
 interface BranchReviewSectionProps {
   reviews: ReviewResponse[];
   currentUserId: string;
+  branchId: string;
+  branchName: string;
+  branchOwnerId: string;
   branchState?: BranchStateType;
+  availableReviewers?: Array<{ id: string; displayName: string }>;
+  onOpenInContext?: () => void;
 }
 
-export function BranchReviewSection({ reviews, currentUserId, branchState }: BranchReviewSectionProps) {
+export function BranchReviewSection({
+  reviews,
+  currentUserId,
+  branchId,
+  branchName,
+  branchOwnerId,
+  branchState,
+  availableReviewers = [],
+  onOpenInContext,
+}: BranchReviewSectionProps) {
+  const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
+
   const approveMutation = useApproveReview();
   const requestChangesMutation = useRequestChanges();
   const cancelMutation = useCancelReview();
@@ -22,6 +40,9 @@ export function BranchReviewSection({ reviews, currentUserId, branchState }: Bra
 
   const isSubmitting =
     approveMutation.isPending || requestChangesMutation.isPending || cancelMutation.isPending;
+
+  const isOwner = currentUserId === branchOwnerId;
+  const canSubmitForReview = isOwner && branchState === 'draft';
 
   const handleApprove = async (reviewId: string, reason?: string) => {
     await approveMutation.mutateAsync({ id: reviewId, reason });
@@ -48,14 +69,30 @@ export function BranchReviewSection({ reviews, currentUserId, branchState }: Bra
   if (reviews.length === 0) {
     return (
       <div className="mt-8">
-        <h3 className="text-lg font-semibold text-gray-900">Reviews</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-900">Reviews</h3>
+          {canSubmitForReview && (
+            <button
+              onClick={() => setIsSubmitDialogOpen(true)}
+              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              Submit for Review
+            </button>
+          )}
+        </div>
         <div className="mt-3 rounded-lg border border-gray-200 bg-white p-6 text-center">
           {branchState === 'draft' ? (
             <>
               <p className="text-gray-600">This branch hasn't been submitted for review yet.</p>
-              <p className="mt-2 text-sm text-gray-500">
-                The branch owner needs to submit it before you can start reviewing.
-              </p>
+              {isOwner ? (
+                <p className="mt-2 text-sm text-gray-500">
+                  Click "Submit for Review" to request reviews from your team.
+                </p>
+              ) : (
+                <p className="mt-2 text-sm text-gray-500">
+                  The branch owner needs to submit it before you can start reviewing.
+                </p>
+              )}
             </>
           ) : branchState === 'review' ? (
             <>
@@ -68,6 +105,14 @@ export function BranchReviewSection({ reviews, currentUserId, branchState }: Bra
             <p className="text-gray-600">No reviews available for this branch.</p>
           )}
         </div>
+
+        <SubmitForReviewDialog
+          branchId={branchId}
+          branchName={branchName}
+          isOpen={isSubmitDialogOpen}
+          onClose={() => setIsSubmitDialogOpen(false)}
+          availableReviewers={availableReviewers}
+        />
       </div>
     );
   }
@@ -82,7 +127,27 @@ export function BranchReviewSection({ reviews, currentUserId, branchState }: Bra
 
   return (
     <div className="mt-8">
-      <h3 className="text-lg font-semibold text-gray-900">Reviews</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-gray-900">Reviews</h3>
+        <div className="flex items-center gap-2">
+          {onOpenInContext && branchState === 'review' && (
+            <button
+              onClick={onOpenInContext}
+              className="px-3 py-1.5 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
+            >
+              Open in Context
+            </button>
+          )}
+          {canSubmitForReview && (
+            <button
+              onClick={() => setIsSubmitDialogOpen(true)}
+              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              Submit for Review
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Approval progress */}
       <div className="mt-3 rounded-lg border border-gray-200 bg-white p-4">
@@ -115,6 +180,14 @@ export function BranchReviewSection({ reviews, currentUserId, branchState }: Bra
           />
         ))}
       </div>
+
+      <SubmitForReviewDialog
+        branchId={branchId}
+        branchName={branchName}
+        isOpen={isSubmitDialogOpen}
+        onClose={() => setIsSubmitDialogOpen(false)}
+        availableReviewers={availableReviewers}
+      />
     </div>
   );
 }
