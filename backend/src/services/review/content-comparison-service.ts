@@ -12,28 +12,59 @@ import type {
   ContentComparisonStatsItem,
 } from '@echo-portal/shared';
 
+interface ContentMetadata {
+  title: string;
+  description: string | null;
+  category: string | null;
+  tags: string[] | null;
+}
+
+/**
+ * Serialize content metadata into diffable lines.
+ * Produces a YAML-like frontmatter block that can be compared line by line.
+ */
+function serializeMetadata(meta: ContentMetadata): string[] {
+  const lines: string[] = [];
+  lines.push('---');
+  lines.push(`title: ${meta.title}`);
+  if (meta.description) {
+    lines.push(`description: ${meta.description}`);
+  }
+  if (meta.category) {
+    lines.push(`category: ${meta.category}`);
+  }
+  if (meta.tags && meta.tags.length > 0) {
+    lines.push(`tags: ${meta.tags.join(', ')}`);
+  }
+  lines.push('---');
+  return lines;
+}
+
 /**
  * Service for DB-backed content comparison.
  *
  * Bypasses the git/worktree layer entirely and compares content
- * bodies stored in PostgreSQL (contents + contentVersions tables).
+ * stored in PostgreSQL (contents + contentVersions tables).
+ * Compares both metadata (title, description, category, tags) and body.
  */
 export class ContentComparisonService {
   /**
    * Get full content comparison for a branch.
    *
    * For each branch content item:
-   * - Items with sourceContentId + hasEdits: compare against source body
+   * - Items with sourceContentId + hasEdits: compare metadata + body against source
    * - Items without sourceContentId: treat as all-additions (new content)
    * - Items with sourceContentId but no edits: skip (unchanged)
    */
   async getContentComparison(branchId: string): Promise<BranchComparison> {
-    // Get all non-archived content for the branch with their current versions
     const branchContents = await db
       .select({
         id: contents.id,
         title: contents.title,
         slug: contents.slug,
+        description: contents.description,
+        category: contents.category,
+        tags: contents.tags,
         sourceContentId: contents.sourceContentId,
         currentVersionId: contents.currentVersionId,
         createdAt: contents.createdAt,
@@ -56,7 +87,6 @@ export class ContentComparisonService {
     let totalDeletions = 0;
 
     for (const item of branchContents) {
-      // Get the branch content's current version body
       const branchVersion = item.currentVersionId
         ? await db.query.contentVersions.findFirst({
             where: eq(contentVersions.id, item.currentVersionId),
@@ -66,11 +96,10 @@ export class ContentComparisonService {
       const branchBody = branchVersion?.body || '';
 
       if (item.sourceContentId) {
-        // This content was forked from a source — check if it was edited
         const hasEdits = item.createdAt.getTime() !== item.updatedAt.getTime();
-        if (!hasEdits) continue; // Skip unchanged items
+        if (!hasEdits) continue;
 
-        // Fetch source content's current version body
+        // Fetch source content + version
         const sourceContent = await db.query.contents.findFirst({
           where: eq(contents.id, item.sourceContentId),
         });
@@ -83,14 +112,58 @@ export class ContentComparisonService {
 
         const sourceBody = sourceVersion?.body || '';
 
-        // Compute line diff
-        const oldLines = sourceBody.split('\n');
-        const newLines = branchBody.split('\n');
-        const diff = diffService.computeLineDiff(oldLines, newLines);
+        // Compare metadata
+        const sourceMeta: ContentMetadata = {
+          title: sourceContent.title,
+          description: sourceContent.description,
+          category: sourceContent.category,
+          tags: sourceContent.tags,
+        };
+        const branchMeta: ContentMetadata = {
+          title: item.title,
+          description: item.description,
+          category: item.category,
+          tags: item.tags,
+        };
 
-        if (diff.additions === 0 && diff.deletions === 0) continue; // No actual changes
+        const sourceMetaLines = serializeMetadata(sourceMeta);
+        const branchMetaLines = serializeMetadata(branchMeta);
+        const metaDiff = diffService.computeLineDiff(sourceMetaLines, branchMetaLines);
 
-        const hunksWithIds = diff.hunks.map((hunk, index) => ({
+        // Compare body
+        const sourceBodyLines = sourceBody.split('\n');
+        const branchBodyLines = branchBody.split('\n');
+        const bodyDiff = diffService.computeLineDiff(sourceBodyLines, branchBodyLines);
+
+        const totalItemAdditions = metaDiff.additions + bodyDiff.additions;
+        const totalItemDeletions = metaDiff.deletions + bodyDiff.deletions;
+
+        if (totalItemAdditions === 0 && totalItemDeletions === 0) continue;
+
+        // Combine hunks: metadata hunks first, then body hunks (skip context-only hunks)
+        const allHunks: LocalDiffHunk[] = [];
+        for (const hunk of metaDiff.hunks) {
+          if (hunk.lines.some((l) => l.type !== 'context')) {
+            allHunks.push(hunk);
+          }
+        }
+        for (const hunk of bodyDiff.hunks) {
+          if (!hunk.lines.some((l) => l.type !== 'context')) continue;
+          // Offset body hunk line numbers to account for metadata block
+          const metaLineCount = sourceMetaLines.length;
+          allHunks.push({
+            ...hunk,
+            oldStart: hunk.oldStart > 0 ? hunk.oldStart + metaLineCount : hunk.oldStart,
+            newStart: hunk.newStart > 0 ? hunk.newStart + metaLineCount : hunk.newStart,
+            lines: hunk.lines.map((line) => ({
+              ...line,
+              oldLineNumber: line.oldLineNumber ? line.oldLineNumber + metaLineCount : undefined,
+              newLineNumber: line.newLineNumber ? line.newLineNumber + metaLineCount : undefined,
+            })),
+          });
+        }
+
+        const hunksWithIds = allHunks.map((hunk, index) => ({
           ...hunk,
           id: this.generateHunkId(item.title, index, hunk),
         }));
@@ -99,19 +172,28 @@ export class ContentComparisonService {
           path: item.title,
           contentId: item.id,
           status: 'modified' as const,
-          additions: diff.additions,
-          deletions: diff.deletions,
+          additions: totalItemAdditions,
+          deletions: totalItemDeletions,
           hunks: hunksWithIds,
         });
 
-        totalAdditions += diff.additions;
-        totalDeletions += diff.deletions;
+        totalAdditions += totalItemAdditions;
+        totalDeletions += totalItemDeletions;
       } else {
-        // New content (no source) — treat all lines as additions
-        const lines = branchBody.split('\n');
-        if (lines.length === 0 || (lines.length === 1 && lines[0] === '')) continue;
+        // New content (no source) — combine metadata + body as all-additions
+        const branchMeta: ContentMetadata = {
+          title: item.title,
+          description: item.description,
+          category: item.category,
+          tags: item.tags,
+        };
+        const metaLines = serializeMetadata(branchMeta);
+        const bodyLines = branchBody.split('\n');
+        const allLines = [...metaLines, '', ...bodyLines];
 
-        const hunks = diffService.createAdditionHunks(lines);
+        if (allLines.length === 0) continue;
+
+        const hunks = diffService.createAdditionHunks(allLines);
         const hunksWithIds = hunks.map((hunk, index) => ({
           ...hunk,
           id: this.generateHunkId(item.title, index, hunk),
@@ -121,12 +203,12 @@ export class ContentComparisonService {
           path: item.title,
           contentId: item.id,
           status: 'added' as const,
-          additions: lines.length,
+          additions: allLines.length,
           deletions: 0,
           hunks: hunksWithIds,
         });
 
-        totalAdditions += lines.length;
+        totalAdditions += allLines.length;
       }
     }
 
@@ -155,6 +237,9 @@ export class ContentComparisonService {
       .select({
         id: contents.id,
         title: contents.title,
+        description: contents.description,
+        category: contents.category,
+        tags: contents.tags,
         sourceContentId: contents.sourceContentId,
         currentVersionId: contents.currentVersionId,
         createdAt: contents.createdAt,
@@ -197,36 +282,66 @@ export class ContentComparisonService {
 
         const sourceBody = sourceVersion?.body || '';
 
-        // Count additions/deletions without building full hunks
-        const oldLines = sourceBody.split('\n');
-        const newLines = branchBody.split('\n');
-        const diff = diffService.computeLineDiff(oldLines, newLines);
+        // Compare metadata
+        const sourceMeta: ContentMetadata = {
+          title: sourceContent.title,
+          description: sourceContent.description,
+          category: sourceContent.category,
+          tags: sourceContent.tags,
+        };
+        const branchMeta: ContentMetadata = {
+          title: item.title,
+          description: item.description,
+          category: item.category,
+          tags: item.tags,
+        };
 
-        if (diff.additions === 0 && diff.deletions === 0) continue;
+        const sourceMetaLines = serializeMetadata(sourceMeta);
+        const branchMetaLines = serializeMetadata(branchMeta);
+        const metaDiff = diffService.computeLineDiff(sourceMetaLines, branchMetaLines);
+
+        // Compare body
+        const sourceBodyLines = sourceBody.split('\n');
+        const branchBodyLines = branchBody.split('\n');
+        const bodyDiff = diffService.computeLineDiff(sourceBodyLines, branchBodyLines);
+
+        const additions = metaDiff.additions + bodyDiff.additions;
+        const deletions = metaDiff.deletions + bodyDiff.deletions;
+
+        if (additions === 0 && deletions === 0) continue;
 
         items.push({
           contentId: item.id,
           title: item.title,
           status: 'modified',
-          additions: diff.additions,
-          deletions: diff.deletions,
+          additions,
+          deletions,
         });
 
-        totalAdditions += diff.additions;
-        totalDeletions += diff.deletions;
+        totalAdditions += additions;
+        totalDeletions += deletions;
       } else {
-        const lines = branchBody.split('\n');
-        if (lines.length === 0 || (lines.length === 1 && lines[0] === '')) continue;
+        const branchMeta: ContentMetadata = {
+          title: item.title,
+          description: item.description,
+          category: item.category,
+          tags: item.tags,
+        };
+        const metaLines = serializeMetadata(branchMeta);
+        const bodyLines = branchBody.split('\n');
+        const allLineCount = metaLines.length + 1 + bodyLines.length; // +1 for blank separator
+
+        if (allLineCount <= 1) continue;
 
         items.push({
           contentId: item.id,
           title: item.title,
           status: 'added',
-          additions: lines.length,
+          additions: allLineCount,
           deletions: 0,
         });
 
-        totalAdditions += lines.length;
+        totalAdditions += allLineCount;
       }
     }
 
