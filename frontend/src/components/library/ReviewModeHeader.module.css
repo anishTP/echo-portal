@@ -1,0 +1,75 @@
+/* ReviewModeHeader.module.css */
+/* Header banner for Library review mode */
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--blue-2);
+  border-bottom: 1px solid var(--blue-6);
+  padding: var(--space-3) var(--space-4);
+}
+
+.content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 100%;
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  flex: 1;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.closeButton {
+  flex-shrink: 0;
+}
+
+.branchBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  background: var(--blue-3);
+  border-radius: var(--radius-2);
+  color: var(--blue-11);
+  flex-shrink: 0;
+}
+
+.statsText {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.addition {
+  color: var(--green-11);
+  font-family: var(--code-font-family);
+}
+
+.deletion {
+  color: var(--red-11);
+  font-family: var(--code-font-family);
+}
+
+.decisionButtons {
+  display: flex;
+  align-items: center;
+}
+
+/* Override ReviewDecisionPanel styling when embedded in header */
+.decisionButtons > div {
+  padding: 0;
+  background: transparent;
+  border: none;
+}

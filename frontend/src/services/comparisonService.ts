@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { BranchComparison, FileDiff } from '@echo-portal/shared';
+import type { BranchComparison, FileDiff, ContentComparisonStats } from '@echo-portal/shared';
 
 /**
  * API client for branch comparison operations
@@ -32,6 +32,21 @@ export const comparisonService = {
     return api.get<FileDiff>(
       `/branches/${branchId}/comparison/files/${encodedPath}${params}`
     );
+  },
+
+  /**
+   * Get DB-backed content comparison for a branch
+   * Compares content bodies stored in PostgreSQL
+   */
+  getContentComparison: (branchId: string): Promise<BranchComparison> => {
+    return api.get<BranchComparison>(`/branches/${branchId}/content-comparison`);
+  },
+
+  /**
+   * Get lightweight content comparison stats for sidebar display
+   */
+  getContentComparisonStats: (branchId: string): Promise<ContentComparisonStats> => {
+    return api.get<ContentComparisonStats>(`/branches/${branchId}/content-comparison/stats`);
   },
 };
 

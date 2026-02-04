@@ -9,15 +9,17 @@ import {
 } from '../components/library';
 import { InlineEditView, type DraftContent, type InlineEditViewHandle } from '../components/library/InlineEditView';
 import { EditModeHeader } from '../components/library/EditModeHeader';
+import { ReviewModeHeader } from '../components/library/ReviewModeHeader';
+import { ReviewDiffView } from '../components/library/ReviewDiffView';
 import { BranchCreateDialog } from '../components/editor/BranchCreateDialog';
-import { ReviewOverlay } from '../components/review/ReviewOverlay';
-import { ReviewProvider } from '../context/ReviewContext';
 import { usePublishedContent, useContentBySlug } from '../hooks/usePublishedContent';
 import { useEditBranch } from '../hooks/useEditBranch';
 import { useBranch } from '../hooks/useBranch';
 import { useContent, useContentList, useDeleteContent, contentKeys } from '../hooks/useContent';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { useDraftSync } from '../hooks/useDraftSync';
+import { useContentComparison, useContentComparisonStats } from '../hooks/useContentComparison';
+import { useBranchReviews, useApproveReview, useRequestChanges } from '../hooks/useReview';
 import { useBranchStore } from '../stores/branchStore';
 import { useAuth } from '../context/AuthContext';
 import type { ContentSummary } from '@echo-portal/shared';
@@ -118,6 +120,32 @@ export default function Library() {
   // Fetch branch data for the effective branch (either from URL in edit mode, or from store in branch mode)
   // This ensures the query is active so invalidation after submit-for-review triggers a refetch
   const { data: activeBranch } = useBranch(effectiveBranchId);
+
+  // Content comparison for review mode (DB-backed, bypasses git worktrees)
+  const { data: contentComparison, isLoading: isComparisonLoading } = useContentComparison(
+    isReviewMode ? branchId : undefined
+  );
+  const { data: comparisonStats } = useContentComparisonStats(
+    isReviewMode ? effectiveBranchId : undefined
+  );
+
+  // Reviews for review mode
+  const { data: branchReviews } = useBranchReviews(isReviewMode ? branchId : undefined);
+  const approveReview = useApproveReview();
+  const requestChanges = useRequestChanges();
+
+  // Find the active review (current user's pending/in_progress review)
+  const activeReview = branchReviews?.find(
+    (r) => r.reviewerId === user?.id && (r.status === 'pending' || r.status === 'in_progress')
+  ) ?? null;
+
+  // Review display mode state
+  const [reviewDisplayMode, setReviewDisplayMode] = useState<'unified' | 'split'>('unified');
+
+  // Find the selected item's diff in review mode
+  const selectedFileDiff = contentComparison?.files.find(
+    (f) => f.contentId === (selectedBranchContentId || contentIdParam)
+  ) ?? null;
 
   // Fetch branch content when in edit mode
   const { data: editModeContent } = useContent(contentIdParam);
@@ -521,10 +549,23 @@ export default function Library() {
             // Branch query is already invalidated by SubmitForReviewButton via invalidateWorkflowQueries
             // This callback can be used for any additional UI updates if needed
           }}
+          onOpenReview={
+            (activeBranch?.state || currentBranch?.state) === 'review' && effectiveBranchId
+              ? () => {
+                  setSearchParams((prev) => {
+                    const next = new URLSearchParams(prev);
+                    next.set('mode', 'review');
+                    next.set('branchId', effectiveBranchId);
+                    return next;
+                  });
+                }
+              : undefined
+          }
+          reviewStats={isReviewMode ? comparisonStats : undefined}
         />
       }
       rightSidebar={
-        isEditMode ? undefined : contentForView ? (
+        isEditMode || isReviewMode ? undefined : contentForView ? (
           <ContentMetadataSidebar
             author={{
               name: contentForView.createdBy.displayName,
@@ -552,20 +593,38 @@ export default function Library() {
             isDeleting={deleteMutation.isPending}
             deleteError={deleteError}
           />
+        ) : isReviewMode ? (
+          <ReviewModeHeader
+            branchName={activeBranch?.name || ''}
+            onClose={exitReviewMode}
+            stats={contentComparison?.stats ?? null}
+            displayMode={reviewDisplayMode}
+            onDisplayModeChange={setReviewDisplayMode}
+            reviews={branchReviews ?? []}
+            activeReview={activeReview}
+            currentUserId={user?.id || ''}
+            onApprove={async (reason) => {
+              if (activeReview) {
+                await approveReview.mutateAsync({ id: activeReview.id, reason });
+              }
+            }}
+            onRequestChanges={async (reason) => {
+              if (activeReview) {
+                await requestChanges.mutateAsync({ id: activeReview.id, reason });
+              }
+            }}
+            isSubmitting={approveReview.isPending || requestChanges.isPending}
+          />
         ) : undefined
       }
     >
-      {/* Review mode overlay */}
-      {isReviewMode && branchId && (
-        <ReviewProvider branchId={branchId}>
-          <ReviewOverlay
-            branchId={branchId}
-            onClose={exitReviewMode}
-          />
-        </ReviewProvider>
-      )}
-
-      {isEditMode && editModeContent && currentDraft ? (
+      {isReviewMode ? (
+        <ReviewDiffView
+          file={selectedFileDiff}
+          displayMode={reviewDisplayMode}
+          isLoading={isComparisonLoading}
+        />
+      ) : isEditMode && editModeContent && currentDraft ? (
         <InlineEditView
           ref={inlineEditViewRef}
           content={editModeContent}

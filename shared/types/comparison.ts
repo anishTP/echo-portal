@@ -27,6 +27,7 @@ export interface BranchComparison {
 
 export interface FileDiff {
   path: string;
+  contentId?: string;                  // Content UUID for DB-backed comparisons
   status: FileStatus;
   oldPath?: string;                    // Original path for renamed files
   additions: number;
@@ -85,4 +86,22 @@ export interface FileDiffRequest {
   branchId: string;
   filePath: string;
   snapshotId?: string;
+}
+
+// ============================================
+// CONTENT COMPARISON TYPES (DB-backed)
+// ============================================
+
+export interface ContentComparisonStats {
+  branchId: string;
+  items: ContentComparisonStatsItem[];
+  totals: DiffStats;
+}
+
+export interface ContentComparisonStatsItem {
+  contentId: string;
+  title: string;
+  status: 'added' | 'modified';
+  additions: number;
+  deletions: number;
 }

@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { comparisonService } from '../../services/review/comparison-service.js';
+import { contentComparisonService } from '../../services/review/content-comparison-service.js';
 import { requireAuth, type AuthEnv } from '../middleware/auth.js';
 import { success } from '../utils/responses.js';
 import { NotFoundError } from '../utils/errors.js';
@@ -67,6 +68,41 @@ comparisonRoutes.get(
     }
 
     return success(c, fileDiff);
+  }
+);
+
+/**
+ * GET /api/v1/branches/:branchId/content-comparison
+ * Get DB-backed content comparison for a branch
+ *
+ * Compares content bodies stored in PostgreSQL instead of git worktrees.
+ * Returns diffs for all modified/added content items in the branch.
+ */
+comparisonRoutes.get(
+  '/branches/:branchId/content-comparison',
+  requireAuth,
+  zValidator('param', branchIdParamSchema),
+  async (c) => {
+    const { branchId } = c.req.valid('param');
+    const comparison = await contentComparisonService.getContentComparison(branchId);
+    return success(c, comparison);
+  }
+);
+
+/**
+ * GET /api/v1/branches/:branchId/content-comparison/stats
+ * Get lightweight content comparison stats for sidebar display
+ *
+ * Returns per-item addition/deletion counts without full hunk data.
+ */
+comparisonRoutes.get(
+  '/branches/:branchId/content-comparison/stats',
+  requireAuth,
+  zValidator('param', branchIdParamSchema),
+  async (c) => {
+    const { branchId } = c.req.valid('param');
+    const stats = await contentComparisonService.getContentComparisonStats(branchId);
+    return success(c, stats);
   }
 );
 

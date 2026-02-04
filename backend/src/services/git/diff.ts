@@ -143,7 +143,7 @@ export class DiffService {
   /**
    * Create hunks for a fully added file
    */
-  private createAdditionHunks(lines: string[]): DiffHunk[] {
+  createAdditionHunks(lines: string[]): DiffHunk[] {
     if (lines.length === 0) return [];
 
     return [
@@ -186,7 +186,7 @@ export class DiffService {
    * Compute line-by-line diff between two versions
    * Uses a simple LCS-based diff algorithm
    */
-  private computeLineDiff(
+  computeLineDiff(
     oldLines: string[],
     newLines: string[]
   ): { hunks: DiffHunk[]; additions: number; deletions: number } {
@@ -272,7 +272,7 @@ export class DiffService {
   /**
    * Compute longest common subsequence of two arrays
    */
-  private longestCommonSubsequence(a: string[], b: string[]): string[] {
+  longestCommonSubsequence(a: string[], b: string[]): string[] {
     const m = a.length;
     const n = b.length;
     const dp: number[][] = Array(m + 1)
