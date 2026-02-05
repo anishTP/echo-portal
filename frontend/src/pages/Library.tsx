@@ -527,6 +527,7 @@ export default function Library() {
 
   return (
     <DocumentationLayout
+      fullWidth={isReviewMode && reviewDisplayMode === 'split'}
       sidebar={
         <LibrarySidebar
           search={search}

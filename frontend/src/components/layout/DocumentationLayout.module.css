@@ -46,6 +46,12 @@
   width: 100%;
 }
 
+.mainContentFullWidth {
+  flex: 1;
+  padding: var(--space-6);
+  width: 100%;
+}
+
 /* Right Sidebar */
 .rightSidebar {
   width: 240px;
