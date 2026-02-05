@@ -45,51 +45,48 @@
    COMMENT INDICATOR ICONS
    ============================================ */
 
-/* Indicator positioned at end of line */
+/* Just the icon, no container background */
 .indicator {
   position: absolute;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  background: var(--accent-9);
-  color: white;
+  padding: 0;
+  background: transparent;
+  color: var(--accent-9);
   border: none;
-  border-radius: var(--radius-2);
-  font-size: var(--font-size-1);
   cursor: pointer;
   z-index: 10;
-  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: color 0.15s ease, transform 0.15s ease;
   transform: translateY(-50%); /* Center vertically on the line */
 }
 
 .indicator:hover {
-  background: var(--accent-10);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-  transform: translateY(-50%) scale(1.05);
+  color: var(--accent-11);
+  transform: translateY(-50%) scale(1.1);
 }
 
 .indicator:focus-visible {
   outline: 2px solid var(--accent-7);
   outline-offset: 2px;
+  border-radius: var(--radius-1);
 }
 
 .indicator svg {
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
 }
 
-/* Contextual indicator variants - all use brand color but with subtle border */
+/* All contextual variants use the same brand color */
 .indicator--default,
 .indicator--addition,
 .indicator--deletion {
-  /* All use the same brand color */
-  background: var(--accent-9);
+  color: var(--accent-9);
 }
 
 .indicator--default:hover,
 .indicator--addition:hover,
 .indicator--deletion:hover {
-  background: var(--accent-10);
+  color: var(--accent-11);
 }

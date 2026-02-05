@@ -271,8 +271,8 @@ export function CommentHighlights({
             title="View comment"
             aria-label="View comment"
           >
-            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M2.5 2a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h2v2l3-2h6a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5h-11Z" />
+            <svg viewBox="0 0 16 16" fill="currentColor">
+              <path d="M2 2.5A1.5 1.5 0 0 1 3.5 1h9A1.5 1.5 0 0 1 14 2.5v7a1.5 1.5 0 0 1-1.5 1.5H8.5l-3 2.5V11H3.5A1.5 1.5 0 0 1 2 9.5v-7Z" />
             </svg>
           </button>
         </div>
