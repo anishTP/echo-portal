@@ -89,7 +89,7 @@ export function CommentPopover({ selection, onSubmit, onCancel }: CommentPopover
     : selection.text;
 
   return (
-    <div ref={popoverRef} className={styles.popover} style={style}>
+    <div ref={popoverRef} className={styles.popover} style={style} data-comment-popover>
       <form onSubmit={handleSubmit}>
         <div className={styles.selectedTextPreview}>
           "{previewText}"

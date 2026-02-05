@@ -46,10 +46,19 @@ function getCharacterOffset(container: HTMLElement, targetNode: Node, targetOffs
 export function useTextSelection(containerRef: RefObject<HTMLElement | null>) {
   const [selection, setSelection] = useState<TextSelection | null>(null);
 
-  const handleMouseUp = useCallback(() => {
+  const handleMouseUp = useCallback((event: MouseEvent) => {
+    // Don't clear selection if clicking inside a popover or form element
+    // This prevents the selection from being cleared when submitting a comment
+    const target = event.target as HTMLElement;
+    const isInsidePopover = target.closest('[data-comment-popover]');
+    const isFormElement = target.closest('button, input, textarea, [role="button"]');
+
     const sel = window.getSelection();
     if (!sel || sel.isCollapsed || !sel.toString().trim()) {
-      setSelection(null);
+      // Only clear if NOT clicking inside a comment popover or form element
+      if (!isInsidePopover && !isFormElement) {
+        setSelection(null);
+      }
       return;
     }
 
