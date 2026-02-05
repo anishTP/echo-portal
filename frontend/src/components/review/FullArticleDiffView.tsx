@@ -164,45 +164,30 @@ function UnifiedArticleView({
   const currentMeta = metadata.new || metadata.old;
   const body = newContent || oldContent || '';
 
-  // Check if metadata changed
-  const metaChanged = metadata.old && metadata.new && (
-    metadata.old.title !== metadata.new.title ||
-    metadata.old.description !== metadata.new.description ||
-    metadata.old.category !== metadata.new.category ||
-    JSON.stringify(metadata.old.tags) !== JSON.stringify(metadata.new.tags)
-  );
+  // Check specific field changes for highlighting
+  const titleChanged = metadata.old && metadata.new && metadata.old.title !== metadata.new.title;
+  const descriptionChanged = metadata.old && metadata.new && metadata.old.description !== metadata.new.description;
+  const categoryChanged = metadata.old && metadata.new && metadata.old.category !== metadata.new.category;
 
   return (
     <article className={styles.article}>
       {/* Category breadcrumb */}
       {currentMeta?.category && (
-        <div className={styles.breadcrumb}>
+        <div className={`${styles.breadcrumb} ${categoryChanged ? styles.highlightAddition : ''}`}>
           <Link to={`/?category=${encodeURIComponent(currentMeta.category)}`}>
             {currentMeta.category}
           </Link>
-          {metaChanged && metadata.old?.category !== metadata.new?.category && (
-            <span className={styles.metaChangeBadge}>Changed</span>
-          )}
         </div>
       )}
 
       {/* Header */}
       <header className={styles.header}>
-        <h1 className={styles.title}>
+        <h1 className={`${styles.title} ${titleChanged ? styles.highlightAddition : ''}`}>
           {currentMeta?.title}
-          {metaChanged && metadata.old?.title !== metadata.new?.title && (
-            <span className={styles.titleChange}>
-              <span className={styles.oldTitle}>{metadata.old?.title}</span>
-              <span className={styles.arrow}>&rarr;</span>
-            </span>
-          )}
         </h1>
         {currentMeta?.description && (
-          <p className={styles.description}>
+          <p className={`${styles.description} ${descriptionChanged ? styles.highlightAddition : ''}`}>
             {currentMeta.description}
-            {metaChanged && metadata.old?.description !== metadata.new?.description && (
-              <span className={styles.metaChangeBadge}>Updated</span>
-            )}
           </p>
         )}
       </header>
