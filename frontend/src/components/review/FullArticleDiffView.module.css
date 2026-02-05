@@ -100,7 +100,7 @@
 }
 
 .markdownBody {
-  max-width: 65ch;
+  max-width: 100%;
 }
 
 /* Markdown content styles (matching ContentRenderer) */
