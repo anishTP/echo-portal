@@ -194,6 +194,8 @@ export function DiffView({
                         commentingAt={
                           commentingAt?.path === file.path ? commentingAt : null
                         }
+                        additions={file.additions}
+                        deletions={file.deletions}
                       />
                     ))}
                   </div>

@@ -256,6 +256,20 @@ export const reviewService = {
   getReviewStatus: (branchId: string): Promise<ReviewStatusResponse> => {
     return api.get<ReviewStatusResponse>(`/branches/${branchId}/review-status`);
   },
+
+  /**
+   * Add a reviewer to a review/branch
+   */
+  addReviewer: (reviewId: string, reviewerId: string): Promise<ReviewResponse> => {
+    return api.post<ReviewResponse>(`/reviews/${reviewId}/reviewers`, { reviewerId });
+  },
+
+  /**
+   * Remove a reviewer from a review/branch
+   */
+  removeReviewer: (reviewId: string, userId: string): Promise<void> => {
+    return api.delete(`/reviews/${reviewId}/reviewers/${userId}`);
+  },
 };
 
 export default reviewService;

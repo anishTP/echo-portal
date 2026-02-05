@@ -7,10 +7,21 @@
   overflow-x: auto;
 }
 
+.containerUnified {
+  /* Let unified view flow like prose content */
+  padding: 0;
+}
+
 .diffWrapper {
   border: 1px solid var(--gray-5);
   border-radius: var(--radius-3);
   overflow: hidden;
+}
+
+.diffWrapperUnified {
+  /* Remove border for unified mode to feel more like the editor */
+  border: none;
+  border-radius: 0;
 }
 
 .hunks {
