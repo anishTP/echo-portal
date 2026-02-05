@@ -10,9 +10,18 @@ export interface ReviewDiffViewProps {
   file: FileDiff | null;
   displayMode: 'unified' | 'split';
   isLoading: boolean;
+  /** Comments for this review */
+  comments?: ReviewComment[];
+  /** Currently active comment form location */
+  commentingAt?: { path: string; line: number; side: 'old' | 'new' } | null;
+  /** Called when user clicks on a line to add a comment */
+  onLineClick?: (path: string, line: number, side: 'old' | 'new') => void;
+  /** Called when user submits a comment */
+  onSubmitComment?: (content: string) => Promise<void>;
+  /** Called when user cancels the comment form */
+  onCancelComment?: () => void;
 }
 
-const noopGetComments = (): ReviewComment[] => [];
 
 /**
  * Main content component showing the diff for a single selected content item.
@@ -22,6 +31,11 @@ export function ReviewDiffView({
   file,
   displayMode,
   isLoading,
+  comments,
+  commentingAt,
+  onLineClick,
+  onSubmitComment,
+  onCancelComment,
 }: ReviewDiffViewProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -55,6 +69,12 @@ export function ReviewDiffView({
     );
   }
 
+  // Helper to get comments for a specific line
+  const getComments = (path: string, line: number, side: 'old' | 'new') => {
+    if (!comments) return [];
+    return comments.filter(c => c.path === path && c.line === line && c.side === side);
+  };
+
   // Use full article view when fullContent is available
   if (file.fullContent) {
     return (
@@ -62,7 +82,11 @@ export function ReviewDiffView({
         <FullArticleDiffView
           file={file}
           displayMode={displayMode}
-          getComments={noopGetComments}
+          getComments={getComments}
+          onLineClick={onLineClick ? (line, side) => onLineClick(file.path, line, side) : undefined}
+          commentingAt={commentingAt?.path === file.path ? { line: commentingAt.line, side: commentingAt.side } : null}
+          onSubmitComment={onSubmitComment}
+          onCancelComment={onCancelComment}
         />
       </div>
     );
@@ -100,7 +124,7 @@ export function ReviewDiffView({
                 hunk={hunk}
                 filePath={file.path}
                 displayMode={displayMode}
-                getComments={noopGetComments}
+                getComments={getComments}
                 additions={file.additions}
                 deletions={file.deletions}
               />

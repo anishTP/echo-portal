@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 import type { FileDiff } from '@echo-portal/shared';
 import type { ReviewComment } from '../../services/reviewService';
 import { DiffMarkdownRenderer } from './DiffMarkdownRenderer';
+import { InlineCommentForm } from './InlineCommentForm';
 import styles from './FullArticleDiffView.module.css';
 
 interface FullArticleDiffViewProps {
@@ -16,6 +17,12 @@ interface FullArticleDiffViewProps {
   displayMode: 'unified' | 'split';
   getComments: (path: string, line: number, side: 'old' | 'new') => ReviewComment[];
   onLineClick?: (line: number, side: 'old' | 'new') => void;
+  /** Currently active comment form location (path already filtered by parent) */
+  commentingAt?: { line: number; side: 'old' | 'new' } | null;
+  /** Called when user submits a comment */
+  onSubmitComment?: (content: string) => Promise<void>;
+  /** Called when user cancels the comment form */
+  onCancelComment?: () => void;
 }
 
 export function FullArticleDiffView({
@@ -23,6 +30,9 @@ export function FullArticleDiffView({
   displayMode,
   getComments,
   onLineClick,
+  commentingAt,
+  onSubmitComment,
+  onCancelComment,
 }: FullArticleDiffViewProps) {
   const { fullContent, hunks, additions, deletions } = file;
 
@@ -43,6 +53,11 @@ export function FullArticleDiffView({
         oldContent={oldContent}
         newContent={newContent}
         metadata={metadata}
+        filePath={file.path}
+        onLineClick={onLineClick}
+        commentingAt={commentingAt}
+        onSubmitComment={onSubmitComment}
+        onCancelComment={onCancelComment}
       />
     );
   }
@@ -66,11 +81,17 @@ export function FullArticleDiffView({
 /**
  * Unified view - Full rendered article as clean prose.
  * Metadata changes shown in header, body rendered without highlighting.
+ * Changed content is clickable to add comments.
  */
 function UnifiedArticleView({
   oldContent,
   newContent,
   metadata,
+  filePath,
+  onLineClick,
+  commentingAt,
+  onSubmitComment,
+  onCancelComment,
 }: {
   oldContent: string | null;
   newContent: string | null;
@@ -78,6 +99,11 @@ function UnifiedArticleView({
     old: { title: string; description: string | null; category: string | null; tags: string[] } | null;
     new: { title: string; description: string | null; category: string | null; tags: string[] } | null;
   };
+  filePath: string;
+  onLineClick?: (line: number, side: 'old' | 'new') => void;
+  commentingAt?: { line: number; side: 'old' | 'new' } | null;
+  onSubmitComment?: (content: string) => Promise<void>;
+  onCancelComment?: () => void;
 }) {
   const currentMeta = metadata.new || metadata.old;
   const body = newContent || oldContent || '';
@@ -87,20 +113,54 @@ function UnifiedArticleView({
   const descriptionChanged = metadata.old && metadata.new && metadata.old.description !== metadata.new.description;
   const categoryChanged = metadata.old && metadata.new && metadata.old.category !== metadata.new.category;
 
+  // Line numbers for clickable elements (conventional assignments for metadata)
+  const TITLE_LINE = 1;
+  const DESCRIPTION_LINE = 2;
+  const CATEGORY_LINE = 3;
+
+  // Helper to make changed content clickable
+  const clickableProps = (line: number, side: 'old' | 'new') => {
+    if (!onLineClick) return {};
+    return {
+      onClick: () => onLineClick(line, side),
+      className: styles.clickableContent,
+      role: 'button' as const,
+      tabIndex: 0,
+      onKeyDown: (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onLineClick(line, side);
+        }
+      },
+    };
+  };
+
+  // Check if comment form should show for a specific line
+  const showCommentFormAt = (line: number) => {
+    return commentingAt?.line === line;
+  };
+
   return (
     <article className={styles.article}>
       {/* Category breadcrumb */}
       {(currentMeta?.category || (categoryChanged && metadata.old?.category)) && (
         <div className={styles.breadcrumb}>
           {categoryChanged && metadata.old?.category && (
-            <span className={styles.highlightDeletion}>
+            <span
+              className={`${styles.highlightDeletion} ${onLineClick ? styles.clickableContent : ''}`}
+              {...(categoryChanged ? clickableProps(CATEGORY_LINE, 'old') : {})}
+            >
               {metadata.old.category}
             </span>
           )}
           {currentMeta?.category && (
             <Link
               to={`/?category=${encodeURIComponent(currentMeta.category)}`}
-              className={categoryChanged ? styles.highlightAddition : ''}
+              className={`${categoryChanged ? styles.highlightAddition : ''} ${categoryChanged && onLineClick ? styles.clickableContent : ''}`}
+              onClick={categoryChanged && onLineClick ? (e) => {
+                e.preventDefault();
+                onLineClick(CATEGORY_LINE, 'new');
+              } : undefined}
             >
               {currentMeta.category}
             </Link>
@@ -108,28 +168,82 @@ function UnifiedArticleView({
         </div>
       )}
 
+      {/* Comment form for category */}
+      {showCommentFormAt(CATEGORY_LINE) && onSubmitComment && onCancelComment && (
+        <div className={styles.commentFormContainer}>
+          <InlineCommentForm
+            path={filePath}
+            line={CATEGORY_LINE}
+            side={commentingAt!.side}
+            onSubmit={onSubmitComment}
+            onCancel={onCancelComment}
+            placeholder="Add a comment about the category change..."
+          />
+        </div>
+      )}
+
       {/* Header */}
       <header className={styles.header}>
         {/* Title: show old (red) then new (green) if changed */}
         {titleChanged && metadata.old?.title && (
-          <h1 className={`${styles.title} ${styles.highlightDeletion}`}>
+          <h1
+            className={`${styles.title} ${styles.highlightDeletion} ${onLineClick ? styles.clickableContent : ''}`}
+            {...clickableProps(TITLE_LINE, 'old')}
+          >
             {metadata.old.title}
           </h1>
         )}
-        <h1 className={`${styles.title} ${titleChanged ? styles.highlightAddition : ''}`}>
+        <h1
+          className={`${styles.title} ${titleChanged ? styles.highlightAddition : ''} ${titleChanged && onLineClick ? styles.clickableContent : ''}`}
+          {...(titleChanged ? clickableProps(TITLE_LINE, 'new') : {})}
+        >
           {currentMeta?.title}
         </h1>
 
+        {/* Comment form for title */}
+        {showCommentFormAt(TITLE_LINE) && onSubmitComment && onCancelComment && (
+          <div className={styles.commentFormContainer}>
+            <InlineCommentForm
+              path={filePath}
+              line={TITLE_LINE}
+              side={commentingAt!.side}
+              onSubmit={onSubmitComment}
+              onCancel={onCancelComment}
+              placeholder="Add a comment about the title change..."
+            />
+          </div>
+        )}
+
         {/* Description: show old (red) then new (green) if changed */}
         {descriptionChanged && metadata.old?.description && (
-          <p className={`${styles.description} ${styles.highlightDeletion}`}>
+          <p
+            className={`${styles.description} ${styles.highlightDeletion} ${onLineClick ? styles.clickableContent : ''}`}
+            {...clickableProps(DESCRIPTION_LINE, 'old')}
+          >
             {metadata.old.description}
           </p>
         )}
         {currentMeta?.description && (
-          <p className={`${styles.description} ${descriptionChanged ? styles.highlightAddition : ''}`}>
+          <p
+            className={`${styles.description} ${descriptionChanged ? styles.highlightAddition : ''} ${descriptionChanged && onLineClick ? styles.clickableContent : ''}`}
+            {...(descriptionChanged ? clickableProps(DESCRIPTION_LINE, 'new') : {})}
+          >
             {currentMeta.description}
           </p>
+        )}
+
+        {/* Comment form for description */}
+        {showCommentFormAt(DESCRIPTION_LINE) && onSubmitComment && onCancelComment && (
+          <div className={styles.commentFormContainer}>
+            <InlineCommentForm
+              path={filePath}
+              line={DESCRIPTION_LINE}
+              side={commentingAt!.side}
+              onSubmit={onSubmitComment}
+              onCancel={onCancelComment}
+              placeholder="Add a comment about the description change..."
+            />
+          </div>
         )}
       </header>
 

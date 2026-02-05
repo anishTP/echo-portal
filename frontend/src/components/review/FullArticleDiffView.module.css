@@ -516,3 +516,31 @@
   border-radius: var(--radius-3);
   text-align: center;
 }
+
+/* ============================================
+   CLICKABLE CONTENT & COMMENT FORM
+   ============================================ */
+
+.clickableContent {
+  cursor: pointer;
+  transition: outline 0.15s ease, background 0.15s ease;
+  border-radius: var(--radius-2);
+}
+
+.clickableContent:hover {
+  outline: 2px solid var(--accent-7);
+  outline-offset: 2px;
+}
+
+.clickableContent:focus-visible {
+  outline: 2px solid var(--accent-9);
+  outline-offset: 2px;
+}
+
+.commentFormContainer {
+  margin: var(--space-4) 0;
+  padding: var(--space-3);
+  background: var(--gray-2);
+  border: 1px solid var(--gray-5);
+  border-radius: var(--radius-3);
+}

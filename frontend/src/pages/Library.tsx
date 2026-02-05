@@ -20,6 +20,7 @@ import { useAutoSave } from '../hooks/useAutoSave';
 import { useDraftSync } from '../hooks/useDraftSync';
 import { useContentComparison, useContentComparisonStats } from '../hooks/useContentComparison';
 import { useBranchReviews, useApproveReview, useRequestChanges } from '../hooks/useReview';
+import { useReviewComments } from '../hooks/useReviewComments';
 import { useBranchStore } from '../stores/branchStore';
 import { useAuth } from '../context/AuthContext';
 import type { ContentSummary } from '@echo-portal/shared';
@@ -138,6 +139,19 @@ export default function Library() {
   const activeReview = branchReviews?.find(
     (r) => r.reviewerId === user?.id && (r.status === 'pending' || r.status === 'in_progress')
   ) ?? null;
+
+  // Review comments for the active review
+  const {
+    comments,
+    addComment,
+  } = useReviewComments(activeReview?.id);
+
+  // Track which line is being commented on
+  const [commentingAt, setCommentingAt] = useState<{
+    path: string;
+    line: number;
+    side: 'old' | 'new';
+  } | null>(null);
 
   // Review display mode state
   const [reviewDisplayMode, setReviewDisplayMode] = useState<'unified' | 'split'>('unified');
@@ -440,6 +454,28 @@ export default function Library() {
     handleDiscard();
   }, [handleDiscard]);
 
+  // Handler for clicking on a diff line to add a comment
+  const handleLineClick = useCallback((path: string, line: number, side: 'old' | 'new') => {
+    setCommentingAt({ path, line, side });
+  }, []);
+
+  // Handler for submitting a comment
+  const handleSubmitComment = useCallback(async (content: string) => {
+    if (!commentingAt) return;
+    await addComment.mutateAsync({
+      content,
+      path: commentingAt.path,
+      line: commentingAt.line,
+      side: commentingAt.side,
+    });
+    setCommentingAt(null);
+  }, [commentingAt, addComment]);
+
+  // Handler for canceling comment
+  const handleCancelComment = useCallback(() => {
+    setCommentingAt(null);
+  }, []);
+
   // Handle delete content
   const handleDeleteContent = useCallback(async () => {
     if (!contentIdParam) return;
@@ -624,6 +660,11 @@ export default function Library() {
           file={selectedFileDiff}
           displayMode={reviewDisplayMode}
           isLoading={isComparisonLoading}
+          comments={comments}
+          commentingAt={commentingAt}
+          onLineClick={handleLineClick}
+          onSubmitComment={handleSubmitComment}
+          onCancelComment={handleCancelComment}
         />
       ) : isEditMode && editModeContent && currentDraft ? (
         <InlineEditView
@@ -650,6 +691,7 @@ export default function Library() {
             onRetry={() => isInBranchMode ? undefined : refetchPublishedContent()}
             onEditRequest={handleEditRequest}
             branchMode={isInBranchMode}
+            branchState={activeBranch?.state}
           />
 
           {/* Branch creation dialog (only for published content) */}
