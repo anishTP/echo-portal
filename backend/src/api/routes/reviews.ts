@@ -1,7 +1,9 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
 import { reviewService } from '../../services/review/review-service.js';
 import { reviewCommentService } from '../../services/review/comments.js';
+import { snapshotService } from '../../services/review/snapshot-service.js';
 import { requireAuth, type AuthEnv } from '../middleware/auth.js';
 import { success, created, paginated, noContent } from '../utils/responses.js';
 import { NotFoundError, ForbiddenError } from '../utils/errors.js';
@@ -85,6 +87,7 @@ reviewRoutes.get('/me', requireAuth, async (c) => {
 
 /**
  * GET /api/v1/reviews/:id - Get a review by ID
+ * Query params: includeSnapshot=true to embed snapshot data
  */
 reviewRoutes.get(
   '/:id',
@@ -92,13 +95,21 @@ reviewRoutes.get(
   zValidator('param', reviewIdParamSchema),
   async (c) => {
     const { id } = c.req.valid('param');
+    const includeSnapshot = c.req.query('includeSnapshot') === 'true';
 
     const review = await reviewService.getById(id);
     if (!review) {
       throw new NotFoundError('Review', id);
     }
 
-    return success(c, review.toResponse());
+    const response: Record<string, unknown> = review.toResponse();
+
+    if (includeSnapshot) {
+      const snapshot = await snapshotService.getByReviewId(id);
+      response.snapshot = snapshot || null;
+    }
+
+    return success(c, response);
   }
 );
 
@@ -281,6 +292,159 @@ reviewRoutes.get(
 
     const stats = await reviewService.getBranchReviewStats(branchId);
     return success(c, stats);
+  }
+);
+
+/**
+ * GET /api/v1/reviews/:id/snapshot - Get comparison snapshot for a review
+ */
+reviewRoutes.get(
+  '/:id/snapshot',
+  requireAuth,
+  zValidator('param', reviewIdParamSchema),
+  async (c) => {
+    const { id } = c.req.valid('param');
+
+    const snapshot = await snapshotService.getByReviewId(id);
+    if (!snapshot) {
+      throw new NotFoundError('Snapshot', id);
+    }
+
+    return success(c, snapshot);
+  }
+);
+
+/**
+ * POST /api/v1/reviews/:id/comments/:commentId/reply - Reply to a comment
+ */
+reviewRoutes.post(
+  '/:id/comments/:commentId/reply',
+  requireAuth,
+  zValidator('param', reviewCommentIdParamSchema),
+  zValidator('json', z.object({ content: z.string().min(1).max(10000) })),
+  async (c) => {
+    const user = c.get('user')!;
+    const { id, commentId } = c.req.valid('param');
+    const { content } = c.req.valid('json');
+
+    const reply = await reviewCommentService.addReply(id, commentId, content, user.id);
+    return created(c, reply);
+  }
+);
+
+/**
+ * POST /api/v1/reviews/:id/refresh-comments - Refresh outdated comment status
+ */
+reviewRoutes.post(
+  '/:id/refresh-comments',
+  requireAuth,
+  zValidator('param', reviewIdParamSchema),
+  async (c) => {
+    const { id } = c.req.valid('param');
+
+    const result = await reviewCommentService.refreshOutdatedStatus(id);
+    return success(c, result);
+  }
+);
+
+/**
+ * GET /api/v1/branches/:branchId/review-status - Get current review status for a branch
+ */
+reviewRoutes.get(
+  '/branch/:branchId/review-status',
+  requireAuth,
+  async (c) => {
+    const branchId = c.req.param('branchId');
+
+    const [stats, subState] = await Promise.all([
+      reviewService.getBranchReviewStats(branchId),
+      reviewService.deriveReviewSubState(branchId),
+    ]);
+
+    // Get branch for required approvals
+    const { db } = await import('../../db/index.js');
+    const { branches } = await import('../../db/schema/branches.js');
+    const { eq } = await import('drizzle-orm');
+
+    const branch = await db.query.branches.findFirst({
+      where: eq(branches.id, branchId),
+    });
+
+    if (!branch) {
+      throw new NotFoundError('Branch', branchId);
+    }
+
+    const requiredApprovals = branch.requiredApprovals || 1;
+    const approvalProgress = {
+      approved: stats.approved,
+      required: requiredApprovals,
+      remaining: Math.max(0, requiredApprovals - stats.approved),
+    };
+
+    return success(c, {
+      branchId,
+      branchState: branch.state,
+      reviewSubState: branch.state === 'review' ? subState : null,
+      approvalProgress,
+      hasBlockingChangesRequested: stats.changesRequested > 0,
+    });
+  }
+);
+
+/**
+ * GET /api/v1/branches/:branchId/review-cycles - Get review cycle history
+ */
+reviewRoutes.get(
+  '/branch/:branchId/review-cycles',
+  requireAuth,
+  async (c) => {
+    const branchId = c.req.param('branchId');
+
+    const cycles = await reviewService.getReviewCycles(branchId);
+    const currentCycle = cycles.length > 0 ? cycles[cycles.length - 1].cycleNumber : 1;
+
+    return success(c, {
+      branchId,
+      cycles,
+      currentCycle,
+    });
+  }
+);
+
+/**
+ * POST /api/v1/reviews/:id/reviewers - Add a reviewer to a branch's active review
+ */
+reviewRoutes.post(
+  '/:id/reviewers',
+  requireAuth,
+  zValidator('param', reviewIdParamSchema),
+  zValidator('json', z.object({ reviewerId: z.string().uuid() })),
+  async (c) => {
+    const user = c.get('user')!;
+    const { id } = c.req.valid('param');
+    const { reviewerId } = c.req.valid('json');
+
+    const result = await reviewService.addReviewer(id, reviewerId, user.id);
+    return created(c, result);
+  }
+);
+
+/**
+ * DELETE /api/v1/reviews/:id/reviewers/:userId - Remove a reviewer
+ */
+reviewRoutes.delete(
+  '/:id/reviewers/:userId',
+  requireAuth,
+  zValidator(
+    'param',
+    z.object({ id: z.string().uuid(), userId: z.string().uuid() })
+  ),
+  async (c) => {
+    const user = c.get('user')!;
+    const { id, userId } = c.req.valid('param');
+
+    await reviewService.removeReviewer(id, userId, user.id);
+    return noContent(c);
   }
 );
 
