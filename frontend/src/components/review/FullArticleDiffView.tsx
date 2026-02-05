@@ -285,13 +285,9 @@ function SplitArticleView({
       {renderPanel('old')}
       {renderPanel('new')}
 
-      {/* Comment highlight overlays */}
-      {comments && comments.length > 0 && (
-        <CommentHighlights
-          comments={comments}
-          containerRef={containerRef}
-        />
-      )}
+      {/* Note: Comment highlights are disabled in split view because the character
+          offsets are calculated for unified view's single-column layout. Comments
+          can be viewed and added in unified view. */}
 
       {/* Floating comment popover on text selection */}
       {selection && onSubmitComment && (
