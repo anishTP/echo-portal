@@ -64,10 +64,7 @@ export function useTextSelection(containerRef: RefObject<HTMLElement | null>) {
 
     // Access .current at call time, not at callback creation time
     const container = containerRef.current;
-    if (!container) {
-      console.warn('[useTextSelection] Container ref is null on mouseup');
-      return;
-    }
+    if (!container) return;
 
     const range = sel.getRangeAt(0);
 

@@ -74,18 +74,6 @@ export function ReviewDiffView({
     // Filter comments for this specific file
     const fileComments = comments?.filter((c) => c.path === file.path);
 
-    // Debug logging
-    console.log('[ReviewDiffView] Passing comments to FullArticleDiffView:', {
-      filePath: file.path,
-      incomingComments: comments?.length ?? 0,
-      filteredComments: fileComments?.length ?? 0,
-      commentDetails: comments?.map(c => ({
-        id: c.id,
-        path: c.path,
-        hasSelectionData: !!(c.selectedText && c.startOffset !== undefined && c.endOffset !== undefined),
-      })),
-    });
-
     return (
       <div className={displayMode === 'unified' ? styles.containerUnified : styles.container}>
         <FullArticleDiffView

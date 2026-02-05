@@ -5,23 +5,47 @@
   /* Container for a single comment's highlights */
 }
 
-/* Amber/yellow background highlight overlay */
+/* ============================================
+   HIGHLIGHT OVERLAYS
+   ============================================ */
+
+/* Base highlight styles */
 .highlight {
   position: absolute;
-  background: var(--amber-4);
-  opacity: 0.5;
   pointer-events: none;
   border-radius: 2px;
   transition: opacity 0.15s ease;
   z-index: 1; /* Above text content but below indicator */
 }
 
-/* Highlight on hover */
-.highlightGroup:hover .highlight {
-  opacity: 0.7;
+/* Default (amber) - for normal text */
+.highlight--default {
+  background: var(--amber-5);
+  opacity: 0.6;
 }
 
-/* Comment indicator icon button */
+/* Addition context (green) - darker green on green background */
+.highlight--addition {
+  background: var(--green-7);
+  opacity: 0.5;
+}
+
+/* Deletion context (red) - darker red on red background */
+.highlight--deletion {
+  background: var(--red-7);
+  opacity: 0.5;
+}
+
+/* Highlight on hover - increase opacity */
+.highlightGroup:hover .highlight {
+  opacity: 0.8;
+}
+
+/* ============================================
+   COMMENT INDICATOR ICONS
+   ============================================ */
+
+/* Base indicator styles */
 .indicator {
   position: absolute;
   display: inline-flex;
@@ -29,7 +53,6 @@
   justify-content: center;
   width: 20px;
   height: 20px;
-  background: var(--amber-9);
   color: white;
   border: none;
   border-radius: var(--radius-full);
@@ -41,14 +64,51 @@
   transform: translate(-50%, -2px); /* Center horizontally, slight offset above text */
 }
 
-.indicator:hover {
-  transform: translate(-50%, -2px) scale(1.15);
+/* Default (amber) indicator */
+.indicator--default {
+  background: var(--amber-9);
+}
+
+.indicator--default:hover {
   background: var(--amber-10);
 }
 
-.indicator:focus-visible {
+.indicator--default:focus-visible {
   outline: 2px solid var(--amber-7);
   outline-offset: 2px;
+}
+
+/* Addition (green) indicator */
+.indicator--addition {
+  background: var(--green-9);
+}
+
+.indicator--addition:hover {
+  background: var(--green-10);
+}
+
+.indicator--addition:focus-visible {
+  outline: 2px solid var(--green-7);
+  outline-offset: 2px;
+}
+
+/* Deletion (red) indicator */
+.indicator--deletion {
+  background: var(--red-9);
+}
+
+.indicator--deletion:hover {
+  background: var(--red-10);
+}
+
+.indicator--deletion:focus-visible {
+  outline: 2px solid var(--red-7);
+  outline-offset: 2px;
+}
+
+/* Common hover transform */
+.indicator:hover {
+  transform: translate(-50%, -2px) scale(1.15);
 }
 
 .indicator svg {

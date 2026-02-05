@@ -453,13 +453,6 @@ export default function Library() {
 
   // Handler for submitting a selection-based comment
   const handleSubmitComment = useCallback(async (content: string, selection: TextSelection, filePath: string) => {
-    console.log('[Library] Submitting comment:', {
-      content: content.substring(0, 50),
-      filePath,
-      selectedText: selection.text.substring(0, 50),
-      startOffset: selection.startOffset,
-      endOffset: selection.endOffset,
-    });
     await addComment.mutateAsync({
       content,
       path: filePath,
@@ -470,7 +463,6 @@ export default function Library() {
       startOffset: selection.startOffset,
       endOffset: selection.endOffset,
     });
-    console.log('[Library] Comment submitted, comments will be refetched');
   }, [addComment]);
 
   // Handle delete content

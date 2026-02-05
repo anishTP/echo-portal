@@ -38,16 +38,6 @@ export function FullArticleDiffView({
   // Filter comments for this file
   const fileComments = comments?.filter((c) => c.path === file.path) || [];
 
-  // Debug logging
-  if (comments && comments.length > 0) {
-    console.log('[FullArticleDiffView] Comment filtering:', {
-      filePath: file.path,
-      incomingComments: comments.length,
-      filteredComments: fileComments.length,
-      allPaths: comments.map(c => c.path),
-    });
-  }
-
   if (!fullContent) {
     return (
       <div className={styles.error}>
@@ -118,24 +108,9 @@ function UnifiedArticleView({
   const categoryChanged = metadata.old && metadata.new && metadata.old.category !== metadata.new.category;
 
   const handleSubmitComment = async (content: string) => {
-    console.log('[ArticleView] handleSubmitComment called', {
-      content: content.substring(0, 50),
-      hasSelection: !!selection,
-      hasOnSubmitComment: !!onSubmitComment,
-      selection: selection ? {
-        text: selection.text.substring(0, 30),
-        startOffset: selection.startOffset,
-        endOffset: selection.endOffset,
-      } : null,
-    });
-
     if (selection && onSubmitComment) {
-      console.log('[ArticleView] Calling onSubmitComment...');
       await onSubmitComment(content, selection);
-      console.log('[ArticleView] onSubmitComment completed');
       clearSelection();
-    } else {
-      console.warn('[ArticleView] Missing selection or onSubmitComment!');
     }
   };
 
@@ -243,24 +218,9 @@ function SplitArticleView({
   const categoryChanged = metadata.old && metadata.new && metadata.old.category !== metadata.new.category;
 
   const handleSubmitComment = async (content: string) => {
-    console.log('[ArticleView] handleSubmitComment called', {
-      content: content.substring(0, 50),
-      hasSelection: !!selection,
-      hasOnSubmitComment: !!onSubmitComment,
-      selection: selection ? {
-        text: selection.text.substring(0, 30),
-        startOffset: selection.startOffset,
-        endOffset: selection.endOffset,
-      } : null,
-    });
-
     if (selection && onSubmitComment) {
-      console.log('[ArticleView] Calling onSubmitComment...');
       await onSubmitComment(content, selection);
-      console.log('[ArticleView] onSubmitComment completed');
       clearSelection();
-    } else {
-      console.warn('[ArticleView] Missing selection or onSubmitComment!');
     }
   };
 

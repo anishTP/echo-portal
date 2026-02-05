@@ -15,20 +15,7 @@ export function useReviewComments(reviewId: string | undefined) {
     queryKey: reviewKeys.comments(reviewId || ''),
     queryFn: async (): Promise<ReviewComment[]> => {
       if (!reviewId) throw new Error('Review ID required');
-      const comments = await reviewService.getComments(reviewId);
-      console.log('[useReviewComments] Fetched comments:', {
-        reviewId,
-        count: comments.length,
-        withSelectionData: comments.filter(c => c.selectedText && c.startOffset !== undefined).length,
-        details: comments.map(c => ({
-          id: c.id,
-          path: c.path,
-          selectedText: c.selectedText?.substring(0, 30),
-          startOffset: c.startOffset,
-          endOffset: c.endOffset,
-        })),
-      });
-      return comments;
+      return reviewService.getComments(reviewId);
     },
     enabled: !!reviewId,
   });

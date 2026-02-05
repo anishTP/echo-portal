@@ -19,11 +19,15 @@ interface CommentHighlightsProps {
   onCommentClick?: (comment: ReviewComment) => void;
 }
 
+type HighlightContext = 'default' | 'addition' | 'deletion';
+
 interface Rect {
   top: number;
   left: number;
   width: number;
   height: number;
+  /** Context for styling - whether this rect is over addition/deletion/normal text */
+  context: HighlightContext;
 }
 
 interface HighlightPosition {
@@ -32,6 +36,31 @@ interface HighlightPosition {
   rects: Rect[];
   /** Position for the indicator icon (end of last rect) */
   indicatorPosition: { top: number; left: number };
+  /** Primary context for the indicator icon */
+  context: HighlightContext;
+}
+
+/**
+ * Detects if an element or its ancestors have addition/deletion styling
+ */
+function detectHighlightContext(element: Element | null): HighlightContext {
+  let current = element;
+  while (current) {
+    const classList = current.classList;
+    // Check for common diff highlight class patterns
+    if (classList) {
+      for (const className of classList) {
+        if (className.includes('Addition') || className.includes('addition')) {
+          return 'addition';
+        }
+        if (className.includes('Deletion') || className.includes('deletion')) {
+          return 'deletion';
+        }
+      }
+    }
+    current = current.parentElement;
+  }
+  return 'default';
 }
 
 /**
@@ -62,28 +91,32 @@ function findTextNodeAtOffset(
 }
 
 /**
- * Gets the bounding rects for a text range within a container.
+ * Gets the bounding rects for a text range within a container,
+ * along with the context (addition/deletion/default) for each rect.
  */
-function getRangeRects(
+function getRangeRectsWithContext(
   container: HTMLElement,
   startOffset: number,
   endOffset: number
-): DOMRect[] {
+): { rects: DOMRect[]; context: HighlightContext } {
   const start = findTextNodeAtOffset(container, startOffset);
   const end = findTextNodeAtOffset(container, endOffset);
 
-  if (!start || !end) return [];
+  if (!start || !end) return { rects: [], context: 'default' };
 
   try {
     const range = document.createRange();
     range.setStart(start.node, Math.min(start.offset, start.node.length));
     range.setEnd(end.node, Math.min(end.offset, end.node.length));
 
+    // Detect context from the start node's parent element
+    const context = detectHighlightContext(start.node.parentElement);
+
     // getClientRects() returns multiple rects if text spans lines
     const clientRects = range.getClientRects();
-    return Array.from(clientRects);
+    return { rects: Array.from(clientRects), context };
   } catch {
-    return [];
+    return { rects: [], context: 'default' };
   }
 }
 
@@ -96,20 +129,10 @@ export function CommentHighlights({
   const [selectedComment, setSelectedComment] = useState<ReviewComment | null>(null);
   const [popoverPosition, setPopoverPosition] = useState<{ top: number; left: number } | null>(null);
 
-  // Debug: log on mount/unmount and when comments change
-  console.log('[CommentHighlights] Render:', {
-    commentsCount: comments.length,
-    hasContainer: !!containerRef.current,
-    highlightsCount: highlights.length,
-  });
-
   // Calculate highlight positions based on comments with selection data
   const calculateHighlights = useCallback(() => {
     const container = containerRef.current;
-    if (!container) {
-      console.warn('[CommentHighlights] Container ref is null, cannot calculate highlights');
-      return;
-    }
+    if (!container) return;
 
     const containerRect = container.getBoundingClientRect();
     const newHighlights: HighlightPosition[] = [];
@@ -119,40 +142,21 @@ export function CommentHighlights({
       (c) => c.selectedText && typeof c.startOffset === 'number' && typeof c.endOffset === 'number'
     );
 
-    console.log('[CommentHighlights] Calculating highlights:', {
-      totalComments: comments.length,
-      selectionComments: selectionComments.length,
-      commentPaths: comments.map(c => c.path),
-      selectionData: selectionComments.map(c => ({
-        id: c.id,
-        text: c.selectedText?.substring(0, 30),
-        start: c.startOffset,
-        end: c.endOffset,
-      })),
-    });
-
     for (const comment of selectionComments) {
-      const rects = getRangeRects(
+      const { rects, context } = getRangeRectsWithContext(
         container,
         comment.startOffset!,
         comment.endOffset!
       );
 
-      console.log('[CommentHighlights] getRangeRects result:', {
-        commentId: comment.id,
-        startOffset: comment.startOffset,
-        endOffset: comment.endOffset,
-        rectsCount: rects.length,
-      });
-
       if (rects.length > 0) {
         // Calculate positions relative to container
-        // Note: We explicitly copy all DOMRect properties since spreading may not work
         const relativeRects = rects.map((rect) => ({
           top: rect.top - containerRect.top + container.scrollTop,
           left: rect.left - containerRect.left + container.scrollLeft,
           width: rect.width,
           height: rect.height,
+          context, // Same context for all rects in this range
         }));
 
         // Indicator at end of last rect
@@ -166,6 +170,7 @@ export function CommentHighlights({
           comment,
           rects: relativeRects,
           indicatorPosition,
+          context,
         });
       }
     }
@@ -244,7 +249,7 @@ export function CommentHighlights({
           {highlight.rects.map((rect, i) => (
             <div
               key={i}
-              className={styles.highlight}
+              className={`${styles.highlight} ${styles[`highlight--${rect.context}`]}`}
               style={{
                 top: rect.top,
                 left: rect.left,
@@ -257,7 +262,7 @@ export function CommentHighlights({
           {/* Comment indicator icon */}
           <button
             type="button"
-            className={styles.indicator}
+            className={`${styles.indicator} ${styles[`indicator--${highlight.context}`]}`}
             style={{
               top: highlight.indicatorPosition.top,
               left: highlight.indicatorPosition.left,
