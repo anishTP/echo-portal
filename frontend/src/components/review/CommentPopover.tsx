@@ -44,13 +44,21 @@ export function CommentPopover({ selection, onSubmit, onCancel }: CommentPopover
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('[CommentPopover] handleSubmit called', { content: content.trim(), isSubmitting });
 
-    if (!content.trim() || isSubmitting) return;
+    if (!content.trim() || isSubmitting) {
+      console.log('[CommentPopover] Early return - empty content or already submitting');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
+      console.log('[CommentPopover] Calling onSubmit...');
       await onSubmit(content.trim());
+      console.log('[CommentPopover] onSubmit completed successfully');
       setContent('');
+    } catch (error) {
+      console.error('[CommentPopover] onSubmit error:', error);
     } finally {
       setIsSubmitting(false);
     }

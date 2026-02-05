@@ -118,9 +118,24 @@ function UnifiedArticleView({
   const categoryChanged = metadata.old && metadata.new && metadata.old.category !== metadata.new.category;
 
   const handleSubmitComment = async (content: string) => {
+    console.log('[ArticleView] handleSubmitComment called', {
+      content: content.substring(0, 50),
+      hasSelection: !!selection,
+      hasOnSubmitComment: !!onSubmitComment,
+      selection: selection ? {
+        text: selection.text.substring(0, 30),
+        startOffset: selection.startOffset,
+        endOffset: selection.endOffset,
+      } : null,
+    });
+
     if (selection && onSubmitComment) {
+      console.log('[ArticleView] Calling onSubmitComment...');
       await onSubmitComment(content, selection);
+      console.log('[ArticleView] onSubmitComment completed');
       clearSelection();
+    } else {
+      console.warn('[ArticleView] Missing selection or onSubmitComment!');
     }
   };
 
@@ -228,9 +243,24 @@ function SplitArticleView({
   const categoryChanged = metadata.old && metadata.new && metadata.old.category !== metadata.new.category;
 
   const handleSubmitComment = async (content: string) => {
+    console.log('[ArticleView] handleSubmitComment called', {
+      content: content.substring(0, 50),
+      hasSelection: !!selection,
+      hasOnSubmitComment: !!onSubmitComment,
+      selection: selection ? {
+        text: selection.text.substring(0, 30),
+        startOffset: selection.startOffset,
+        endOffset: selection.endOffset,
+      } : null,
+    });
+
     if (selection && onSubmitComment) {
+      console.log('[ArticleView] Calling onSubmitComment...');
       await onSubmitComment(content, selection);
+      console.log('[ArticleView] onSubmitComment completed');
       clearSelection();
+    } else {
+      console.warn('[ArticleView] Missing selection or onSubmitComment!');
     }
   };
 
