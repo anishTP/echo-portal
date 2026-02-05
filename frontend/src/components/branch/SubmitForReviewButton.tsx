@@ -41,8 +41,10 @@ export function SubmitForReviewButton({
       console.log('[SubmitForReview] Submitting:', { branchId, reviewerIds, reason });
       return branchService.submitForReview(branchId, reviewerIds, reason || undefined);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('[SubmitForReview] Success! Response:', data);
       invalidateWorkflowQueries(queryClient, branchId);
+      console.log('[SubmitForReview] Queries invalidated for branchId:', branchId);
       setShowModal(false);
       setReason('');
       onSuccess?.();
