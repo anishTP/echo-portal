@@ -38,6 +38,10 @@ export const addReviewCommentSchema = z.object({
     .max(10000, 'Comment must be 10000 characters or less'),
   path: z.string().max(500).optional(),
   line: z.number().int().positive().optional(),
+  side: z.enum(['old', 'new']).optional(),
+  selectedText: z.string().max(10000).optional(),
+  startOffset: z.number().int().nonnegative().optional(),
+  endOffset: z.number().int().nonnegative().optional(),
 });
 
 export type AddReviewCommentInput = z.infer<typeof addReviewCommentSchema>;

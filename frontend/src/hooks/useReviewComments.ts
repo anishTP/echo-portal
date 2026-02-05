@@ -15,7 +15,20 @@ export function useReviewComments(reviewId: string | undefined) {
     queryKey: reviewKeys.comments(reviewId || ''),
     queryFn: async (): Promise<ReviewComment[]> => {
       if (!reviewId) throw new Error('Review ID required');
-      return reviewService.getComments(reviewId);
+      const comments = await reviewService.getComments(reviewId);
+      console.log('[useReviewComments] Fetched comments:', {
+        reviewId,
+        count: comments.length,
+        withSelectionData: comments.filter(c => c.selectedText && c.startOffset !== undefined).length,
+        details: comments.map(c => ({
+          id: c.id,
+          path: c.path,
+          selectedText: c.selectedText?.substring(0, 30),
+          startOffset: c.startOffset,
+          endOffset: c.endOffset,
+        })),
+      });
+      return comments;
     },
     enabled: !!reviewId,
   });
@@ -26,17 +39,28 @@ export function useReviewComments(reviewId: string | undefined) {
       content,
       path,
       line,
-      hunkId,
+      hunkId: _hunkId, // Currently not passed to API, but kept for future use
       side,
+      selectedText,
+      startOffset,
+      endOffset,
     }: {
       content: string;
       path?: string;
       line?: number;
       hunkId?: string;
       side?: 'old' | 'new';
+      selectedText?: string;
+      startOffset?: number;
+      endOffset?: number;
     }) => {
       if (!reviewId) throw new Error('Review ID required');
-      return reviewService.addComment(reviewId, content, path, line);
+      return reviewService.addComment(reviewId, content, path, line, {
+        side,
+        selectedText,
+        startOffset,
+        endOffset,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: reviewKeys.comments(reviewId!) });

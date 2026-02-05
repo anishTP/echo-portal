@@ -34,7 +34,7 @@ export class ReviewCommentService {
       });
     }
 
-    const { content, path, line } = parsed.data;
+    const { content, path, line, side, selectedText, startOffset, endOffset } = parsed.data;
 
     // Get the review
     const review = await db.query.reviews.findFirst({
@@ -66,6 +66,10 @@ export class ReviewCommentService {
       content,
       path,
       line,
+      side,
+      selectedText,
+      startOffset,
+      endOffset,
       isOutdated: false,
       createdAt: now,
       updatedAt: now,

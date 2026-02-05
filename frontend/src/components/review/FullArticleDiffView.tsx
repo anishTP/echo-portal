@@ -11,14 +11,18 @@ import { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import type { FileDiff } from '@echo-portal/shared';
 import type { TextSelection } from '../../hooks/useTextSelection';
+import type { ReviewComment } from '../../services/reviewService';
 import { useTextSelection } from '../../hooks/useTextSelection';
 import { DiffMarkdownRenderer } from './DiffMarkdownRenderer';
 import { CommentPopover } from './CommentPopover';
+import { CommentHighlights } from './CommentHighlights';
 import styles from './FullArticleDiffView.module.css';
 
 interface FullArticleDiffViewProps {
   file: FileDiff;
   displayMode: 'unified' | 'split';
+  /** Comments for this file (used to display highlights) */
+  comments?: ReviewComment[];
   /** Called when user submits a comment on selected text */
   onSubmitComment?: (content: string, selection: TextSelection) => Promise<void>;
 }
@@ -26,9 +30,23 @@ interface FullArticleDiffViewProps {
 export function FullArticleDiffView({
   file,
   displayMode,
+  comments,
   onSubmitComment,
 }: FullArticleDiffViewProps) {
   const { fullContent, additions, deletions } = file;
+
+  // Filter comments for this file
+  const fileComments = comments?.filter((c) => c.path === file.path) || [];
+
+  // Debug logging
+  if (comments && comments.length > 0) {
+    console.log('[FullArticleDiffView] Comment filtering:', {
+      filePath: file.path,
+      incomingComments: comments.length,
+      filteredComments: fileComments.length,
+      allPaths: comments.map(c => c.path),
+    });
+  }
 
   if (!fullContent) {
     return (
@@ -47,6 +65,7 @@ export function FullArticleDiffView({
         oldContent={oldContent}
         newContent={newContent}
         metadata={metadata}
+        comments={fileComments}
         onSubmitComment={onSubmitComment}
       />
     );
@@ -60,6 +79,7 @@ export function FullArticleDiffView({
       metadata={metadata}
       additions={additions}
       deletions={deletions}
+      comments={fileComments}
       onSubmitComment={onSubmitComment}
     />
   );
@@ -74,6 +94,7 @@ function UnifiedArticleView({
   oldContent,
   newContent,
   metadata,
+  comments,
   onSubmitComment,
 }: {
   oldContent: string | null;
@@ -82,6 +103,7 @@ function UnifiedArticleView({
     old: { title: string; description: string | null; category: string | null; tags: string[] } | null;
     new: { title: string; description: string | null; category: string | null; tags: string[] } | null;
   };
+  comments?: ReviewComment[];
   onSubmitComment?: (content: string, selection: TextSelection) => Promise<void>;
 }) {
   const articleRef = useRef<HTMLElement>(null);
@@ -153,6 +175,14 @@ function UnifiedArticleView({
         <DiffMarkdownRenderer content={body} />
       </div>
 
+      {/* Comment highlight overlays */}
+      {comments && comments.length > 0 && (
+        <CommentHighlights
+          comments={comments}
+          containerRef={articleRef}
+        />
+      )}
+
       {/* Floating comment popover on text selection */}
       {selection && onSubmitComment && (
         <CommentPopover
@@ -175,6 +205,7 @@ function SplitArticleView({
   metadata,
   additions,
   deletions,
+  comments,
   onSubmitComment,
 }: {
   oldContent: string | null;
@@ -185,6 +216,7 @@ function SplitArticleView({
   };
   additions: number;
   deletions: number;
+  comments?: ReviewComment[];
   onSubmitComment?: (content: string, selection: TextSelection) => Promise<void>;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -262,6 +294,14 @@ function SplitArticleView({
     <div ref={containerRef} className={styles.splitContainer}>
       {renderPanel('old')}
       {renderPanel('new')}
+
+      {/* Comment highlight overlays */}
+      {comments && comments.length > 0 && (
+        <CommentHighlights
+          comments={comments}
+          containerRef={containerRef}
+        />
+      )}
 
       {/* Floating comment popover on text selection */}
       {selection && onSubmitComment && (

@@ -15,6 +15,10 @@ export interface ReviewComment {
   line?: number;
   hunkId?: string;
   side?: 'old' | 'new';
+  // Selection-based comment data (for text highlighting)
+  selectedText?: string;
+  startOffset?: number;
+  endOffset?: number;
   parentId?: string;
   isOutdated: boolean;
   outdatedReason?: string;
@@ -180,12 +184,19 @@ export const reviewService = {
     id: string,
     content: string,
     path?: string,
-    line?: number
+    line?: number,
+    options?: {
+      side?: 'old' | 'new';
+      selectedText?: string;
+      startOffset?: number;
+      endOffset?: number;
+    }
   ): Promise<ReviewComment> => {
     return api.post<ReviewComment>(`/reviews/${id}/comments`, {
       content,
       path,
       line,
+      ...options,
     });
   },
 

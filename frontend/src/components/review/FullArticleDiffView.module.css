@@ -8,6 +8,7 @@
 .article {
   max-width: 100%;
   padding: var(--space-4);
+  position: relative; /* Required for comment highlight overlays */
 }
 
 /* Breadcrumb */
@@ -308,6 +309,7 @@
   display: flex;
   width: 100%;
   gap: var(--space-4);
+  position: relative; /* Required for comment highlight overlays */
 }
 
 .panel {

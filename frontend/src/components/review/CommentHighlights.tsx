@@ -1,0 +1,288 @@
+/**
+ * CommentHighlights - Renders visual highlights over text that has comments.
+ *
+ * Shows amber/yellow background on commented text and displays a small
+ * comment indicator icon at the end of each highlighted range.
+ */
+
+import { useState, useEffect, useCallback, RefObject } from 'react';
+import type { ReviewComment } from '../../services/reviewService';
+import { CommentViewPopover } from './CommentViewPopover';
+import styles from './CommentHighlights.module.css';
+
+interface CommentHighlightsProps {
+  /** Comments that may have selection data for highlighting */
+  comments: ReviewComment[];
+  /** Reference to the container element containing the commentable text */
+  containerRef: RefObject<HTMLElement | null>;
+  /** Callback when a comment indicator is clicked */
+  onCommentClick?: (comment: ReviewComment) => void;
+}
+
+interface Rect {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}
+
+interface HighlightPosition {
+  comment: ReviewComment;
+  /** Bounding rects for the highlighted text (may span multiple lines) */
+  rects: Rect[];
+  /** Position for the indicator icon (end of last rect) */
+  indicatorPosition: { top: number; left: number };
+}
+
+/**
+ * Finds a text node and offset within a container that corresponds to
+ * a character offset in the container's text content.
+ */
+function findTextNodeAtOffset(
+  container: HTMLElement,
+  targetOffset: number
+): { node: Text; offset: number } | null {
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+  let currentOffset = 0;
+
+  let node = walker.nextNode() as Text | null;
+  while (node) {
+    const nodeLength = node.textContent?.length || 0;
+    if (currentOffset + nodeLength >= targetOffset) {
+      return {
+        node,
+        offset: targetOffset - currentOffset,
+      };
+    }
+    currentOffset += nodeLength;
+    node = walker.nextNode() as Text | null;
+  }
+
+  return null;
+}
+
+/**
+ * Gets the bounding rects for a text range within a container.
+ */
+function getRangeRects(
+  container: HTMLElement,
+  startOffset: number,
+  endOffset: number
+): DOMRect[] {
+  const start = findTextNodeAtOffset(container, startOffset);
+  const end = findTextNodeAtOffset(container, endOffset);
+
+  if (!start || !end) return [];
+
+  try {
+    const range = document.createRange();
+    range.setStart(start.node, Math.min(start.offset, start.node.length));
+    range.setEnd(end.node, Math.min(end.offset, end.node.length));
+
+    // getClientRects() returns multiple rects if text spans lines
+    const clientRects = range.getClientRects();
+    return Array.from(clientRects);
+  } catch {
+    return [];
+  }
+}
+
+export function CommentHighlights({
+  comments,
+  containerRef,
+  onCommentClick,
+}: CommentHighlightsProps) {
+  const [highlights, setHighlights] = useState<HighlightPosition[]>([]);
+  const [selectedComment, setSelectedComment] = useState<ReviewComment | null>(null);
+  const [popoverPosition, setPopoverPosition] = useState<{ top: number; left: number } | null>(null);
+
+  // Debug: log on mount/unmount and when comments change
+  console.log('[CommentHighlights] Render:', {
+    commentsCount: comments.length,
+    hasContainer: !!containerRef.current,
+    highlightsCount: highlights.length,
+  });
+
+  // Calculate highlight positions based on comments with selection data
+  const calculateHighlights = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) {
+      console.warn('[CommentHighlights] Container ref is null, cannot calculate highlights');
+      return;
+    }
+
+    const containerRect = container.getBoundingClientRect();
+    const newHighlights: HighlightPosition[] = [];
+
+    // Filter comments that have selection data
+    const selectionComments = comments.filter(
+      (c) => c.selectedText && typeof c.startOffset === 'number' && typeof c.endOffset === 'number'
+    );
+
+    console.log('[CommentHighlights] Calculating highlights:', {
+      totalComments: comments.length,
+      selectionComments: selectionComments.length,
+      commentPaths: comments.map(c => c.path),
+      selectionData: selectionComments.map(c => ({
+        id: c.id,
+        text: c.selectedText?.substring(0, 30),
+        start: c.startOffset,
+        end: c.endOffset,
+      })),
+    });
+
+    for (const comment of selectionComments) {
+      const rects = getRangeRects(
+        container,
+        comment.startOffset!,
+        comment.endOffset!
+      );
+
+      console.log('[CommentHighlights] getRangeRects result:', {
+        commentId: comment.id,
+        startOffset: comment.startOffset,
+        endOffset: comment.endOffset,
+        rectsCount: rects.length,
+      });
+
+      if (rects.length > 0) {
+        // Calculate positions relative to container
+        // Note: We explicitly copy all DOMRect properties since spreading may not work
+        const relativeRects = rects.map((rect) => ({
+          top: rect.top - containerRect.top + container.scrollTop,
+          left: rect.left - containerRect.left + container.scrollLeft,
+          width: rect.width,
+          height: rect.height,
+        }));
+
+        // Indicator at end of last rect
+        const lastRect = relativeRects[relativeRects.length - 1];
+        const indicatorPosition = {
+          top: lastRect.top,
+          left: lastRect.left + lastRect.width,
+        };
+
+        newHighlights.push({
+          comment,
+          rects: relativeRects,
+          indicatorPosition,
+        });
+      }
+    }
+
+    setHighlights(newHighlights);
+  }, [comments, containerRef]);
+
+  // Recalculate on mount and when comments change
+  useEffect(() => {
+    // Use requestAnimationFrame to ensure the DOM is fully painted
+    // This is important when markdown content is being rendered
+    const rafId = requestAnimationFrame(() => {
+      calculateHighlights();
+    });
+
+    // Recalculate on window resize
+    const handleResize = () => calculateHighlights();
+    window.addEventListener('resize', handleResize);
+
+    // Also observe container for scroll changes
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('scroll', calculateHighlights);
+    }
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', handleResize);
+      if (container) {
+        container.removeEventListener('scroll', calculateHighlights);
+      }
+    };
+  }, [calculateHighlights, containerRef]);
+
+  const handleIndicatorClick = (highlight: HighlightPosition, event: React.MouseEvent) => {
+    event.stopPropagation();
+
+    // Get click position for popover
+    const rect = (event.target as HTMLElement).getBoundingClientRect();
+    setPopoverPosition({
+      top: rect.bottom + 8,
+      left: rect.left,
+    });
+    setSelectedComment(highlight.comment);
+    onCommentClick?.(highlight.comment);
+  };
+
+  const handleClosePopover = () => {
+    setSelectedComment(null);
+    setPopoverPosition(null);
+  };
+
+  // Close popover when clicking outside
+  useEffect(() => {
+    if (!selectedComment) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest(`.${styles.popover}`) && !target.closest(`.${styles.indicator}`)) {
+        handleClosePopover();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [selectedComment]);
+
+  if (highlights.length === 0) return null;
+
+  return (
+    <>
+      {/* Highlight overlays */}
+      {highlights.map((highlight) => (
+        <div key={highlight.comment.id} className={styles.highlightGroup}>
+          {/* Background highlights for each rect */}
+          {highlight.rects.map((rect, i) => (
+            <div
+              key={i}
+              className={styles.highlight}
+              style={{
+                top: rect.top,
+                left: rect.left,
+                width: rect.width,
+                height: rect.height,
+              }}
+            />
+          ))}
+
+          {/* Comment indicator icon */}
+          <button
+            type="button"
+            className={styles.indicator}
+            style={{
+              top: highlight.indicatorPosition.top,
+              left: highlight.indicatorPosition.left,
+            }}
+            onClick={(e) => handleIndicatorClick(highlight, e)}
+            title="View comment"
+            aria-label="View comment"
+          >
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M2.5 2a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h2v2l3-2h6a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5h-11Z" />
+            </svg>
+          </button>
+        </div>
+      ))}
+
+      {/* Comment view popover */}
+      {selectedComment && popoverPosition && (
+        <CommentViewPopover
+          comment={selectedComment}
+          position={popoverPosition}
+          onClose={handleClosePopover}
+        />
+      )}
+    </>
+  );
+}
+
+export default CommentHighlights;

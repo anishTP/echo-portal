@@ -18,6 +18,10 @@ export interface ReviewComment {
   line?: number;                       // Line number in diff
   hunkId?: string;                     // Diff hunk identifier for stable anchoring
   side?: 'old' | 'new';               // Which side of diff (deletion vs addition)
+  // Selection-based comment data (for text highlighting)
+  selectedText?: string;               // The text that was selected when commenting
+  startOffset?: number;                // Start offset in container text content
+  endOffset?: number;                  // End offset in container text content
   // Threading
   parentId?: string;                   // Parent comment ID (null = top-level)
   // Staleness tracking
@@ -54,6 +58,9 @@ export interface ReviewCommentInput {
   line?: number;
   hunkId?: string;
   side?: 'old' | 'new';
+  selectedText?: string;
+  startOffset?: number;
+  endOffset?: number;
 }
 
 // ============================================

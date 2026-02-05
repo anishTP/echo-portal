@@ -18,3 +18,5 @@ export { ReviewerManagementPanel } from './ReviewerManagementPanel';
 export { FullArticleDiffView } from './FullArticleDiffView';
 export { DiffMarkdownRenderer } from './DiffMarkdownRenderer';
 export { CommentPopover } from './CommentPopover';
+export { CommentHighlights } from './CommentHighlights';
+export { CommentViewPopover } from './CommentViewPopover';

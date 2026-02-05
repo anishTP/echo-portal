@@ -1,0 +1,56 @@
+/* CommentHighlights.module.css */
+/* Styles for comment highlight overlays and indicators */
+
+.highlightGroup {
+  /* Container for a single comment's highlights */
+}
+
+/* Amber/yellow background highlight overlay */
+.highlight {
+  position: absolute;
+  background: var(--amber-4);
+  opacity: 0.5;
+  pointer-events: none;
+  border-radius: 2px;
+  transition: opacity 0.15s ease;
+  z-index: 1; /* Above text content but below indicator */
+}
+
+/* Highlight on hover */
+.highlightGroup:hover .highlight {
+  opacity: 0.7;
+}
+
+/* Comment indicator icon button */
+.indicator {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: var(--amber-9);
+  color: white;
+  border: none;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-1);
+  cursor: pointer;
+  z-index: 10;
+  transition: transform 0.15s ease, background 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transform: translate(-50%, -2px); /* Center horizontally, slight offset above text */
+}
+
+.indicator:hover {
+  transform: translate(-50%, -2px) scale(1.15);
+  background: var(--amber-10);
+}
+
+.indicator:focus-visible {
+  outline: 2px solid var(--amber-7);
+  outline-offset: 2px;
+}
+
+.indicator svg {
+  flex-shrink: 0;
+}
