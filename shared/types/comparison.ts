@@ -44,12 +44,12 @@ export interface FullContentData {
   oldContent: string | null;           // null for added files
   newContent: string | null;           // null for deleted files
   metadata: {
-    old: ContentMetadataSnapshot | null;
-    new: ContentMetadataSnapshot | null;
+    old: DiffMetadata | null;
+    new: DiffMetadata | null;
   };
 }
 
-export interface ContentMetadataSnapshot {
+export interface DiffMetadata {
   title: string;
   description: string | null;
   category: string | null;
