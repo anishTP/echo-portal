@@ -3,6 +3,7 @@ import type { FileDiff } from '@echo-portal/shared';
 import type { ReviewComment } from '../../services/reviewService';
 import { DiffFileHeader } from '../review/DiffFileHeader';
 import { DiffHunk } from '../review/DiffHunk';
+import { FullArticleDiffView } from '../review/FullArticleDiffView';
 import styles from './ReviewDiffView.module.css';
 
 export interface ReviewDiffViewProps {
@@ -54,9 +55,37 @@ export function ReviewDiffView({
     );
   }
 
+  // Use full article view when fullContent is available
+  if (file.fullContent) {
+    return (
+      <div className={displayMode === 'unified' ? styles.containerUnified : styles.container}>
+        <FullArticleDiffView
+          file={file}
+          displayMode={displayMode}
+          getComments={noopGetComments}
+        />
+      </div>
+    );
+  }
+
+  // Fallback to hunk-based rendering
+  const containerClasses = [
+    styles.container,
+    displayMode === 'unified' && styles.containerUnified,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const wrapperClasses = [
+    styles.diffWrapper,
+    displayMode === 'unified' && styles.diffWrapperUnified,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <div className={styles.container}>
-      <div className={styles.diffWrapper}>
+    <div className={containerClasses}>
+      <div className={wrapperClasses}>
         <DiffFileHeader
           file={file}
           isExpanded={isExpanded}
@@ -72,6 +101,8 @@ export function ReviewDiffView({
                 filePath={file.path}
                 displayMode={displayMode}
                 getComments={noopGetComments}
+                additions={file.additions}
+                deletions={file.deletions}
               />
             ))}
           </div>

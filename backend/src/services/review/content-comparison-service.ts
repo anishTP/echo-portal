@@ -7,9 +7,9 @@ import type { DiffHunk as LocalDiffHunk } from '../git/diff.js';
 import type {
   BranchComparison,
   FileDiff,
-  DiffHunk,
   ContentComparisonStats,
   ContentComparisonStatsItem,
+  FullContentData,
 } from '@echo-portal/shared';
 
 interface ContentMetadata {
@@ -168,6 +168,26 @@ export class ContentComparisonService {
           id: this.generateHunkId(item.title, index, hunk),
         }));
 
+        // Build full content data for article-level diff view
+        const fullContent: FullContentData = {
+          oldContent: sourceBody,
+          newContent: branchBody,
+          metadata: {
+            old: {
+              title: sourceContent.title,
+              description: sourceContent.description,
+              category: sourceContent.category,
+              tags: sourceContent.tags || [],
+            },
+            new: {
+              title: item.title,
+              description: item.description,
+              category: item.category,
+              tags: item.tags || [],
+            },
+          },
+        };
+
         files.push({
           path: item.title,
           contentId: item.id,
@@ -175,6 +195,7 @@ export class ContentComparisonService {
           additions: totalItemAdditions,
           deletions: totalItemDeletions,
           hunks: hunksWithIds,
+          fullContent,
         });
 
         totalAdditions += totalItemAdditions;
@@ -199,6 +220,21 @@ export class ContentComparisonService {
           id: this.generateHunkId(item.title, index, hunk),
         }));
 
+        // Build full content data for article-level diff view (new content)
+        const fullContent: FullContentData = {
+          oldContent: null, // No source for new content
+          newContent: branchBody,
+          metadata: {
+            old: null,
+            new: {
+              title: item.title,
+              description: item.description,
+              category: item.category,
+              tags: item.tags || [],
+            },
+          },
+        };
+
         files.push({
           path: item.title,
           contentId: item.id,
@@ -206,6 +242,7 @@ export class ContentComparisonService {
           additions: allLines.length,
           deletions: 0,
           hunks: hunksWithIds,
+          fullContent,
         });
 
         totalAdditions += allLines.length;

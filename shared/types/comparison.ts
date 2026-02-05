@@ -33,6 +33,27 @@ export interface FileDiff {
   additions: number;
   deletions: number;
   hunks: DiffHunk[];
+  fullContent?: FullContentData;       // Full content for article-level diff views
+}
+
+/**
+ * Full content data for article-level diff display.
+ * Includes raw body content and structured metadata separately.
+ */
+export interface FullContentData {
+  oldContent: string | null;           // null for added files
+  newContent: string | null;           // null for deleted files
+  metadata: {
+    old: ContentMetadataSnapshot | null;
+    new: ContentMetadataSnapshot | null;
+  };
+}
+
+export interface ContentMetadataSnapshot {
+  title: string;
+  description: string | null;
+  category: string | null;
+  tags: string[];
 }
 
 export type FileStatus = 'added' | 'modified' | 'deleted' | 'renamed';
