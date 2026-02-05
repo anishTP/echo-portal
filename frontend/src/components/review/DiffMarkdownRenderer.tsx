@@ -116,6 +116,12 @@ export function DiffMarkdownRenderer({ content }: DiffMarkdownRendererProps) {
           blockquote: ({ children }) => (
             <blockquote className={styles.blockquote}>{children}</blockquote>
           ),
+          ins: ({ children }) => (
+            <ins className={styles.inlineDiffAddition}>{children}</ins>
+          ),
+          del: ({ children }) => (
+            <del className={styles.inlineDiffDeletion}>{children}</del>
+          ),
           img: ({ src, alt }) => {
             if (!src || src === '') {
               return (

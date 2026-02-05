@@ -147,6 +147,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.75.5
         version: 5.90.19(react@19.2.3)
+      '@types/diff':
+        specifier: ^8.0.0
+        version: 8.0.0
       '@types/prismjs':
         specifier: ^1.26.5
         version: 1.26.5
@@ -156,6 +159,9 @@ importers:
       dexie-react-hooks:
         specifier: ^4.2.0
         version: 4.2.0(@types/react@19.2.9)(dexie@4.3.0)(react@19.2.3)
+      diff:
+        specifier: ^8.0.3
+        version: 8.0.3
       monaco-editor:
         specifier: ^0.52.2
         version: 0.52.2
@@ -2176,6 +2182,10 @@ packages:
   '@types/deep-eql@4.0.2':
     resolution: {integrity: sha512-c9h9dVVMigMPc4bwTvC5dxqtqJZwQPePsWjPlpSOnojbor6pGqdk541lfA7AqFQr5pB1BRdq0juY9db81BwyFw==}
 
+  '@types/diff@8.0.0':
+    resolution: {integrity: sha512-o7jqJM04gfaYrdCecCVMbZhNdG6T1MHg/oQoRFdERLV+4d+V7FijhiEAbFu0Usww84Yijk9yH58U4Jk4HbtzZw==}
+    deprecated: This is a stub types definition. diff provides its own type definitions, so you do not need this installed.
+
   '@types/estree-jsx@1.0.5':
     resolution: {integrity: sha512-52CcUVNFyfb1A2ALocQw/Dd1BQFNmSdkuC3BkZ6iqhdMfQz7JWOFRuJFloOzjk+6WijU56m9oKXFAXc7o3Towg==}
 
@@ -2629,6 +2639,10 @@ packages:
 
   diff3@0.0.3:
     resolution: {integrity: sha512-iSq8ngPOt0K53A6eVr4d5Kn6GNrM2nQZtC740pzIriHtn4pOQ2lyzEXQMBeVcWERN0ye7fhBsk9PbLLQOnUx/g==}
+
+  diff@8.0.3:
+    resolution: {integrity: sha512-qejHi7bcSD4hQAZE0tNAawRK1ZtafHDmMTMkrrIGgSLl7hTnQHmKCeB45xAcbfTqK2zowkM3j3bHt/4b/ARbYQ==}
+    engines: {node: '>=0.3.1'}
 
   dom-accessibility-api@0.5.16:
     resolution: {integrity: sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg==}
@@ -6414,6 +6428,10 @@ snapshots:
 
   '@types/deep-eql@4.0.2': {}
 
+  '@types/diff@8.0.0':
+    dependencies:
+      diff: 8.0.3
+
   '@types/estree-jsx@1.0.5':
     dependencies:
       '@types/estree': 1.0.8
@@ -6916,6 +6934,8 @@ snapshots:
   dexie@4.3.0: {}
 
   diff3@0.0.3: {}
+
+  diff@8.0.3: {}
 
   dom-accessibility-api@0.5.16: {}
 

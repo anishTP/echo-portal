@@ -528,3 +528,24 @@
 .splitContainer::selection {
   background: var(--accent-4);
 }
+
+/* ============================================
+   INLINE DIFF HIGHLIGHTING (WORD-LEVEL)
+   ============================================ */
+
+/* Inline additions (green background, no strikethrough) */
+.inlineDiffAddition {
+  background: var(--green-3);
+  text-decoration: none;
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+/* Inline deletions (red background with strikethrough) */
+.inlineDiffDeletion {
+  background: var(--red-3);
+  text-decoration: line-through;
+  color: var(--gray-10);
+  border-radius: 2px;
+  padding: 0 2px;
+}

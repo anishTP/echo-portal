@@ -7,12 +7,17 @@
  * Commenting is selection-based: select any text to add a comment.
  */
 
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import type { FileDiff } from '@echo-portal/shared';
 import type { TextSelection } from '../../hooks/useTextSelection';
 import type { ReviewComment } from '../../services/reviewService';
 import { useTextSelection } from '../../hooks/useTextSelection';
+import {
+  generateUnifiedDiffMarkdown,
+  generateOldSideDiffMarkdown,
+  generateNewSideDiffMarkdown,
+} from '../../utils/inlineDiff';
 import { DiffMarkdownRenderer } from './DiffMarkdownRenderer';
 import { CommentPopover } from './CommentPopover';
 import { CommentHighlights } from './CommentHighlights';
@@ -100,7 +105,12 @@ function UnifiedArticleView({
   const { selection, clearSelection } = useTextSelection(articleRef);
 
   const currentMeta = metadata.new || metadata.old;
-  const body = newContent || oldContent || '';
+
+  // Compute inline diff for body content
+  const diffMarkdown = useMemo(
+    () => generateUnifiedDiffMarkdown(oldContent, newContent),
+    [oldContent, newContent]
+  );
 
   // Check specific field changes for highlighting
   const titleChanged = metadata.old && metadata.new && metadata.old.title !== metadata.new.title;
@@ -160,9 +170,9 @@ function UnifiedArticleView({
         )}
       </header>
 
-      {/* Body rendered as clean prose */}
+      {/* Body rendered as prose with inline diff highlighting */}
       <div className={styles.body}>
-        <DiffMarkdownRenderer content={body} />
+        <DiffMarkdownRenderer content={diffMarkdown} />
       </div>
 
       {/* Comment highlight overlays */}
@@ -217,6 +227,16 @@ function SplitArticleView({
   const descriptionChanged = metadata.old && metadata.new && metadata.old.description !== metadata.new.description;
   const categoryChanged = metadata.old && metadata.new && metadata.old.category !== metadata.new.category;
 
+  // Compute side-specific diffs for body content
+  const oldDiffMarkdown = useMemo(
+    () => generateOldSideDiffMarkdown(oldContent, newContent),
+    [oldContent, newContent]
+  );
+  const newDiffMarkdown = useMemo(
+    () => generateNewSideDiffMarkdown(oldContent, newContent),
+    [oldContent, newContent]
+  );
+
   const handleSubmitComment = async (content: string) => {
     if (selection && onSubmitComment) {
       await onSubmitComment(content, selection);
@@ -229,7 +249,7 @@ function SplitArticleView({
     const count = isOld ? deletions : additions;
     const label = isOld ? 'removals' : 'additions';
     const meta = isOld ? metadata.old : metadata.new;
-    const body = isOld ? (oldContent || '') : (newContent || '');
+    const diffMarkdown = isOld ? oldDiffMarkdown : newDiffMarkdown;
     const highlightClass = isOld ? styles.highlightDeletion : styles.highlightAddition;
 
     return (
@@ -269,10 +289,10 @@ function SplitArticleView({
             </p>
           )}
 
-          {/* Body */}
-          {body && (
+          {/* Body with inline diff highlighting */}
+          {diffMarkdown && (
             <div className={styles.splitBody}>
-              <DiffMarkdownRenderer content={body} />
+              <DiffMarkdownRenderer content={diffMarkdown} />
             </div>
           )}
         </article>
