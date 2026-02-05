@@ -125,7 +125,6 @@ export function FullArticleDiffView({
         oldContent={oldContent}
         newContent={newContent}
         metadata={metadata}
-        hunks={hunks}
       />
     );
   }
@@ -147,14 +146,13 @@ export function FullArticleDiffView({
 }
 
 /**
- * Unified view - Full rendered article with paragraph-level diff highlighting.
- * Shows the new version with changes highlighted.
+ * Unified view - Full rendered article as clean prose.
+ * Metadata changes shown in header, body rendered without highlighting.
  */
 function UnifiedArticleView({
   oldContent,
   newContent,
   metadata,
-  hunks,
 }: {
   oldContent: string | null;
   newContent: string | null;
@@ -162,7 +160,6 @@ function UnifiedArticleView({
     old: { title: string; description: string | null; category: string | null; tags: string[] } | null;
     new: { title: string; description: string | null; category: string | null; tags: string[] } | null;
   };
-  hunks: FileDiff['hunks'];
 }) {
   const currentMeta = metadata.new || metadata.old;
   const body = newContent || oldContent || '';
@@ -210,30 +207,10 @@ function UnifiedArticleView({
         )}
       </header>
 
-      {/* Body with diff highlighting */}
+      {/* Body rendered as clean prose */}
       <div className={styles.body}>
-        <DiffMarkdownRenderer
-          content={body}
-          hunks={hunks}
-          side="new"
-        />
+        <DiffMarkdownRenderer content={body} />
       </div>
-
-      {/* Show deleted content at the end if applicable */}
-      {oldContent && newContent && oldContent !== newContent && (
-        <details className={styles.deletedContent}>
-          <summary className={styles.deletedSummary}>
-            View deleted content
-          </summary>
-          <div className={styles.deletedBody}>
-            <DiffMarkdownRenderer
-              content={oldContent}
-              hunks={hunks}
-              side="old"
-            />
-          </div>
-        </details>
-      )}
     </article>
   );
 }
