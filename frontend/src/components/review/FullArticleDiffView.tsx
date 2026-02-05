@@ -118,12 +118,11 @@ function UnifiedArticleView({
   const DESCRIPTION_LINE = 2;
   const CATEGORY_LINE = 3;
 
-  // Helper to make changed content clickable
+  // Helper to make changed content clickable (className handled separately to preserve highlighting)
   const clickableProps = (line: number, side: 'old' | 'new') => {
     if (!onLineClick) return {};
     return {
       onClick: () => onLineClick(line, side),
-      className: styles.clickableContent,
       role: 'button' as const,
       tabIndex: 0,
       onKeyDown: (e: React.KeyboardEvent) => {
