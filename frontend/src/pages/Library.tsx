@@ -24,6 +24,7 @@ import { useReviewComments } from '../hooks/useReviewComments';
 import { useBranchStore } from '../stores/branchStore';
 import { useAuth } from '../context/AuthContext';
 import type { ContentSummary } from '@echo-portal/shared';
+import type { TextSelection } from '../hooks/useTextSelection';
 
 type ContentType = 'all' | 'guideline' | 'asset' | 'opinion';
 
@@ -146,12 +147,8 @@ export default function Library() {
     addComment,
   } = useReviewComments(activeReview?.id);
 
-  // Track which line is being commented on
-  const [commentingAt, setCommentingAt] = useState<{
-    path: string;
-    line: number;
-    side: 'old' | 'new';
-  } | null>(null);
+  // Selection-based commenting no longer needs explicit state tracking
+  // The CommentPopover handles its own state via useTextSelection
 
   // Review display mode state
   const [reviewDisplayMode, setReviewDisplayMode] = useState<'unified' | 'split'>('unified');
@@ -454,27 +451,17 @@ export default function Library() {
     handleDiscard();
   }, [handleDiscard]);
 
-  // Handler for clicking on a diff line to add a comment
-  const handleLineClick = useCallback((path: string, line: number, side: 'old' | 'new') => {
-    setCommentingAt({ path, line, side });
-  }, []);
-
-  // Handler for submitting a comment
-  const handleSubmitComment = useCallback(async (content: string) => {
-    if (!commentingAt) return;
+  // Handler for submitting a selection-based comment
+  const handleSubmitComment = useCallback(async (content: string, selection: TextSelection, filePath: string) => {
     await addComment.mutateAsync({
       content,
-      path: commentingAt.path,
-      line: commentingAt.line,
-      side: commentingAt.side,
+      path: filePath,
+      // Store selection info for anchoring (using startOffset as line for now)
+      line: selection.startOffset,
+      side: 'new', // Default to 'new' side for selection-based comments
+      // Additional selection data could be stored in metadata field if backend supports it
     });
-    setCommentingAt(null);
-  }, [commentingAt, addComment]);
-
-  // Handler for canceling comment
-  const handleCancelComment = useCallback(() => {
-    setCommentingAt(null);
-  }, []);
+  }, [addComment]);
 
   // Handle delete content
   const handleDeleteContent = useCallback(async () => {
@@ -661,10 +648,7 @@ export default function Library() {
           displayMode={reviewDisplayMode}
           isLoading={isComparisonLoading}
           comments={comments}
-          commentingAt={commentingAt}
-          onLineClick={handleLineClick}
           onSubmitComment={handleSubmitComment}
-          onCancelComment={handleCancelComment}
         />
       ) : isEditMode && editModeContent && currentDraft ? (
         <InlineEditView

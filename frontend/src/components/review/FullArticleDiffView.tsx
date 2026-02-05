@@ -3,38 +3,32 @@
  *
  * Unified view: Renders as prose with markdown formatting, metadata highlighting.
  * Split view: Side-by-side prose panels showing old and new versions.
+ *
+ * Commenting is selection-based: select any text to add a comment.
  */
 
+import { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import type { FileDiff } from '@echo-portal/shared';
-import type { ReviewComment } from '../../services/reviewService';
+import type { TextSelection } from '../../hooks/useTextSelection';
+import { useTextSelection } from '../../hooks/useTextSelection';
 import { DiffMarkdownRenderer } from './DiffMarkdownRenderer';
-import { InlineCommentForm } from './InlineCommentForm';
+import { CommentPopover } from './CommentPopover';
 import styles from './FullArticleDiffView.module.css';
 
 interface FullArticleDiffViewProps {
   file: FileDiff;
   displayMode: 'unified' | 'split';
-  getComments: (path: string, line: number, side: 'old' | 'new') => ReviewComment[];
-  onLineClick?: (line: number, side: 'old' | 'new') => void;
-  /** Currently active comment form location (path already filtered by parent) */
-  commentingAt?: { line: number; side: 'old' | 'new' } | null;
-  /** Called when user submits a comment */
-  onSubmitComment?: (content: string) => Promise<void>;
-  /** Called when user cancels the comment form */
-  onCancelComment?: () => void;
+  /** Called when user submits a comment on selected text */
+  onSubmitComment?: (content: string, selection: TextSelection) => Promise<void>;
 }
 
 export function FullArticleDiffView({
   file,
   displayMode,
-  getComments,
-  onLineClick,
-  commentingAt,
   onSubmitComment,
-  onCancelComment,
 }: FullArticleDiffViewProps) {
-  const { fullContent, hunks, additions, deletions } = file;
+  const { fullContent, additions, deletions } = file;
 
   if (!fullContent) {
     return (
@@ -53,11 +47,7 @@ export function FullArticleDiffView({
         oldContent={oldContent}
         newContent={newContent}
         metadata={metadata}
-        filePath={file.path}
-        onLineClick={onLineClick}
-        commentingAt={commentingAt}
         onSubmitComment={onSubmitComment}
-        onCancelComment={onCancelComment}
       />
     );
   }
@@ -68,12 +58,9 @@ export function FullArticleDiffView({
       oldContent={oldContent}
       newContent={newContent}
       metadata={metadata}
-      hunks={hunks}
       additions={additions}
       deletions={deletions}
-      getComments={getComments}
-      onLineClick={onLineClick}
-      filePath={file.path}
+      onSubmitComment={onSubmitComment}
     />
   );
 }
@@ -81,17 +68,13 @@ export function FullArticleDiffView({
 /**
  * Unified view - Full rendered article as clean prose.
  * Metadata changes shown in header, body rendered without highlighting.
- * Changed content is clickable to add comments.
+ * Select any text to add comments.
  */
 function UnifiedArticleView({
   oldContent,
   newContent,
   metadata,
-  filePath,
-  onLineClick,
-  commentingAt,
   onSubmitComment,
-  onCancelComment,
 }: {
   oldContent: string | null;
   newContent: string | null;
@@ -99,12 +82,11 @@ function UnifiedArticleView({
     old: { title: string; description: string | null; category: string | null; tags: string[] } | null;
     new: { title: string; description: string | null; category: string | null; tags: string[] } | null;
   };
-  filePath: string;
-  onLineClick?: (line: number, side: 'old' | 'new') => void;
-  commentingAt?: { line: number; side: 'old' | 'new' } | null;
-  onSubmitComment?: (content: string) => Promise<void>;
-  onCancelComment?: () => void;
+  onSubmitComment?: (content: string, selection: TextSelection) => Promise<void>;
 }) {
+  const articleRef = useRef<HTMLElement>(null);
+  const { selection, clearSelection } = useTextSelection(articleRef);
+
   const currentMeta = metadata.new || metadata.old;
   const body = newContent || oldContent || '';
 
@@ -113,53 +95,27 @@ function UnifiedArticleView({
   const descriptionChanged = metadata.old && metadata.new && metadata.old.description !== metadata.new.description;
   const categoryChanged = metadata.old && metadata.new && metadata.old.category !== metadata.new.category;
 
-  // Line numbers for clickable elements (conventional assignments for metadata)
-  const TITLE_LINE = 1;
-  const DESCRIPTION_LINE = 2;
-  const CATEGORY_LINE = 3;
-
-  // Helper to make changed content clickable (className handled separately to preserve highlighting)
-  const clickableProps = (line: number, side: 'old' | 'new') => {
-    if (!onLineClick) return {};
-    return {
-      onClick: () => onLineClick(line, side),
-      role: 'button' as const,
-      tabIndex: 0,
-      onKeyDown: (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onLineClick(line, side);
-        }
-      },
-    };
-  };
-
-  // Check if comment form should show for a specific line
-  const showCommentFormAt = (line: number) => {
-    return commentingAt?.line === line;
+  const handleSubmitComment = async (content: string) => {
+    if (selection && onSubmitComment) {
+      await onSubmitComment(content, selection);
+      clearSelection();
+    }
   };
 
   return (
-    <article className={styles.article}>
+    <article ref={articleRef} className={styles.article}>
       {/* Category breadcrumb */}
       {(currentMeta?.category || (categoryChanged && metadata.old?.category)) && (
         <div className={styles.breadcrumb}>
           {categoryChanged && metadata.old?.category && (
-            <span
-              className={`${styles.highlightDeletion} ${onLineClick ? styles.clickableContent : ''}`}
-              {...(categoryChanged ? clickableProps(CATEGORY_LINE, 'old') : {})}
-            >
+            <span className={styles.highlightDeletion}>
               {metadata.old.category}
             </span>
           )}
           {currentMeta?.category && (
             <Link
               to={`/?category=${encodeURIComponent(currentMeta.category)}`}
-              className={`${categoryChanged ? styles.highlightAddition : ''} ${categoryChanged && onLineClick ? styles.clickableContent : ''}`}
-              onClick={categoryChanged && onLineClick ? (e) => {
-                e.preventDefault();
-                onLineClick(CATEGORY_LINE, 'new');
-              } : undefined}
+              className={categoryChanged ? styles.highlightAddition : undefined}
             >
               {currentMeta.category}
             </Link>
@@ -167,82 +123,28 @@ function UnifiedArticleView({
         </div>
       )}
 
-      {/* Comment form for category */}
-      {showCommentFormAt(CATEGORY_LINE) && onSubmitComment && onCancelComment && (
-        <div className={styles.commentFormContainer}>
-          <InlineCommentForm
-            path={filePath}
-            line={CATEGORY_LINE}
-            side={commentingAt!.side}
-            onSubmit={onSubmitComment}
-            onCancel={onCancelComment}
-            placeholder="Add a comment about the category change..."
-          />
-        </div>
-      )}
-
       {/* Header */}
       <header className={styles.header}>
         {/* Title: show old (red) then new (green) if changed */}
         {titleChanged && metadata.old?.title && (
-          <h1
-            className={`${styles.title} ${styles.highlightDeletion} ${onLineClick ? styles.clickableContent : ''}`}
-            {...clickableProps(TITLE_LINE, 'old')}
-          >
+          <h1 className={`${styles.title} ${styles.highlightDeletion}`}>
             {metadata.old.title}
           </h1>
         )}
-        <h1
-          className={`${styles.title} ${titleChanged ? styles.highlightAddition : ''} ${titleChanged && onLineClick ? styles.clickableContent : ''}`}
-          {...(titleChanged ? clickableProps(TITLE_LINE, 'new') : {})}
-        >
+        <h1 className={`${styles.title} ${titleChanged ? styles.highlightAddition : ''}`}>
           {currentMeta?.title}
         </h1>
 
-        {/* Comment form for title */}
-        {showCommentFormAt(TITLE_LINE) && onSubmitComment && onCancelComment && (
-          <div className={styles.commentFormContainer}>
-            <InlineCommentForm
-              path={filePath}
-              line={TITLE_LINE}
-              side={commentingAt!.side}
-              onSubmit={onSubmitComment}
-              onCancel={onCancelComment}
-              placeholder="Add a comment about the title change..."
-            />
-          </div>
-        )}
-
         {/* Description: show old (red) then new (green) if changed */}
         {descriptionChanged && metadata.old?.description && (
-          <p
-            className={`${styles.description} ${styles.highlightDeletion} ${onLineClick ? styles.clickableContent : ''}`}
-            {...clickableProps(DESCRIPTION_LINE, 'old')}
-          >
+          <p className={`${styles.description} ${styles.highlightDeletion}`}>
             {metadata.old.description}
           </p>
         )}
         {currentMeta?.description && (
-          <p
-            className={`${styles.description} ${descriptionChanged ? styles.highlightAddition : ''} ${descriptionChanged && onLineClick ? styles.clickableContent : ''}`}
-            {...(descriptionChanged ? clickableProps(DESCRIPTION_LINE, 'new') : {})}
-          >
+          <p className={`${styles.description} ${descriptionChanged ? styles.highlightAddition : ''}`}>
             {currentMeta.description}
           </p>
-        )}
-
-        {/* Comment form for description */}
-        {showCommentFormAt(DESCRIPTION_LINE) && onSubmitComment && onCancelComment && (
-          <div className={styles.commentFormContainer}>
-            <InlineCommentForm
-              path={filePath}
-              line={DESCRIPTION_LINE}
-              side={commentingAt!.side}
-              onSubmit={onSubmitComment}
-              onCancel={onCancelComment}
-              placeholder="Add a comment about the description change..."
-            />
-          </div>
         )}
       </header>
 
@@ -250,6 +152,15 @@ function UnifiedArticleView({
       <div className={styles.body}>
         <DiffMarkdownRenderer content={body} />
       </div>
+
+      {/* Floating comment popover on text selection */}
+      {selection && onSubmitComment && (
+        <CommentPopover
+          selection={selection}
+          onSubmit={handleSubmitComment}
+          onCancel={clearSelection}
+        />
+      )}
     </article>
   );
 }
@@ -264,6 +175,7 @@ function SplitArticleView({
   metadata,
   additions,
   deletions,
+  onSubmitComment,
 }: {
   oldContent: string | null;
   newContent: string | null;
@@ -271,17 +183,24 @@ function SplitArticleView({
     old: { title: string; description: string | null; category: string | null; tags: string[] } | null;
     new: { title: string; description: string | null; category: string | null; tags: string[] } | null;
   };
-  hunks: FileDiff['hunks'];
   additions: number;
   deletions: number;
-  getComments: (path: string, line: number, side: 'old' | 'new') => ReviewComment[];
-  onLineClick?: (line: number, side: 'old' | 'new') => void;
-  filePath: string;
+  onSubmitComment?: (content: string, selection: TextSelection) => Promise<void>;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { selection, clearSelection } = useTextSelection(containerRef);
+
   // Check specific field changes for highlighting
   const titleChanged = metadata.old && metadata.new && metadata.old.title !== metadata.new.title;
   const descriptionChanged = metadata.old && metadata.new && metadata.old.description !== metadata.new.description;
   const categoryChanged = metadata.old && metadata.new && metadata.old.category !== metadata.new.category;
+
+  const handleSubmitComment = async (content: string) => {
+    if (selection && onSubmitComment) {
+      await onSubmitComment(content, selection);
+      clearSelection();
+    }
+  };
 
   const renderPanel = (side: 'old' | 'new') => {
     const isOld = side === 'old';
@@ -340,9 +259,18 @@ function SplitArticleView({
   };
 
   return (
-    <div className={styles.splitContainer}>
+    <div ref={containerRef} className={styles.splitContainer}>
       {renderPanel('old')}
       {renderPanel('new')}
+
+      {/* Floating comment popover on text selection */}
+      {selection && onSubmitComment && (
+        <CommentPopover
+          selection={selection}
+          onSubmit={handleSubmitComment}
+          onCancel={clearSelection}
+        />
+      )}
     </div>
   );
 }

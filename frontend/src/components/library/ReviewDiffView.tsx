@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { FileDiff } from '@echo-portal/shared';
 import type { ReviewComment } from '../../services/reviewService';
+import type { TextSelection } from '../../hooks/useTextSelection';
 import { DiffFileHeader } from '../review/DiffFileHeader';
 import { DiffHunk } from '../review/DiffHunk';
 import { FullArticleDiffView } from '../review/FullArticleDiffView';
@@ -12,30 +13,23 @@ export interface ReviewDiffViewProps {
   isLoading: boolean;
   /** Comments for this review */
   comments?: ReviewComment[];
-  /** Currently active comment form location */
-  commentingAt?: { path: string; line: number; side: 'old' | 'new' } | null;
-  /** Called when user clicks on a line to add a comment */
-  onLineClick?: (path: string, line: number, side: 'old' | 'new') => void;
-  /** Called when user submits a comment */
-  onSubmitComment?: (content: string) => Promise<void>;
-  /** Called when user cancels the comment form */
-  onCancelComment?: () => void;
+  /** Called when user submits a comment on selected text */
+  onSubmitComment?: (content: string, selection: TextSelection, filePath: string) => Promise<void>;
 }
 
 
 /**
  * Main content component showing the diff for a single selected content item.
  * Reuses DiffFileHeader and DiffHunk from the review components.
+ *
+ * Commenting is selection-based: select any text to add a comment.
  */
 export function ReviewDiffView({
   file,
   displayMode,
   isLoading,
   comments,
-  commentingAt,
-  onLineClick,
   onSubmitComment,
-  onCancelComment,
 }: ReviewDiffViewProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -82,11 +76,11 @@ export function ReviewDiffView({
         <FullArticleDiffView
           file={file}
           displayMode={displayMode}
-          getComments={getComments}
-          onLineClick={onLineClick ? (line, side) => onLineClick(file.path, line, side) : undefined}
-          commentingAt={commentingAt?.path === file.path ? { line: commentingAt.line, side: commentingAt.side } : null}
-          onSubmitComment={onSubmitComment}
-          onCancelComment={onCancelComment}
+          onSubmitComment={
+            onSubmitComment
+              ? (content, selection) => onSubmitComment(content, selection, file.path)
+              : undefined
+          }
         />
       </div>
     );
