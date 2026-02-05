@@ -159,11 +159,11 @@ export function CommentHighlights({
           context, // Same context for all rects in this range
         }));
 
-        // Indicator at end of last rect
+        // Position indicator at end of the line (right edge of container)
         const lastRect = relativeRects[relativeRects.length - 1];
         const indicatorPosition = {
-          top: lastRect.top,
-          left: lastRect.left + lastRect.width,
+          top: lastRect.top + (lastRect.height / 2), // Vertically center on the line
+          left: containerRect.width - 16, // Position near right edge with some padding
         };
 
         newHighlights.push({

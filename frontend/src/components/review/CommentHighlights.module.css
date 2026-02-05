@@ -45,72 +45,51 @@
    COMMENT INDICATOR ICONS
    ============================================ */
 
-/* Base indicator styles */
+/* Indicator positioned at end of line */
 .indicator {
   position: absolute;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
+  background: var(--accent-9);
   color: white;
   border: none;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-2);
   font-size: var(--font-size-1);
   cursor: pointer;
   z-index: 10;
-  transition: transform 0.15s ease, background 0.15s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  transform: translate(-50%, -2px); /* Center horizontally, slight offset above text */
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transform: translateY(-50%); /* Center vertically on the line */
 }
 
-/* Default (amber) indicator */
-.indicator--default {
-  background: var(--amber-9);
-}
-
-.indicator--default:hover {
-  background: var(--amber-10);
-}
-
-.indicator--default:focus-visible {
-  outline: 2px solid var(--amber-7);
-  outline-offset: 2px;
-}
-
-/* Addition (green) indicator */
-.indicator--addition {
-  background: var(--green-9);
-}
-
-.indicator--addition:hover {
-  background: var(--green-10);
-}
-
-.indicator--addition:focus-visible {
-  outline: 2px solid var(--green-7);
-  outline-offset: 2px;
-}
-
-/* Deletion (red) indicator */
-.indicator--deletion {
-  background: var(--red-9);
-}
-
-.indicator--deletion:hover {
-  background: var(--red-10);
-}
-
-.indicator--deletion:focus-visible {
-  outline: 2px solid var(--red-7);
-  outline-offset: 2px;
-}
-
-/* Common hover transform */
 .indicator:hover {
-  transform: translate(-50%, -2px) scale(1.15);
+  background: var(--accent-10);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transform: translateY(-50%) scale(1.05);
+}
+
+.indicator:focus-visible {
+  outline: 2px solid var(--accent-7);
+  outline-offset: 2px;
 }
 
 .indicator svg {
   flex-shrink: 0;
+}
+
+/* Contextual indicator variants - all use brand color but with subtle border */
+.indicator--default,
+.indicator--addition,
+.indicator--deletion {
+  /* All use the same brand color */
+  background: var(--accent-9);
+}
+
+.indicator--default:hover,
+.indicator--addition:hover,
+.indicator--deletion:hover {
+  background: var(--accent-10);
 }
