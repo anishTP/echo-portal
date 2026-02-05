@@ -1,0 +1,243 @@
+/* DiffHunk.module.css */
+/* Diff hunk styling for both split and unified views */
+
+/* ============================================
+   SPLIT VIEW LAYOUT
+   ============================================ */
+
+.splitContainer {
+  display: flex;
+  width: 100%;
+  font-family: var(--code-font-family);
+  font-size: var(--font-size-2);
+  line-height: 1.5;
+}
+
+.panel {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.panelOld {
+  border-right: 1px solid var(--gray-6);
+}
+
+.panelNew {
+  /* No additional styling needed */
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  background: var(--gray-2);
+  border-bottom: 1px solid var(--gray-5);
+  font-size: var(--font-size-1);
+  font-family: var(--default-font-family);
+}
+
+.panelHeaderOld {
+  color: var(--red-11);
+}
+
+.panelHeaderNew {
+  color: var(--green-11);
+}
+
+.panelHeaderCount {
+  font-weight: var(--font-weight-medium);
+}
+
+.panelTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* ============================================
+   LINE NUMBER GUTTER
+   ============================================ */
+
+.lineNumber {
+  width: 48px;
+  min-width: 48px;
+  padding: 0 var(--space-2);
+  text-align: right;
+  color: var(--gray-10);
+  background: var(--gray-3);
+  user-select: none;
+  font-size: var(--font-size-1);
+  vertical-align: top;
+}
+
+.lineNumberAddition {
+  background: var(--green-3);
+  color: var(--green-11);
+}
+
+.lineNumberDeletion {
+  background: var(--red-3);
+  color: var(--red-11);
+}
+
+/* ============================================
+   LINE CONTENT
+   ============================================ */
+
+.lineContent {
+  padding: 0 var(--space-3);
+  white-space: pre-wrap;
+  word-break: break-all;
+  vertical-align: top;
+}
+
+.lineAddition {
+  background: var(--green-2);
+}
+
+.lineDeletion {
+  background: var(--red-2);
+}
+
+.lineContext {
+  background: var(--color-background);
+}
+
+.lineEmpty {
+  background: var(--gray-2);
+}
+
+/* ============================================
+   CHARACTER-LEVEL HIGHLIGHTS
+   ============================================ */
+
+.charHighlightAdd {
+  background: var(--green-5);
+  border-radius: 2px;
+}
+
+.charHighlightDel {
+  background: var(--red-5);
+  border-radius: 2px;
+}
+
+/* ============================================
+   SPLIT VIEW ROWS
+   ============================================ */
+
+.splitRow {
+  transition: background 0.1s ease;
+}
+
+.splitRow:hover .lineContent {
+  filter: brightness(0.97);
+}
+
+.splitRowClickable {
+  cursor: pointer;
+}
+
+.splitRowCommenting {
+  outline: 2px solid var(--blue-8);
+  outline-offset: -2px;
+}
+
+/* ============================================
+   UNIFIED VIEW LAYOUT (PROSE-LIKE)
+   ============================================ */
+
+.unifiedContainer {
+  font-family: var(--default-font-family);
+  font-size: var(--font-size-3);
+  line-height: 1.7;
+  padding: var(--space-4);
+  max-width: 65ch;
+  margin: 0 auto;
+}
+
+.unifiedLine {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-2);
+  margin: var(--space-1) 0;
+}
+
+.unifiedLineAddition {
+  background: var(--green-2);
+  border-left: 3px solid var(--green-8);
+  padding-left: calc(var(--space-3) - 3px);
+}
+
+.unifiedLineDeletion {
+  background: var(--red-2);
+  border-left: 3px solid var(--red-8);
+  padding-left: calc(var(--space-3) - 3px);
+  text-decoration: line-through;
+  color: var(--gray-10);
+}
+
+.unifiedLineContext {
+  background: transparent;
+}
+
+.unifiedLineClickable {
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.unifiedLineClickable:hover {
+  filter: brightness(0.97);
+}
+
+.unifiedLineCommenting {
+  outline: 2px solid var(--blue-8);
+  outline-offset: -2px;
+}
+
+.unifiedLineNumber {
+  display: inline-block;
+  min-width: 24px;
+  margin-right: var(--space-2);
+  color: var(--gray-9);
+  font-size: var(--font-size-1);
+  font-family: var(--code-font-family);
+  user-select: none;
+}
+
+/* ============================================
+   COMMENT INDICATOR
+   ============================================ */
+
+.commentBadge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: var(--space-2);
+  padding: 0 var(--space-2);
+  height: 20px;
+  font-size: var(--font-size-1);
+  font-weight: var(--font-weight-medium);
+  background: var(--blue-3);
+  color: var(--blue-11);
+  border-radius: var(--radius-full);
+}
+
+/* ============================================
+   HUNK SEPARATOR (UNIFIED VIEW)
+   ============================================ */
+
+.hunkSeparator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+  color: var(--gray-9);
+  font-size: var(--font-size-1);
+}
+
+.hunkSeparator::before,
+.hunkSeparator::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--gray-5);
+}
