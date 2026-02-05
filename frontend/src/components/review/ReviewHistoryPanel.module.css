@@ -1,0 +1,71 @@
+/* ReviewHistoryPanel.module.css */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.cycleCard {
+  padding: var(--space-4);
+  border-radius: var(--radius-3);
+  background: var(--color-panel-solid);
+  border: 1px solid var(--gray-6);
+  transition: border-color 0.15s ease;
+}
+
+.cycleCard[data-outcome="approved"] {
+  border-left: 3px solid var(--green-9);
+}
+
+.cycleCard[data-outcome="changes_requested"] {
+  border-left: 3px solid var(--orange-9);
+}
+
+.cycleCard[data-outcome="pending"] {
+  border-left: 3px solid var(--blue-9);
+}
+
+.cycleCard[data-outcome="withdrawn"] {
+  border-left: 3px solid var(--gray-7);
+}
+
+.cycleNumber {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(24px * var(--scaling));
+  height: calc(24px * var(--scaling));
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-1);
+  font-weight: var(--font-weight-bold);
+  background: var(--gray-4);
+  color: var(--gray-12);
+}
+
+.cycleCard[data-current="true"] .cycleNumber {
+  background: var(--accent-9);
+  color: var(--accent-contrast);
+}
+
+.approvalBar {
+  height: calc(6px * var(--scaling));
+  border-radius: var(--radius-full);
+  background: var(--gray-4);
+  overflow: hidden;
+}
+
+.approvalFill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--green-9);
+  transition: width 0.3s ease;
+}
+
+.emptyState {
+  padding: var(--space-5);
+  text-align: center;
+  border-radius: var(--radius-3);
+  background: var(--gray-2);
+  border: 1px solid var(--gray-5);
+}
