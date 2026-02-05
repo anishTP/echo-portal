@@ -172,19 +172,42 @@ function UnifiedArticleView({
   return (
     <article className={styles.article}>
       {/* Category breadcrumb */}
-      {currentMeta?.category && (
-        <div className={`${styles.breadcrumb} ${categoryChanged ? styles.highlightAddition : ''}`}>
-          <Link to={`/?category=${encodeURIComponent(currentMeta.category)}`}>
-            {currentMeta.category}
-          </Link>
+      {(currentMeta?.category || (categoryChanged && metadata.old?.category)) && (
+        <div className={styles.breadcrumb}>
+          {categoryChanged && metadata.old?.category && (
+            <span className={styles.highlightDeletion}>
+              {metadata.old.category}
+            </span>
+          )}
+          {currentMeta?.category && (
+            <Link
+              to={`/?category=${encodeURIComponent(currentMeta.category)}`}
+              className={categoryChanged ? styles.highlightAddition : ''}
+            >
+              {currentMeta.category}
+            </Link>
+          )}
         </div>
       )}
 
       {/* Header */}
       <header className={styles.header}>
+        {/* Title: show old (red) then new (green) if changed */}
+        {titleChanged && metadata.old?.title && (
+          <h1 className={`${styles.title} ${styles.highlightDeletion}`}>
+            {metadata.old.title}
+          </h1>
+        )}
         <h1 className={`${styles.title} ${titleChanged ? styles.highlightAddition : ''}`}>
           {currentMeta?.title}
         </h1>
+
+        {/* Description: show old (red) then new (green) if changed */}
+        {descriptionChanged && metadata.old?.description && (
+          <p className={`${styles.description} ${styles.highlightDeletion}`}>
+            {metadata.old.description}
+          </p>
+        )}
         {currentMeta?.description && (
           <p className={`${styles.description} ${descriptionChanged ? styles.highlightAddition : ''}`}>
             {currentMeta.description}

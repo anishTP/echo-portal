@@ -37,6 +37,15 @@
   margin: calc(var(--space-1) * -1) calc(var(--space-2) * -1);
 }
 
+.highlightDeletion {
+  background: var(--red-3);
+  border-radius: var(--radius-2);
+  padding: var(--space-1) var(--space-2);
+  margin: calc(var(--space-1) * -1) calc(var(--space-2) * -1);
+  text-decoration: line-through;
+  color: var(--gray-10);
+}
+
 /* Header */
 .header {
   margin-bottom: var(--space-6);
