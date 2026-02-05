@@ -38,6 +38,7 @@ export function SubmitForReviewButton({
   const submitMutation = useMutation({
     mutationFn: () => {
       const reviewerIds = reviewers.map((r) => r.id);
+      console.log('[SubmitForReview] Submitting:', { branchId, reviewerIds, reason });
       return branchService.submitForReview(branchId, reviewerIds, reason || undefined);
     },
     onSuccess: () => {
@@ -48,6 +49,8 @@ export function SubmitForReviewButton({
     },
     onError: (error: any) => {
       console.error('Failed to submit for review:', error);
+      // Also alert so user sees the error even if dialog UI doesn't show it
+      alert(`Failed to submit for review: ${error?.message || JSON.stringify(error)}`);
     },
   });
 
