@@ -141,11 +141,20 @@ export default function Library() {
     (r) => r.reviewerId === user?.id && (r.status === 'pending' || r.status === 'in_progress')
   ) ?? null;
 
-  // Review comments for the active review
+  // Find the most recent review with feedback (for showing comments to author after changes requested)
+  // This allows authors to see the comments from completed reviews
+  const reviewWithFeedback = branchReviews?.find(
+    (r) => r.status === 'completed' && r.decision === 'changes_requested'
+  ) ?? null;
+
+  // Use active review if available, otherwise use review with feedback
+  const reviewForComments = activeReview ?? reviewWithFeedback;
+
+  // Review comments for the active or feedback review
   const {
     comments,
     addComment,
-  } = useReviewComments(activeReview?.id);
+  } = useReviewComments(reviewForComments?.id);
 
   // Selection-based commenting no longer needs explicit state tracking
   // The CommentPopover handles its own state via useTextSelection
