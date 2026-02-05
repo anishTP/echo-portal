@@ -55,6 +55,10 @@ export interface LibrarySidebarProps {
   onOpenReview?: () => void;
   /** Content comparison stats for review mode (per-item +X/-Y display) */
   reviewStats?: ContentComparisonStats;
+  /** Whether there is feedback from a completed review with changes_requested */
+  hasFeedbackToView?: boolean;
+  /** Callback to view feedback from a completed review */
+  onViewFeedback?: () => void;
 }
 
 // Git branch icon for branch mode indicator
@@ -105,6 +109,8 @@ export function LibrarySidebar({
   onSubmitForReviewSuccess,
   onOpenReview,
   reviewStats,
+  hasFeedbackToView = false,
+  onViewFeedback,
 }: LibrarySidebarProps) {
   const location = useLocation();
 
@@ -123,6 +129,9 @@ export function LibrarySidebar({
 
   // Show review button for branches in review state
   const showReviewButton = branchMode && branchState === 'review';
+
+  // Show feedback button for draft branches that have completed review feedback
+  const showFeedbackButton = branchMode && branchState === 'draft' && hasFeedbackToView;
 
   // Group items by category
   const groupedItems = useMemo(() => {
@@ -203,6 +212,20 @@ export function LibrarySidebar({
           >
             Review Changes
           </button>
+        </div>
+      )}
+
+      {/* View Feedback Button (draft state with completed feedback) */}
+      {showFeedbackButton && onViewFeedback && (
+        <div className={styles.feedbackSection}>
+          <button
+            type="button"
+            className={styles.feedbackButton}
+            onClick={onViewFeedback}
+          >
+            View Feedback
+          </button>
+          <p className={styles.feedbackHint}>A reviewer has requested changes</p>
         </div>
       )}
 

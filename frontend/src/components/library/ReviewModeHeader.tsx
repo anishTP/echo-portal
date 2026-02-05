@@ -17,6 +17,8 @@ export interface ReviewModeHeaderProps {
   onApprove: (reason?: string) => Promise<void>;
   onRequestChanges: (reason: string) => Promise<void>;
   isSubmitting?: boolean;
+  /** When true, user is viewing feedback from a completed review (read-only) */
+  feedbackMode?: boolean;
 }
 
 export function ReviewModeHeader({
@@ -30,6 +32,7 @@ export function ReviewModeHeader({
   onApprove,
   onRequestChanges,
   isSubmitting = false,
+  feedbackMode = false,
 }: ReviewModeHeaderProps) {
   return (
     <div className={styles.header}>
@@ -51,8 +54,8 @@ export function ReviewModeHeader({
             </Text>
           </div>
 
-          <Badge color="amber" variant="soft" size="1">
-            Pending Review
+          <Badge color={feedbackMode ? 'orange' : 'amber'} variant="soft" size="1">
+            {feedbackMode ? 'Changes Requested' : 'Pending Review'}
           </Badge>
 
           {stats && (
@@ -76,7 +79,7 @@ export function ReviewModeHeader({
             <SegmentedControl.Item value="split">Split</SegmentedControl.Item>
           </SegmentedControl.Root>
 
-          {activeReview && (
+          {activeReview && !feedbackMode && (
             <div className={styles.decisionButtons}>
               <ReviewDecisionPanel
                 review={activeReview}

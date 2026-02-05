@@ -53,8 +53,8 @@ export default function Library() {
   // Determine if we're in review mode (in-context review overlay)
   const isReviewMode = mode === 'review' && !!branchId;
 
-  // Effective branch ID for content list (from store or URL params in edit mode)
-  const effectiveBranchId = currentBranch?.id || (isEditMode ? branchId : undefined);
+  // Effective branch ID for content list (from store or URL params in edit/review mode)
+  const effectiveBranchId = currentBranch?.id || ((isEditMode || isReviewMode) ? branchId : undefined);
 
   // Extract filters from URL
   const type = (searchParams.get('type') as ContentType) || 'all';
@@ -131,8 +131,9 @@ export default function Library() {
     isReviewMode ? effectiveBranchId : undefined
   );
 
-  // Reviews for review mode
-  const { data: branchReviews } = useBranchReviews(isReviewMode ? branchId : undefined);
+  // Reviews for review mode OR for checking if there's feedback to view
+  // Fetch for the effectiveBranchId (even if not in review mode) to check for completed feedback
+  const { data: branchReviews } = useBranchReviews(effectiveBranchId);
   const approveReview = useApproveReview();
   const requestChanges = useRequestChanges();
 
@@ -149,6 +150,12 @@ export default function Library() {
 
   // Use active review if available, otherwise use review with feedback
   const reviewForComments = activeReview ?? reviewWithFeedback;
+
+  // Check if there's feedback to view (for drafts after changes_requested)
+  const hasFeedbackToView = !!reviewWithFeedback && (activeBranch?.state === 'draft' || currentBranch?.state === 'draft');
+
+  // Check if we're in feedback viewing mode (viewing comments from completed review, no active review)
+  const isFeedbackMode = isReviewMode && !activeReview && !!reviewWithFeedback;
 
   // Review comments for the active or feedback review
   const {
@@ -297,6 +304,18 @@ export default function Library() {
       return next;
     });
   }, [setSearchParams]);
+
+  // Enter feedback viewing mode (view comments from completed review)
+  const enterFeedbackMode = useCallback(() => {
+    if (effectiveBranchId) {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('mode', 'review');
+        next.set('branchId', effectiveBranchId);
+        return next;
+      });
+    }
+  }, [effectiveBranchId, setSearchParams]);
 
   // Handle edit request from ContentRenderer
   const handleEditRequest = useCallback(() => {
@@ -597,6 +616,8 @@ export default function Library() {
               : undefined
           }
           reviewStats={isReviewMode ? comparisonStats : undefined}
+          hasFeedbackToView={hasFeedbackToView}
+          onViewFeedback={hasFeedbackToView ? enterFeedbackMode : undefined}
         />
       }
       rightSidebar={
@@ -649,6 +670,7 @@ export default function Library() {
               }
             }}
             isSubmitting={approveReview.isPending || requestChanges.isPending}
+            feedbackMode={isFeedbackMode}
           />
         ) : undefined
       }
