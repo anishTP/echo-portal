@@ -208,11 +208,11 @@ export function CommentHighlights({
   const handleIndicatorClick = (highlight: HighlightPosition, event: React.MouseEvent) => {
     event.stopPropagation();
 
-    // Get click position for popover
+    // Get click position for popover - offset to the left to avoid overlapping with icons
     const rect = (event.target as HTMLElement).getBoundingClientRect();
     setPopoverPosition({
       top: rect.bottom + 8,
-      left: rect.left,
+      left: rect.left - 200, // Offset left so popover doesn't cover other icons
     });
     setSelectedComment(highlight.comment);
     onCommentClick?.(highlight.comment);
@@ -259,7 +259,7 @@ export function CommentHighlights({
             />
           ))}
 
-          {/* Comment indicator icon */}
+          {/* Comment indicator icon - chat bubble with lines */}
           <button
             type="button"
             className={`${styles.indicator} ${styles[`indicator--${highlight.context}`]}`}
@@ -271,8 +271,11 @@ export function CommentHighlights({
             title="View comment"
             aria-label="View comment"
           >
-            <svg viewBox="0 0 16 16" fill="currentColor">
-              <path d="M2 2.5A1.5 1.5 0 0 1 3.5 1h9A1.5 1.5 0 0 1 14 2.5v7a1.5 1.5 0 0 1-1.5 1.5H8.5l-3 2.5V11H3.5A1.5 1.5 0 0 1 2 9.5v-7Z" />
+            <svg viewBox="0 0 20 20" fill="currentColor">
+              {/* Chat bubble outline */}
+              <path fillRule="evenodd" clipRule="evenodd" d="M2 5a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3h-4.586l-3.707 3.707A1 1 0 0 1 5 18v-3H5a3 3 0 0 1-3-3V5Zm3-1a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h2v2.586l2.293-2.293A1 1 0 0 1 8 13h7a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1H5Z" />
+              {/* Text lines inside */}
+              <path d="M6 6h8v1.5H6V6Zm0 3h5v1.5H6V9Z" />
             </svg>
           </button>
         </div>
