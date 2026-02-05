@@ -152,10 +152,13 @@ export default function Library() {
   const reviewForComments = activeReview ?? reviewWithFeedback;
 
   // Check if there's feedback to view (for drafts after changes_requested)
-  const hasFeedbackToView = !!reviewWithFeedback && (activeBranch?.state === 'draft' || currentBranch?.state === 'draft');
+  // Only show when branch is in DRAFT state (not after resubmission when it goes to REVIEW)
+  const branchInDraftState = activeBranch?.state === 'draft' || currentBranch?.state === 'draft';
+  const hasFeedbackToView = !!reviewWithFeedback && branchInDraftState;
 
   // Check if we're in feedback viewing mode (viewing comments from completed review, no active review)
-  const isFeedbackMode = isReviewMode && !activeReview && !!reviewWithFeedback;
+  // Only valid when branch is in DRAFT state - after resubmission it should exit feedback mode
+  const isFeedbackMode = isReviewMode && !activeReview && !!reviewWithFeedback && branchInDraftState;
 
   // Review comments for the active or feedback review
   const {
@@ -601,7 +604,10 @@ export default function Library() {
           canSubmitForReview={activeBranch?.permissions?.canSubmitForReview}
           onSubmitForReviewSuccess={() => {
             // Branch query is already invalidated by SubmitForReviewButton via invalidateWorkflowQueries
-            // This callback can be used for any additional UI updates if needed
+            // If we were in feedback mode, exit review mode since branch is now in review state
+            if (isFeedbackMode) {
+              exitReviewMode();
+            }
           }}
           onOpenReview={
             (activeBranch?.state || currentBranch?.state) === 'review' && effectiveBranchId
