@@ -8,6 +8,38 @@ export interface TextSelection {
 }
 
 /**
+ * Calculates the character offset of a node/offset pair relative to a container's text content.
+ * Walks through all text nodes in the container and counts characters until reaching the target.
+ */
+function getCharacterOffset(container: HTMLElement, targetNode: Node, targetOffset: number): number {
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+  let offset = 0;
+
+  let node = walker.nextNode();
+  while (node) {
+    if (node === targetNode) {
+      return offset + targetOffset;
+    }
+    offset += node.textContent?.length || 0;
+    node = walker.nextNode();
+  }
+
+  // If the target node wasn't found directly, it might be an element node
+  // In that case, find the text node at the given offset
+  if (targetNode.nodeType === Node.ELEMENT_NODE) {
+    const childNodes = targetNode.childNodes;
+    if (targetOffset < childNodes.length) {
+      const child = childNodes[targetOffset];
+      if (child.nodeType === Node.TEXT_NODE) {
+        return getCharacterOffset(container, child, 0);
+      }
+    }
+  }
+
+  return offset;
+}
+
+/**
  * Hook for detecting text selection within a container element.
  * Returns selection info including text, character offsets, and bounding rect.
  */
@@ -21,12 +53,20 @@ export function useTextSelection(containerRef: RefObject<HTMLElement | null>) {
       return;
     }
 
-    // Check if selection is within our container
+    // Access .current at call time, not at callback creation time
     const container = containerRef.current;
-    if (!container) return;
+    if (!container) {
+      console.warn('[useTextSelection] Container ref is null on mouseup');
+      return;
+    }
 
     const range = sel.getRangeAt(0);
-    if (!container.contains(range.commonAncestorContainer)) {
+
+    // Check both start and end containers (more robust than commonAncestorContainer)
+    const startInContainer = container.contains(range.startContainer);
+    const endInContainer = container.contains(range.endContainer);
+
+    if (!startInContainer || !endInContainer) {
       setSelection(null);
       return;
     }
@@ -34,17 +74,19 @@ export function useTextSelection(containerRef: RefObject<HTMLElement | null>) {
     const text = sel.toString().trim();
     const rect = range.getBoundingClientRect();
 
-    // Calculate offsets relative to container text content
-    const containerText = container.textContent || '';
-    const startOffset = containerText.indexOf(text);
+    // Calculate offsets by walking the DOM tree
+    // This gives us the exact character position, not just the first occurrence
+    const startOffset = getCharacterOffset(container, range.startContainer, range.startOffset);
+    const endOffset = getCharacterOffset(container, range.endContainer, range.endOffset);
 
     setSelection({
       text,
-      startOffset: startOffset >= 0 ? startOffset : 0,
-      endOffset: startOffset >= 0 ? startOffset + text.length : text.length,
+      startOffset,
+      endOffset,
       rect,
     });
-  }, [containerRef]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- containerRef is a stable ref object; we intentionally read .current at call time
+  }, []);
 
   const clearSelection = useCallback(() => {
     setSelection(null);
