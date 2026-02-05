@@ -208,11 +208,11 @@ export function CommentHighlights({
   const handleIndicatorClick = (highlight: HighlightPosition, event: React.MouseEvent) => {
     event.stopPropagation();
 
-    // Get click position for popover - offset to the left to avoid overlapping with icons
+    // Position popover to the right of the icon, outside the content area
     const rect = (event.target as HTMLElement).getBoundingClientRect();
     setPopoverPosition({
-      top: rect.bottom + 8,
-      left: rect.left - 200, // Offset left so popover doesn't cover other icons
+      top: rect.top,
+      left: rect.right + 12, // Position to the right of the icon
     });
     setSelectedComment(highlight.comment);
     onCommentClick?.(highlight.comment);
