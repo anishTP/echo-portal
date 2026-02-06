@@ -149,6 +149,7 @@ export function CommentViewPopover({
     <div
       ref={popoverRef}
       className={styles.popover}
+      data-comment-popover
       style={{
         top: position.top,
         left: position.left,

@@ -244,7 +244,8 @@ export function CommentHighlights({
 
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (!target.closest(`.${styles.popover}`) && !target.closest(`.${styles.indicator}`)) {
+      // Check for data attribute on popover or indicator class
+      if (!target.closest('[data-comment-popover]') && !target.closest(`.${styles.indicator}`)) {
         handleClosePopover();
       }
     };
