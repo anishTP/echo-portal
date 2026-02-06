@@ -23,6 +23,8 @@ export interface ReviewDiffViewProps {
   onResolve?: (commentId: string) => Promise<unknown>;
   /** Callback when unresolving a comment */
   onUnresolve?: (commentId: string) => Promise<unknown>;
+  /** Callback when replying to a comment */
+  onReply?: (commentId: string, content: string) => Promise<unknown>;
 }
 
 
@@ -42,6 +44,7 @@ export function ReviewDiffView({
   branchAuthorId,
   onResolve,
   onUnresolve,
+  onReply,
 }: ReviewDiffViewProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -101,6 +104,7 @@ export function ReviewDiffView({
           branchAuthorId={branchAuthorId}
           onResolve={onResolve}
           onUnresolve={onUnresolve}
+          onReply={onReply}
         />
       </div>
     );

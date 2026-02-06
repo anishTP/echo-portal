@@ -20,6 +20,8 @@ interface CommentViewPopoverProps {
   onResolve?: (commentId: string) => Promise<unknown>;
   /** Callback when unresolving a comment */
   onUnresolve?: (commentId: string) => Promise<unknown>;
+  /** Callback when replying to a comment */
+  onReply?: (commentId: string, content: string) => Promise<unknown>;
 }
 
 function formatRelativeTime(dateString: string): string {
@@ -49,15 +51,21 @@ export function CommentViewPopover({
   branchAuthorId,
   onResolve,
   onUnresolve,
+  onReply,
 }: CommentViewPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
   const [isResolving, setIsResolving] = useState(false);
+  const [isReplying, setIsReplying] = useState(false);
+  const [replyContent, setReplyContent] = useState('');
+  const [isSubmittingReply, setIsSubmittingReply] = useState(false);
 
   const isResolved = !!comment.resolvedAt;
   // Can resolve if: not a reply AND (branch author OR comment author)
   const canResolve = !comment.parentId && currentUserId && (
     currentUserId === branchAuthorId || currentUserId === comment.authorId
   );
+  // Can reply if: not already a reply (max 2 levels) AND user is logged in
+  const canReply = !comment.parentId && currentUserId && onReply;
 
   const handleResolve = async () => {
     if (onResolve && !isResolving) {
@@ -79,6 +87,24 @@ export function CommentViewPopover({
         setIsResolving(false);
       }
     }
+  };
+
+  const handleSubmitReply = async () => {
+    if (onReply && replyContent.trim() && !isSubmittingReply) {
+      setIsSubmittingReply(true);
+      try {
+        await onReply(comment.id, replyContent.trim());
+        setReplyContent('');
+        setIsReplying(false);
+      } finally {
+        setIsSubmittingReply(false);
+      }
+    }
+  };
+
+  const handleCancelReply = () => {
+    setReplyContent('');
+    setIsReplying(false);
   };
 
   // Handle escape key to close
@@ -139,6 +165,38 @@ export function CommentViewPopover({
       {/* Comment content */}
       <div className={styles.content}>{comment.content}</div>
 
+      {/* Reply form */}
+      {isReplying && (
+        <div className={styles.replyForm}>
+          <textarea
+            className={styles.replyInput}
+            placeholder="Write a reply..."
+            value={replyContent}
+            onChange={(e) => setReplyContent(e.target.value)}
+            rows={2}
+            autoFocus
+          />
+          <div className={styles.replyActions}>
+            <button
+              type="button"
+              className={styles.cancelButton}
+              onClick={handleCancelReply}
+              disabled={isSubmittingReply}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className={styles.submitButton}
+              onClick={handleSubmitReply}
+              disabled={isSubmittingReply || !replyContent.trim()}
+            >
+              {isSubmittingReply ? 'Sending...' : 'Reply'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Footer with timestamp and actions */}
       <div className={styles.footer}>
         <span className={styles.timestamp}>{formatRelativeTime(comment.createdAt)}</span>
@@ -152,34 +210,50 @@ export function CommentViewPopover({
             Resolved
           </span>
         )}
-        {/* Resolve/Unresolve button */}
-        {canResolve && (onResolve || onUnresolve) && (
-          <button
-            type="button"
-            className={styles.resolveButton}
-            onClick={isResolved ? handleUnresolve : handleResolve}
-            disabled={isResolving}
-            title={isResolved ? 'Unresolve' : 'Resolve'}
-          >
-            {isResolving ? (
-              '...'
-            ) : isResolved ? (
-              <>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                </svg>
-                Unresolve
-              </>
-            ) : (
-              <>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-                Resolve
-              </>
-            )}
-          </button>
-        )}
+        <div className={styles.actions}>
+          {/* Reply button */}
+          {canReply && !isReplying && (
+            <button
+              type="button"
+              className={styles.actionButton}
+              onClick={() => setIsReplying(true)}
+              title="Reply"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+              </svg>
+              Reply
+            </button>
+          )}
+          {/* Resolve/Unresolve button */}
+          {canResolve && (onResolve || onUnresolve) && (
+            <button
+              type="button"
+              className={`${styles.actionButton} ${isResolved ? styles.unresolveButton : styles.resolveButton}`}
+              onClick={isResolved ? handleUnresolve : handleResolve}
+              disabled={isResolving}
+              title={isResolved ? 'Unresolve' : 'Resolve'}
+            >
+              {isResolving ? (
+                '...'
+              ) : isResolved ? (
+                <>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Unresolve
+                </>
+              ) : (
+                <>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  Resolve
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Close button */}

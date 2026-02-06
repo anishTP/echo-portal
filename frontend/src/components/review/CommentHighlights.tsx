@@ -25,6 +25,8 @@ interface CommentHighlightsProps {
   onResolve?: (commentId: string) => Promise<unknown>;
   /** Callback when unresolving a comment */
   onUnresolve?: (commentId: string) => Promise<unknown>;
+  /** Callback when replying to a comment */
+  onReply?: (commentId: string, content: string) => Promise<unknown>;
 }
 
 type HighlightContext = 'default' | 'addition' | 'deletion';
@@ -136,6 +138,7 @@ export function CommentHighlights({
   branchAuthorId,
   onResolve,
   onUnresolve,
+  onReply,
 }: CommentHighlightsProps) {
   const [highlights, setHighlights] = useState<HighlightPosition[]>([]);
   const [selectedComment, setSelectedComment] = useState<ReviewComment | null>(null);
@@ -303,6 +306,7 @@ export function CommentHighlights({
           branchAuthorId={branchAuthorId}
           onResolve={onResolve}
           onUnresolve={onUnresolve}
+          onReply={onReply}
         />
       )}
     </>

@@ -38,6 +38,8 @@ interface FullArticleDiffViewProps {
   onResolve?: (commentId: string) => Promise<unknown>;
   /** Callback when unresolving a comment */
   onUnresolve?: (commentId: string) => Promise<unknown>;
+  /** Callback when replying to a comment */
+  onReply?: (commentId: string, content: string) => Promise<unknown>;
 }
 
 export function FullArticleDiffView({
@@ -49,6 +51,7 @@ export function FullArticleDiffView({
   branchAuthorId,
   onResolve,
   onUnresolve,
+  onReply,
 }: FullArticleDiffViewProps) {
   const { fullContent, additions, deletions } = file;
 
@@ -78,6 +81,7 @@ export function FullArticleDiffView({
         branchAuthorId={branchAuthorId}
         onResolve={onResolve}
         onUnresolve={onUnresolve}
+        onReply={onReply}
       />
     );
   }
@@ -96,6 +100,7 @@ export function FullArticleDiffView({
       branchAuthorId={branchAuthorId}
       onResolve={onResolve}
       onUnresolve={onUnresolve}
+      onReply={onReply}
     />
   );
 }
@@ -115,6 +120,7 @@ function UnifiedArticleView({
   branchAuthorId,
   onResolve,
   onUnresolve,
+  onReply,
 }: {
   oldContent: string | null;
   newContent: string | null;
@@ -128,6 +134,7 @@ function UnifiedArticleView({
   branchAuthorId?: string;
   onResolve?: (commentId: string) => Promise<unknown>;
   onUnresolve?: (commentId: string) => Promise<unknown>;
+  onReply?: (commentId: string, content: string) => Promise<unknown>;
 }) {
   const articleRef = useRef<HTMLElement>(null);
   const { selection, clearSelection } = useTextSelection(articleRef);
@@ -212,6 +219,7 @@ function UnifiedArticleView({
           branchAuthorId={branchAuthorId}
           onResolve={onResolve}
           onUnresolve={onUnresolve}
+          onReply={onReply}
         />
       )}
 
@@ -243,6 +251,7 @@ function SplitArticleView({
   branchAuthorId: _branchAuthorId,
   onResolve: _onResolve,
   onUnresolve: _onUnresolve,
+  onReply: _onReply,
 }: {
   oldContent: string | null;
   newContent: string | null;
@@ -258,6 +267,7 @@ function SplitArticleView({
   branchAuthorId?: string;
   onResolve?: (commentId: string) => Promise<unknown>;
   onUnresolve?: (commentId: string) => Promise<unknown>;
+  onReply?: (commentId: string, content: string) => Promise<unknown>;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { selection, clearSelection } = useTextSelection(containerRef);

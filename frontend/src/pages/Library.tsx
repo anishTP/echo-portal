@@ -164,6 +164,7 @@ export default function Library() {
   const {
     comments,
     addComment,
+    replyToComment,
     resolveComment,
     unresolveComment,
   } = useReviewComments(reviewForComments?.id);
@@ -694,6 +695,7 @@ export default function Library() {
           branchAuthorId={reviewForComments?.requestedById}
           onResolve={(commentId) => resolveComment.mutateAsync(commentId)}
           onUnresolve={(commentId) => unresolveComment.mutateAsync(commentId)}
+          onReply={(commentId, content) => replyToComment.mutateAsync({ commentId, content })}
         />
       ) : isEditMode && editModeContent && currentDraft ? (
         <InlineEditView
