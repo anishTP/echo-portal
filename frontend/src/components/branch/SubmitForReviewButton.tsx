@@ -3,7 +3,7 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { Dialog, Button, TextArea, Text, Callout, Flex, Avatar, Badge } from '@radix-ui/themes';
 import { branchService } from '../../services/branchService';
 import { api } from '../../services/api';
-import { invalidateWorkflowQueries } from '../../hooks/queryKeys';
+import { branchKeys, reviewKeys } from '../../hooks/queryKeys';
 import { TeamMemberPicker, type TeamMember } from './TeamMemberPicker';
 
 interface SubmitForReviewButtonProps {
@@ -38,19 +38,22 @@ export function SubmitForReviewButton({
   const submitMutation = useMutation({
     mutationFn: () => {
       const reviewerIds = reviewers.map((r) => r.id);
-      console.log('[SubmitForReview] Submitting with:', { branchId, reviewerIds, reason });
       return branchService.submitForReview(branchId, reviewerIds, reason || undefined);
     },
-    onSuccess: async (data) => {
-      console.log('[SubmitForReview] Success:', data);
-      await invalidateWorkflowQueries(queryClient, branchId);
-      console.log('[SubmitForReview] Queries refetched');
+    onSuccess: (data) => {
+      // Update cache immediately with returned branch data to avoid race condition
+      if (data.branch) {
+        queryClient.setQueryData(branchKeys.detail(branchId), data.branch);
+      }
+      // Invalidate list queries (these don't suffer from race conditions)
+      queryClient.invalidateQueries({ queryKey: branchKeys.myBranches() });
+      queryClient.invalidateQueries({ queryKey: branchKeys.reviewBranches() });
+      queryClient.invalidateQueries({ queryKey: reviewKeys.myReviews() });
+      queryClient.invalidateQueries({ queryKey: branchKeys.lists() });
+
       setShowModal(false);
       setReason('');
       onSuccess?.();
-    },
-    onError: (error: any) => {
-      console.error('[SubmitForReview] Error:', error);
     },
   });
 

@@ -127,9 +127,6 @@ export function LibrarySidebar({
   // Show submit button for draft branches owned by user
   const showSubmitButton = branchMode && branchId && branchState === 'draft' && isOwner;
 
-  // Debug logging
-  console.log('[LibrarySidebar] branchState:', branchState, 'showSubmitButton:', showSubmitButton);
-
   // Show review button for branches in review state
   const showReviewButton = branchMode && branchState === 'review';
 

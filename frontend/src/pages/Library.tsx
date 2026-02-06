@@ -606,11 +606,7 @@ export default function Library() {
           hasActiveFilters={hasActiveFilters}
           branchMode={showBranchContent}
           branchName={currentBranch?.name || activeBranch?.name}
-          branchState={(() => {
-            const state = activeBranch?.state || currentBranch?.state;
-            console.log('[Library] branchState for sidebar:', { activeBranchState: activeBranch?.state, currentBranchState: currentBranch?.state, result: state });
-            return state;
-          })()}
+          branchState={activeBranch?.state || currentBranch?.state}
           branchId={currentBranch?.id || activeBranch?.id}
           isOwner={!!user && (currentBranch?.ownerId === user.id || activeBranch?.ownerId === user.id)}
           canSubmitForReview={activeBranch?.permissions?.canSubmitForReview}
