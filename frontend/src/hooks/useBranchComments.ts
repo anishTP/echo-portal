@@ -43,25 +43,15 @@ export function useBranchComments(
   // Merge all comments into a single array
   const comments = useMemo(() => {
     const allComments: ReviewComment[] = [];
-    console.log('[useBranchComments] commentQueries count:', commentQueries.length);
-    for (let i = 0; i < commentQueries.length; i++) {
-      const query = commentQueries[i];
-      console.log(`[useBranchComments] Query ${i}:`, {
-        status: query.status,
-        dataLength: query.data?.length,
-        data: query.data
-      });
+    for (const query of commentQueries) {
       if (query.data) {
         allComments.push(...query.data);
       }
     }
     // Sort by creation time
-    const sorted = allComments.sort((a, b) =>
+    return allComments.sort((a, b) =>
       new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     );
-    console.log('[useBranchComments] Final merged comments:', sorted);
-    console.log('[useBranchComments] Comments with parentId:', sorted.filter(c => c.parentId));
-    return sorted;
   }, [commentQueries]);
 
   // Keep a ref to the latest comments for use in mutation closures
@@ -150,24 +140,15 @@ export function useBranchComments(
 
   // Reply to comment mutation (uses comment's reviewId)
   const replyToComment = useMutation({
-    mutationFn: async ({ commentId, content }: { commentId: string; content: string }) => {
-      console.log('[useBranchComments:replyToComment] Called with:', { commentId, content });
-      console.log('[useBranchComments:replyToComment] commentsRef.current:', commentsRef.current);
+    mutationFn: ({ commentId, content }: { commentId: string; content: string }) => {
       // Find the comment to get its reviewId (use ref for latest data)
       const comment = commentsRef.current.find(c => c.id === commentId);
-      console.log('[useBranchComments:replyToComment] Found comment:', comment);
       if (!comment?.reviewId) {
-        console.error('[useBranchComments:replyToComment] No reviewId! Comment:', comment);
         throw new Error('Cannot find review for this comment');
       }
-      console.log('[useBranchComments:replyToComment] Calling API with reviewId:', comment.reviewId);
-      const result = await reviewService.replyToComment(comment.reviewId, commentId, content);
-      console.log('[useBranchComments:replyToComment] API response:', result);
-      return result;
+      return reviewService.replyToComment(comment.reviewId, commentId, content);
     },
-    onSuccess: (data) => {
-      console.log('[useBranchComments:replyToComment] onSuccess, data:', data);
-      console.log('[useBranchComments:replyToComment] Invalidating queries for reviewIds:', reviewIds);
+    onSuccess: () => {
       invalidateAllComments();
       addNotification({
         type: 'success',
@@ -176,7 +157,6 @@ export function useBranchComments(
       });
     },
     onError: (error: Error) => {
-      console.error('[useBranchComments:replyToComment] onError:', error);
       addNotification({
         type: 'error',
         title: 'Failed to add reply',
