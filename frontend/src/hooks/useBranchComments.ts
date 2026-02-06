@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 import { useQueries, useMutation, useQueryClient } from '@tanstack/react-query';
 import { reviewService, type ReviewComment, type ReviewResponse } from '../services/reviewService';
 import { useUIStore } from '../stores/index';
@@ -53,6 +53,13 @@ export function useBranchComments(
       new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     );
   }, [commentQueries]);
+
+  // Keep a ref to the latest comments for use in mutation closures
+  // This avoids stale closure issues where mutations capture old comments array
+  const commentsRef = useRef<ReviewComment[]>(comments);
+  useEffect(() => {
+    commentsRef.current = comments;
+  }, [comments]);
 
   // Loading state: true if any query is loading
   const isLoading = commentQueries.some(q => q.isLoading);
@@ -134,8 +141,8 @@ export function useBranchComments(
   // Reply to comment mutation (uses comment's reviewId)
   const replyToComment = useMutation({
     mutationFn: ({ commentId, content }: { commentId: string; content: string }) => {
-      // Find the comment to get its reviewId
-      const comment = comments.find(c => c.id === commentId);
+      // Find the comment to get its reviewId (use ref for latest data)
+      const comment = commentsRef.current.find(c => c.id === commentId);
       if (!comment?.reviewId) {
         throw new Error('Cannot find review for this comment');
       }
@@ -161,7 +168,7 @@ export function useBranchComments(
   // Update comment mutation (uses comment's reviewId)
   const updateComment = useMutation({
     mutationFn: ({ commentId, content }: { commentId: string; content: string }) => {
-      const comment = comments.find(c => c.id === commentId);
+      const comment = commentsRef.current.find(c => c.id === commentId);
       if (!comment?.reviewId) {
         throw new Error('Cannot find review for this comment');
       }
@@ -187,7 +194,7 @@ export function useBranchComments(
   // Delete comment mutation (uses comment's reviewId)
   const deleteComment = useMutation({
     mutationFn: (commentId: string) => {
-      const comment = comments.find(c => c.id === commentId);
+      const comment = commentsRef.current.find(c => c.id === commentId);
       if (!comment?.reviewId) {
         throw new Error('Cannot find review for this comment');
       }
@@ -213,7 +220,7 @@ export function useBranchComments(
   // Resolve comment mutation (uses comment's reviewId)
   const resolveComment = useMutation({
     mutationFn: (commentId: string) => {
-      const comment = comments.find(c => c.id === commentId);
+      const comment = commentsRef.current.find(c => c.id === commentId);
       if (!comment?.reviewId) {
         throw new Error('Cannot find review for this comment');
       }
@@ -239,7 +246,7 @@ export function useBranchComments(
   // Unresolve comment mutation (uses comment's reviewId)
   const unresolveComment = useMutation({
     mutationFn: (commentId: string) => {
-      const comment = comments.find(c => c.id === commentId);
+      const comment = commentsRef.current.find(c => c.id === commentId);
       if (!comment?.reviewId) {
         throw new Error('Cannot find review for this comment');
       }
