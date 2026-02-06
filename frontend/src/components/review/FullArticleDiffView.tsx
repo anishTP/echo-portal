@@ -55,8 +55,16 @@ export function FullArticleDiffView({
 }: FullArticleDiffViewProps) {
   const { fullContent, additions, deletions } = file;
 
-  // Filter comments for this file
-  const fileComments = comments?.filter((c) => c.path === file.path) || [];
+  // Filter comments for this file (include replies whose parent is on this file)
+  const fileComments = useMemo(() => {
+    if (!comments) return [];
+    // First get direct comments on this file
+    const directComments = comments.filter((c) => c.path === file.path);
+    const directCommentIds = new Set(directComments.map(c => c.id));
+    // Then include replies whose parent is a direct comment on this file
+    const replies = comments.filter((c) => c.parentId && directCommentIds.has(c.parentId));
+    return [...directComments, ...replies];
+  }, [comments, file.path]);
 
   if (!fullContent) {
     return (
