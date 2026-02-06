@@ -420,6 +420,156 @@ export class ReviewCommentService {
 
     return { updatedCount, comments: updatedComments };
   }
+
+  /**
+   * Resolve a comment (mark as addressed)
+   * Only root comments can be resolved (not replies)
+   * Branch author can resolve any comment; comment author can resolve their own
+   */
+  async resolveComment(
+    reviewId: string,
+    commentId: string,
+    userId: string
+  ): Promise<ReviewComment> {
+    // Get the review
+    const review = await db.query.reviews.findFirst({
+      where: eq(reviews.id, reviewId),
+    });
+
+    if (!review) {
+      throw new NotFoundError('Review', reviewId);
+    }
+
+    // Check review is not cancelled
+    if (review.status === ReviewStatus.CANCELLED) {
+      throw new ValidationError('Cannot modify comments on cancelled review');
+    }
+
+    // Find the comment
+    const existingComments = (review.comments as ReviewComment[]) || [];
+    const commentIndex = existingComments.findIndex((c) => c.id === commentId);
+
+    if (commentIndex === -1) {
+      throw new NotFoundError('Comment', commentId);
+    }
+
+    const comment = existingComments[commentIndex];
+
+    // Check it's not a reply
+    if (comment.parentId) {
+      throw new ValidationError('Cannot resolve a reply. Resolve the parent comment instead');
+    }
+
+    // Check if already resolved
+    if (comment.resolvedAt) {
+      throw new ValidationError('Comment is already resolved');
+    }
+
+    // Check permission: branch author OR comment author
+    if (userId !== review.requestedById && userId !== comment.authorId) {
+      throw new ForbiddenError(
+        'Only the branch author or comment author can resolve this comment'
+      );
+    }
+
+    // Update the comment
+    const now = new Date().toISOString();
+    const updatedComment: ReviewComment = {
+      ...comment,
+      resolvedAt: now,
+      resolvedBy: userId,
+      updatedAt: now,
+    };
+
+    const updatedComments = [...existingComments];
+    updatedComments[commentIndex] = updatedComment;
+
+    // Update the review
+    await db
+      .update(reviews)
+      .set({
+        comments: updatedComments,
+        updatedAt: new Date(),
+      })
+      .where(eq(reviews.id, reviewId));
+
+    return updatedComment;
+  }
+
+  /**
+   * Unresolve a comment (mark as not addressed)
+   * Only root comments can be unresolved
+   * Same permission rules as resolve
+   */
+  async unresolveComment(
+    reviewId: string,
+    commentId: string,
+    userId: string
+  ): Promise<ReviewComment> {
+    // Get the review
+    const review = await db.query.reviews.findFirst({
+      where: eq(reviews.id, reviewId),
+    });
+
+    if (!review) {
+      throw new NotFoundError('Review', reviewId);
+    }
+
+    // Check review is not cancelled
+    if (review.status === ReviewStatus.CANCELLED) {
+      throw new ValidationError('Cannot modify comments on cancelled review');
+    }
+
+    // Find the comment
+    const existingComments = (review.comments as ReviewComment[]) || [];
+    const commentIndex = existingComments.findIndex((c) => c.id === commentId);
+
+    if (commentIndex === -1) {
+      throw new NotFoundError('Comment', commentId);
+    }
+
+    const comment = existingComments[commentIndex];
+
+    // Check it's not a reply
+    if (comment.parentId) {
+      throw new ValidationError('Cannot unresolve a reply');
+    }
+
+    // Check if not resolved
+    if (!comment.resolvedAt) {
+      throw new ValidationError('Comment is not resolved');
+    }
+
+    // Check permission: branch author OR comment author
+    if (userId !== review.requestedById && userId !== comment.authorId) {
+      throw new ForbiddenError(
+        'Only the branch author or comment author can unresolve this comment'
+      );
+    }
+
+    // Update the comment
+    const now = new Date().toISOString();
+    const updatedComment: ReviewComment = {
+      ...comment,
+      resolvedAt: undefined,
+      resolvedBy: undefined,
+      updatedAt: now,
+    };
+
+    const updatedComments = [...existingComments];
+    updatedComments[commentIndex] = updatedComment;
+
+    // Update the review
+    await db
+      .update(reviews)
+      .set({
+        comments: updatedComments,
+        updatedAt: new Date(),
+      })
+      .where(eq(reviews.id, reviewId));
+
+    return updatedComment;
+  }
 }
 
 // Export singleton instance

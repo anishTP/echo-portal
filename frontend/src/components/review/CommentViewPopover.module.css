@@ -83,6 +83,14 @@
   border-radius: var(--radius-full);
 }
 
+.resolvedBadge {
+  font-size: var(--font-size-1);
+  color: var(--green-11);
+  background: var(--green-3);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+}
+
 /* Close button */
 .closeButton {
   position: absolute;

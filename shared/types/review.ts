@@ -27,6 +27,9 @@ export interface ReviewComment {
   // Staleness tracking
   isOutdated: boolean;                 // Default: false
   outdatedReason?: string;             // Why marked outdated
+  // Resolution tracking
+  resolvedAt?: string;                 // ISO timestamp when resolved
+  resolvedBy?: string;                 // userId who resolved
   // Timestamps
   createdAt: string;
   updatedAt: string;

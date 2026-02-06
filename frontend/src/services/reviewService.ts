@@ -22,6 +22,9 @@ export interface ReviewComment {
   parentId?: string;
   isOutdated: boolean;
   outdatedReason?: string;
+  // Resolution tracking
+  resolvedAt?: string;
+  resolvedBy?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -243,6 +246,20 @@ export const reviewService = {
     return api.post<{ updatedCount: number; comments: ReviewComment[] }>(
       `/reviews/${reviewId}/refresh-comments`
     );
+  },
+
+  /**
+   * Resolve a comment (mark as addressed)
+   */
+  resolveComment: (reviewId: string, commentId: string): Promise<ReviewComment> => {
+    return api.post<ReviewComment>(`/reviews/${reviewId}/comments/${commentId}/resolve`);
+  },
+
+  /**
+   * Unresolve a comment
+   */
+  unresolveComment: (reviewId: string, commentId: string): Promise<ReviewComment> => {
+    return api.post<ReviewComment>(`/reviews/${reviewId}/comments/${commentId}/unresolve`);
   },
 
   /**

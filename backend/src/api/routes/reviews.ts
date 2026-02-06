@@ -333,6 +333,38 @@ reviewRoutes.post(
 );
 
 /**
+ * POST /api/v1/reviews/:id/comments/:commentId/resolve - Resolve a comment
+ */
+reviewRoutes.post(
+  '/:id/comments/:commentId/resolve',
+  requireAuth,
+  zValidator('param', reviewCommentIdParamSchema),
+  async (c) => {
+    const user = c.get('user')!;
+    const { id, commentId } = c.req.valid('param');
+
+    const comment = await reviewCommentService.resolveComment(id, commentId, user.id);
+    return success(c, comment);
+  }
+);
+
+/**
+ * POST /api/v1/reviews/:id/comments/:commentId/unresolve - Unresolve a comment
+ */
+reviewRoutes.post(
+  '/:id/comments/:commentId/unresolve',
+  requireAuth,
+  zValidator('param', reviewCommentIdParamSchema),
+  async (c) => {
+    const user = c.get('user')!;
+    const { id, commentId } = c.req.valid('param');
+
+    const comment = await reviewCommentService.unresolveComment(id, commentId, user.id);
+    return success(c, comment);
+  }
+);
+
+/**
  * POST /api/v1/reviews/:id/refresh-comments - Refresh outdated comment status
  */
 reviewRoutes.post(

@@ -6,9 +6,12 @@ interface CommentThreadProps {
   comment: ReviewComment;
   replies: ReviewComment[];
   currentUserId: string;
+  branchAuthorId?: string;
   onReply: (content: string) => Promise<void>;
   onEdit?: (commentId: string, content: string) => Promise<void>;
   onDelete?: (commentId: string) => Promise<void>;
+  onResolve?: (commentId: string) => Promise<void>;
+  onUnresolve?: (commentId: string) => Promise<void>;
 }
 
 /**
@@ -19,15 +22,24 @@ export function CommentThread({
   comment,
   replies,
   currentUserId,
+  branchAuthorId,
   onReply,
   onEdit,
   onDelete,
+  onResolve,
+  onUnresolve,
 }: CommentThreadProps) {
   const [isReplying, setIsReplying] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(comment.content);
+  const [isResolving, setIsResolving] = useState(false);
 
   const isAuthor = comment.authorId === currentUserId;
+  const isResolved = !!comment.resolvedAt;
+  // Can resolve if: not a reply AND (branch author OR comment author)
+  const canResolve = !comment.parentId && (
+    currentUserId === branchAuthorId || currentUserId === comment.authorId
+  );
 
   const handleReply = async (content: string) => {
     await onReply(content);
@@ -47,6 +59,28 @@ export function CommentThread({
     }
   };
 
+  const handleResolve = async () => {
+    if (onResolve && !isResolving) {
+      setIsResolving(true);
+      try {
+        await onResolve(comment.id);
+      } finally {
+        setIsResolving(false);
+      }
+    }
+  };
+
+  const handleUnresolve = async () => {
+    if (onUnresolve && !isResolving) {
+      setIsResolving(true);
+      try {
+        await onUnresolve(comment.id);
+      } finally {
+        setIsResolving(false);
+      }
+    }
+  };
+
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     const now = new Date();
@@ -63,9 +97,9 @@ export function CommentThread({
   };
 
   return (
-    <div className={`${comment.isOutdated ? 'opacity-60' : ''}`}>
+    <div className={`${comment.isOutdated ? 'opacity-60' : ''} ${isResolved ? 'opacity-75' : ''}`}>
       {/* Main comment */}
-      <div className="p-3 bg-white dark:bg-gray-900 border rounded-md">
+      <div className={`p-3 bg-white dark:bg-gray-900 border rounded-md ${isResolved ? 'border-l-4 border-l-green-500' : ''}`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
@@ -83,31 +117,65 @@ export function CommentThread({
                 Outdated
               </span>
             )}
+            {isResolved && (
+              <span className="px-1.5 py-0.5 text-xs bg-green-100 text-green-700 rounded">
+                Resolved
+              </span>
+            )}
           </div>
 
           {/* Actions */}
-          {isAuthor && !isEditing && (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setIsEditing(true)}
-                className="p-1 text-gray-400 hover:text-gray-600"
-                title="Edit"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
-              </button>
-              <button
-                onClick={handleDelete}
-                className="p-1 text-gray-400 hover:text-red-600"
-                title="Delete"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-            </div>
-          )}
+          <div className="flex items-center gap-1">
+            {/* Resolve/Unresolve button */}
+            {canResolve && (
+              isResolved ? (
+                <button
+                  onClick={handleUnresolve}
+                  disabled={isResolving}
+                  className="p-1 text-gray-400 hover:text-orange-600 disabled:opacity-50"
+                  title="Unresolve"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                  </svg>
+                </button>
+              ) : (
+                <button
+                  onClick={handleResolve}
+                  disabled={isResolving}
+                  className="p-1 text-gray-400 hover:text-green-600 disabled:opacity-50"
+                  title="Resolve"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </button>
+              )
+            )}
+            {/* Edit/Delete buttons for comment author */}
+            {isAuthor && !isEditing && (
+              <>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="p-1 text-gray-400 hover:text-gray-600"
+                  title="Edit"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="p-1 text-gray-400 hover:text-red-600"
+                  title="Delete"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* File location */}

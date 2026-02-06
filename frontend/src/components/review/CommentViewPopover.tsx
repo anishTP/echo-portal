@@ -106,6 +106,11 @@ export function CommentViewPopover({
             Outdated
           </span>
         )}
+        {comment.resolvedAt && (
+          <span className={styles.resolvedBadge}>
+            Resolved
+          </span>
+        )}
       </div>
 
       {/* Close button */}

@@ -161,6 +161,52 @@ export function useReviewComments(reviewId: string | undefined) {
     },
   });
 
+  // Resolve comment mutation
+  const resolveComment = useMutation({
+    mutationFn: (commentId: string) => {
+      if (!reviewId) throw new Error('Review ID required');
+      return reviewService.resolveComment(reviewId, commentId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: reviewKeys.comments(reviewId!) });
+      addNotification({
+        type: 'success',
+        title: 'Comment resolved',
+        message: 'The comment has been marked as resolved.',
+      });
+    },
+    onError: (error: Error) => {
+      addNotification({
+        type: 'error',
+        title: 'Failed to resolve comment',
+        message: error.message,
+      });
+    },
+  });
+
+  // Unresolve comment mutation
+  const unresolveComment = useMutation({
+    mutationFn: (commentId: string) => {
+      if (!reviewId) throw new Error('Review ID required');
+      return reviewService.unresolveComment(reviewId, commentId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: reviewKeys.comments(reviewId!) });
+      addNotification({
+        type: 'success',
+        title: 'Comment unresolved',
+        message: 'The comment has been marked as unresolved.',
+      });
+    },
+    onError: (error: Error) => {
+      addNotification({
+        type: 'error',
+        title: 'Failed to unresolve comment',
+        message: error.message,
+      });
+    },
+  });
+
   // Helper to organize comments by file and thread
   const organizeComments = (comments: ReviewComment[]) => {
     const byFile: Record<string, ReviewComment[]> = {};
@@ -192,6 +238,8 @@ export function useReviewComments(reviewId: string | undefined) {
       general,
       getReplies: (commentId: string) => threaded.get(commentId) || [],
       outdatedCount: comments.filter((c) => c.isOutdated).length,
+      resolvedCount: comments.filter((c) => c.resolvedAt && !c.parentId).length,
+      unresolvedCount: comments.filter((c) => !c.resolvedAt && !c.parentId).length,
       totalCount: comments.length,
     };
   };
@@ -206,6 +254,8 @@ export function useReviewComments(reviewId: string | undefined) {
     updateComment,
     deleteComment,
     refreshOutdated,
+    resolveComment,
+    unresolveComment,
     refetch: commentsQuery.refetch,
   };
 }
