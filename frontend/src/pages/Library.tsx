@@ -142,14 +142,19 @@ export default function Library() {
     (r) => r.reviewerId === user?.id && (r.status === 'pending' || r.status === 'in_progress')
   ) ?? null;
 
+  // Find any active review on the branch (for author to reply to reviewer comments)
+  const activeReviewOnBranch = branchReviews?.find(
+    (r) => r.status === 'pending' || r.status === 'in_progress'
+  ) ?? null;
+
   // Find the most recent review with feedback (for showing comments to author after changes requested)
   // This allows authors to see the comments from completed reviews
   const reviewWithFeedback = branchReviews?.find(
     (r) => r.status === 'completed' && r.decision === 'changes_requested'
   ) ?? null;
 
-  // Use active review if available, otherwise use review with feedback
-  const reviewForComments = activeReview ?? reviewWithFeedback;
+  // Use active review if available, otherwise any active review on branch, otherwise review with feedback
+  const reviewForComments = activeReview ?? activeReviewOnBranch ?? reviewWithFeedback;
 
   // Check if there's feedback to view (for drafts after changes_requested)
   // Only show when branch is in DRAFT state (not after resubmission when it goes to REVIEW)
