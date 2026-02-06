@@ -5,7 +5,7 @@
  * comment indicator icon at the end of each highlighted range.
  */
 
-import { useState, useEffect, useCallback, RefObject } from 'react';
+import { useState, useEffect, useCallback, useMemo, RefObject } from 'react';
 import type { ReviewComment } from '../../services/reviewService';
 import { CommentViewPopover } from './CommentViewPopover';
 import styles from './CommentHighlights.module.css';
@@ -144,6 +144,12 @@ export function CommentHighlights({
   const [selectedComment, setSelectedComment] = useState<ReviewComment | null>(null);
   const [popoverPosition, setPopoverPosition] = useState<{ top: number; left: number } | null>(null);
 
+  // Memoize root comments (non-replies) to avoid recalculating highlights when only replies change
+  const rootComments = useMemo(
+    () => comments.filter(c => !c.parentId),
+    [comments]
+  );
+
   // Calculate highlight positions based on comments with selection data
   const calculateHighlights = useCallback(() => {
     const container = containerRef.current;
@@ -152,9 +158,13 @@ export function CommentHighlights({
     const containerRect = container.getBoundingClientRect();
     const newHighlights: HighlightPosition[] = [];
 
-    // Filter comments that have selection data (exclude replies - they don't have selection data)
-    const selectionComments = comments.filter(
-      (c) => !c.parentId && c.selectedText && typeof c.startOffset === 'number' && typeof c.endOffset === 'number'
+    // Filter root comments that have valid selection data
+    const selectionComments = rootComments.filter(
+      (c) => c.selectedText &&
+             typeof c.startOffset === 'number' &&
+             typeof c.endOffset === 'number' &&
+             c.startOffset >= 0 &&
+             c.endOffset > c.startOffset
     );
 
     for (const comment of selectionComments) {
@@ -164,15 +174,26 @@ export function CommentHighlights({
         comment.endOffset!
       );
 
-      if (rects.length > 0) {
+      // Filter out invalid rects (zero dimensions or negative positions)
+      const validRects = rects.filter(
+        rect => rect.width > 0 && rect.height > 0 && rect.top >= 0 && rect.left >= 0
+      );
+
+      if (validRects.length > 0) {
         // Calculate positions relative to container
-        const relativeRects = rects.map((rect) => ({
+        const relativeRects = validRects.map((rect) => ({
           top: rect.top - containerRect.top + container.scrollTop,
           left: rect.left - containerRect.left + container.scrollLeft,
           width: rect.width,
           height: rect.height,
           context, // Same context for all rects in this range
         }));
+
+        // Additional validation: skip if positions are unreasonable
+        const hasValidPositions = relativeRects.every(
+          r => r.top >= 0 && r.left >= 0 && r.width > 0 && r.height > 0
+        );
+        if (!hasValidPositions) continue;
 
         // Position indicator at end of the line (right edge of container)
         const lastRect = relativeRects[relativeRects.length - 1];
@@ -191,7 +212,7 @@ export function CommentHighlights({
     }
 
     setHighlights(newHighlights);
-  }, [comments, containerRef]);
+  }, [rootComments, containerRef]);
 
   // Recalculate on mount and when comments change
   useEffect(() => {
