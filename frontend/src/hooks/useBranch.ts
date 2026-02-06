@@ -18,7 +18,9 @@ export function useBranch(id: string | undefined) {
     queryKey: branchKeys.detail(id || ''),
     queryFn: async () => {
       if (!id) throw new Error('Branch ID required');
+      console.log('[useBranch] Fetching branch:', id);
       const branch = await branchService.getById(id);
+      console.log('[useBranch] Fetched branch state:', branch?.state);
       setCurrentBranch(branch);
       return branch;
     },
