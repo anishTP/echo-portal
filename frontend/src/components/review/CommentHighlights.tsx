@@ -160,8 +160,6 @@ export function CommentHighlights({
 
     // Get container's text content to validate offsets
     const containerText = container.textContent || '';
-    console.log('[CommentHighlights] Container text length:', containerText.length);
-    console.log('[CommentHighlights] Root comments to process:', rootComments.length);
 
     // Filter root comments that have valid selection data
     const selectionComments = rootComments.filter(
@@ -172,23 +170,13 @@ export function CommentHighlights({
              c.endOffset > c.startOffset &&
              c.endOffset <= containerText.length
     );
-    console.log('[CommentHighlights] Selection comments after filter:', selectionComments.length);
 
     for (const comment of selectionComments) {
       // Verify the text at offsets matches the stored selectedText (allows for minor differences)
       const textAtOffsets = containerText.slice(comment.startOffset!, comment.endOffset!);
       const storedText = comment.selectedText!;
-      console.log('[CommentHighlights] Comment:', {
-        id: comment.id,
-        startOffset: comment.startOffset,
-        endOffset: comment.endOffset,
-        storedText: storedText.substring(0, 50),
-        textAtOffsets: textAtOffsets.substring(0, 50),
-        match: textAtOffsets === storedText
-      });
       // Skip if text doesn't match (content has changed since comment was created)
       if (textAtOffsets !== storedText && !textAtOffsets.includes(storedText) && !storedText.includes(textAtOffsets)) {
-        console.log('[CommentHighlights] Skipping - text mismatch');
         continue;
       }
 
@@ -197,7 +185,6 @@ export function CommentHighlights({
         comment.startOffset!,
         comment.endOffset!
       );
-      console.log('[CommentHighlights] Rects for comment:', { commentId: comment.id, rectsCount: rects.length, rects });
 
       // Filter out invalid rects (zero dimensions or negative positions)
       const validRects = rects.filter(
@@ -227,12 +214,6 @@ export function CommentHighlights({
           left: containerRect.width - 16, // Position near right edge with some padding
         };
 
-        console.log('[CommentHighlights] Adding highlight:', {
-          commentId: comment.id,
-          indicatorPosition,
-          relativeRectsCount: relativeRects.length,
-          firstRect: relativeRects[0]
-        });
         newHighlights.push({
           comment,
           rects: relativeRects,
@@ -242,7 +223,6 @@ export function CommentHighlights({
       }
     }
 
-    console.log('[CommentHighlights] Final highlights count:', newHighlights.length);
     setHighlights(newHighlights);
   }, [rootComments, containerRef]);
 
@@ -282,12 +262,6 @@ export function CommentHighlights({
       top: rect.top,
       left: rect.right + 12, // Position to the right of the icon
     };
-    console.log('[CommentHighlights] Indicator clicked:', {
-      commentId: highlight.comment.id,
-      indicatorRect: rect,
-      popoverPosition: position,
-      highlightIndicatorPosition: highlight.indicatorPosition
-    });
     setPopoverPosition(position);
     setSelectedComment(highlight.comment);
     onCommentClick?.(highlight.comment);

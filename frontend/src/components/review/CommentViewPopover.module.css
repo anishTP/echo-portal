@@ -10,6 +10,9 @@
   padding: var(--space-3);
   max-width: 320px;
   min-width: 260px;
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
   z-index: 50;
   animation: fadeIn 0.15s ease;
 }
@@ -66,6 +69,13 @@
   font-size: var(--font-size-1);
   color: var(--gray-9);
   margin-bottom: var(--space-3);
+}
+
+/* Scrollable content area (quoted text + content + replies) */
+.scrollableContent {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0; /* Required for flex child scrolling */
 }
 
 /* Replies section */

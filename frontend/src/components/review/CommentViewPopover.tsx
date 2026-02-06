@@ -136,17 +136,34 @@ export function CommentViewPopover({
     const rect = popover.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
+    const padding = 16;
 
-    // Adjust horizontal position if overflowing right
-    if (rect.right > viewportWidth - 16) {
-      popover.style.left = `${viewportWidth - rect.width - 16}px`;
+    // Calculate optimal horizontal position
+    let left = position.left;
+    if (rect.right > viewportWidth - padding) {
+      // Try positioning to the left of the indicator instead
+      left = Math.max(padding, position.left - rect.width - 24);
+    }
+    popover.style.left = `${left}px`;
+
+    // Calculate optimal vertical position - try to center on the trigger point
+    // but keep within viewport bounds
+    let top = position.top;
+    const popoverHeight = rect.height;
+
+    // If popover would overflow bottom
+    if (top + popoverHeight > viewportHeight - padding) {
+      // Position so bottom edge is at viewport bottom with padding
+      top = viewportHeight - popoverHeight - padding;
     }
 
-    // Adjust vertical position if overflowing bottom
-    if (rect.bottom > viewportHeight - 16) {
-      popover.style.top = `${position.top - rect.height - 16}px`;
+    // Ensure it doesn't go above viewport
+    if (top < padding) {
+      top = padding;
     }
-  }, [position, isResolved]);
+
+    popover.style.top = `${top}px`;
+  }, [position, isResolved, replies.length]);
 
   return (
     <div
@@ -160,35 +177,38 @@ export function CommentViewPopover({
       role="dialog"
       aria-label="Comment"
     >
-      {/* Header with quoted text if available */}
-      {comment.selectedText && (
-        <div className={styles.quotedText}>
-          <span className={styles.quoteIcon}>"</span>
-          <span className={styles.quoteContent}>
-            {comment.selectedText.length > 100
-              ? `${comment.selectedText.slice(0, 100)}...`
-              : comment.selectedText}
-          </span>
-        </div>
-      )}
+      {/* Scrollable content area */}
+      <div className={styles.scrollableContent}>
+        {/* Header with quoted text if available */}
+        {comment.selectedText && (
+          <div className={styles.quotedText}>
+            <span className={styles.quoteIcon}>"</span>
+            <span className={styles.quoteContent}>
+              {comment.selectedText.length > 100
+                ? `${comment.selectedText.slice(0, 100)}...`
+                : comment.selectedText}
+            </span>
+          </div>
+        )}
 
-      {/* Comment content */}
-      <div className={styles.content}>{comment.content}</div>
+        {/* Comment content */}
+        <div className={styles.content}>{comment.content}</div>
 
-      {/* Timestamp */}
-      <div className={styles.timestamp}>{formatRelativeTime(comment.createdAt)}</div>
+        {/* Timestamp */}
+        <div className={styles.timestamp}>{formatRelativeTime(comment.createdAt)}</div>
 
-      {/* Replies */}
-      {replies.length > 0 && (
-        <div className={styles.replies}>
-          {replies.map((reply) => (
-            <div key={reply.id} className={styles.reply}>
-              <div className={styles.replyContent}>{reply.content}</div>
-              <div className={styles.replyTimestamp}>{formatRelativeTime(reply.createdAt)}</div>
-            </div>
-          ))}
-        </div>
-      )}
+        {/* Replies */}
+        {replies.length > 0 && (
+          <div className={styles.replies}>
+            {replies.map((reply) => (
+              <div key={reply.id} className={styles.reply}>
+                <div className={styles.replyContent}>{reply.content}</div>
+                <div className={styles.replyTimestamp}>{formatRelativeTime(reply.createdAt)}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Resolved state - shows when resolved, hides reply input */}
       {isResolved ? (
