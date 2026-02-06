@@ -201,7 +201,9 @@ branchRoutes.get('/:id', zValidator('param', branchIdParamSchema), async (c) => 
   const { id } = c.req.valid('param');
   const context = getAccessContext(c);
 
+  console.log('[GET /branches/:id] Fetching branch:', id);
   const branch = await branchService.getById(id);
+  console.log('[GET /branches/:id] Branch state from DB:', branch?.state);
   if (!branch) {
     throw new NotFoundError('Branch', id);
   }

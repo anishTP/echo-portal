@@ -42,6 +42,8 @@ export async function invalidateWorkflowQueries(
   queryClient.invalidateQueries({ queryKey: reviewKeys.myReviews() });
   queryClient.invalidateQueries({ queryKey: branchKeys.lists() });
   if (branchId) {
+    // Small delay to ensure database transaction is fully committed and visible
+    await new Promise(resolve => setTimeout(resolve, 100));
     // For the specific branch, refetch immediately to ensure UI updates
     await queryClient.refetchQueries({ queryKey: branchKeys.detail(branchId) });
     queryClient.invalidateQueries({ queryKey: reviewKeys.branchReviews(branchId) });
