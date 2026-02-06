@@ -563,30 +563,11 @@
   text-decoration: none; /* Remove strikethrough from image */
 }
 
-/* Make del containing images a positioned container for the badge */
+/* Adjust del styling when containing images */
 .inlineDiffDeletion:has(img),
 .markdownBody del:has(img) {
-  position: relative;
-  display: inline-block;
   text-decoration: none; /* Remove strikethrough when containing image */
   background: transparent; /* Remove red background for image deletions */
-  padding: 0;
-}
-
-/* "Removed" badge on deleted images via pseudo-element */
-.inlineDiffDeletion:has(img)::after,
-.markdownBody del:has(img)::after {
-  content: "Removed";
-  position: absolute;
-  top: var(--space-2);
-  right: var(--space-2);
-  padding: var(--space-1) var(--space-2);
-  background: var(--red-9);
-  color: white;
-  font-size: var(--font-size-1);
-  font-weight: var(--font-weight-medium);
-  border-radius: var(--radius-2);
-  z-index: 1;
 }
 
 /* ============================================
