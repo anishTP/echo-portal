@@ -32,16 +32,18 @@ export const reviewKeys = {
  * Invalidate all dashboard-related queries after any workflow transition.
  * Call this from every mutation that changes branch state or review status.
  */
-export function invalidateWorkflowQueries(
+export async function invalidateWorkflowQueries(
   queryClient: QueryClient,
   branchId?: string
 ) {
+  // Invalidate and refetch list queries
   queryClient.invalidateQueries({ queryKey: branchKeys.myBranches() });
   queryClient.invalidateQueries({ queryKey: branchKeys.reviewBranches() });
   queryClient.invalidateQueries({ queryKey: reviewKeys.myReviews() });
   queryClient.invalidateQueries({ queryKey: branchKeys.lists() });
   if (branchId) {
-    queryClient.invalidateQueries({ queryKey: branchKeys.detail(branchId) });
+    // For the specific branch, refetch immediately to ensure UI updates
+    await queryClient.refetchQueries({ queryKey: branchKeys.detail(branchId) });
     queryClient.invalidateQueries({ queryKey: reviewKeys.branchReviews(branchId) });
     queryClient.invalidateQueries({ queryKey: reviewKeys.branchStats(branchId) });
   }
