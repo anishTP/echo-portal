@@ -11,6 +11,8 @@ import styles from './CommentViewPopover.module.css';
 
 interface CommentViewPopoverProps {
   comment: ReviewComment;
+  /** Replies to this comment (threaded comments) */
+  replies?: ReviewComment[];
   position: { top: number; left: number };
   onClose: () => void;
   /** Current user ID for permission checks */
@@ -46,6 +48,7 @@ function formatRelativeTime(dateString: string): string {
 
 export function CommentViewPopover({
   comment,
+  replies = [],
   position,
   onClose,
   currentUserId,
@@ -174,6 +177,18 @@ export function CommentViewPopover({
 
       {/* Timestamp */}
       <div className={styles.timestamp}>{formatRelativeTime(comment.createdAt)}</div>
+
+      {/* Replies */}
+      {replies.length > 0 && (
+        <div className={styles.replies}>
+          {replies.map((reply) => (
+            <div key={reply.id} className={styles.reply}>
+              <div className={styles.replyContent}>{reply.content}</div>
+              <div className={styles.replyTimestamp}>{formatRelativeTime(reply.createdAt)}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Resolved state - shows when resolved, hides reply input */}
       {isResolved ? (

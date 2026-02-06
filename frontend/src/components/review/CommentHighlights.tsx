@@ -301,6 +301,7 @@ export function CommentHighlights({
       {selectedComment && popoverPosition && (
         <CommentViewPopover
           comment={selectedComment}
+          replies={comments.filter(c => c.parentId === selectedComment.id)}
           position={popoverPosition}
           onClose={handleClosePopover}
           currentUserId={currentUserId}
