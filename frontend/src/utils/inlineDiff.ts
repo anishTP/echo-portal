@@ -112,7 +112,7 @@ export function generateUnifiedDiffMarkdown(
     hasImage: /!\[/.test(p.value)
   })));
 
-  return diff
+  const result = diff
     .map((part) => {
       if (part.added) return `<ins>${escapeHtml(part.value)}</ins>`;
       if (part.removed) {
@@ -124,6 +124,13 @@ export function generateUnifiedDiffMarkdown(
       return part.value;
     })
     .join('');
+
+  // DEBUG: Log final result if it contains an image
+  if (result.includes('<img')) {
+    console.log('[inlineDiff] Final result with img:', result.substring(result.indexOf('<img') - 50, result.indexOf('<img') + 200));
+  }
+
+  return result;
 }
 
 /**
