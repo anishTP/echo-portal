@@ -554,23 +554,29 @@
    DELETED IMAGE STYLES
    ============================================ */
 
-/* Container for deleted images with badge */
-.deletedImageContainer {
-  position: relative;
-  display: block;
-  margin: var(--space-4) 0;
-}
-
-/* Deleted image styling */
-.deletedImage {
+/* Images inside deletion blocks - use descendant selector */
+.inlineDiffDeletion img,
+.markdownBody del img {
   opacity: 0.5;
   border: 3px solid var(--red-9);
   filter: grayscale(50%);
-  margin: 0; /* Override default image margin since container has it */
+  text-decoration: none; /* Remove strikethrough from image */
 }
 
-/* "Removed" badge on deleted images */
-.deletedImageBadge {
+/* Make del containing images a positioned container for the badge */
+.inlineDiffDeletion:has(img),
+.markdownBody del:has(img) {
+  position: relative;
+  display: inline-block;
+  text-decoration: none; /* Remove strikethrough when containing image */
+  background: transparent; /* Remove red background for image deletions */
+  padding: 0;
+}
+
+/* "Removed" badge on deleted images via pseudo-element */
+.inlineDiffDeletion:has(img)::after,
+.markdownBody del:has(img)::after {
+  content: "Removed";
   position: absolute;
   top: var(--space-2);
   right: var(--space-2);
@@ -580,6 +586,7 @@
   font-size: var(--font-size-1);
   font-weight: var(--font-weight-medium);
   border-radius: var(--radius-2);
+  z-index: 1;
 }
 
 /* ============================================
