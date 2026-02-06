@@ -474,8 +474,9 @@ branchRoutes.post(
       throw new ValidationError('At least one reviewer is required');
     }
 
-    // Add reviewers first (validates mutual exclusion)
-    await branchService.addReviewers(id, reviewerIds, user.id);
+    // Add reviewers first (validates mutual exclusion) - returns branch with all reviewers
+    const branchWithReviewers = await branchService.addReviewers(id, reviewerIds, user.id);
+    const allReviewerIds = branchWithReviewers.reviewers ?? reviewerIds;
 
     // Then transition to review state
     const result = await transitionService.executeTransition({
@@ -490,10 +491,8 @@ branchRoutes.post(
       throw new ValidationError(result.error || 'Failed to submit for review');
     }
 
-    // Create review records for ALL reviewers on the branch (not just the
-    // ones in this request) so pre-existing reviewers also appear in the queue
-    const updatedBranch = await branchService.getById(id);
-    const allReviewerIds = updatedBranch?.reviewers ?? reviewerIds;
+    // Create review records for ALL reviewers BEFORE fetching branch
+    // (prevents auto-repair from triggering due to missing pending reviews)
     await Promise.all(
       allReviewerIds.map((reviewerId) =>
         reviewService.create({ branchId: id, reviewerId }, user.id).catch((err) => {
