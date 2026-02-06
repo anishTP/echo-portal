@@ -203,16 +203,17 @@ export class BranchService {
       return null; // No changes_requested review, not stuck
     }
 
-    // Check if there are any pending reviews (indicates resubmission, not stuck)
-    const pendingReview = await db.query.reviews.findFirst({
+    // Check if there are any active reviews (pending or in_progress)
+    // This indicates a resubmission or active review, not a stuck branch
+    const activeReview = await db.query.reviews.findFirst({
       where: and(
         eq(reviews.branchId, branch.id),
-        eq(reviews.status, 'pending')
+        sql`${reviews.status} IN ('pending', 'in_progress')`
       ),
     });
 
-    if (pendingReview) {
-      // There's a pending review, so the branch was legitimately resubmitted
+    if (activeReview) {
+      // There's an active review, so the branch was legitimately resubmitted
       // Don't auto-repair
       return null;
     }

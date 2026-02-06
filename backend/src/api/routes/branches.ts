@@ -498,9 +498,10 @@ branchRoutes.post(
         reviewService.create({ branchId: id, reviewerId }, user.id).catch((err) => {
           // Only ignore duplicate/conflict errors — not permission or other failures
           if (err?.code === 'CONFLICT' || err?.message?.includes('already exists')) {
-            return; // Duplicate review record, safe to ignore
+            return null; // Duplicate review record, safe to ignore
           }
           console.error(`[submit-for-review] Failed to create review for reviewer ${reviewerId}:`, err);
+          return null;
         })
       )
     );
