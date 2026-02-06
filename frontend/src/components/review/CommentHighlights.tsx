@@ -158,16 +158,28 @@ export function CommentHighlights({
     const containerRect = container.getBoundingClientRect();
     const newHighlights: HighlightPosition[] = [];
 
+    // Get container's text content to validate offsets
+    const containerText = container.textContent || '';
+
     // Filter root comments that have valid selection data
     const selectionComments = rootComments.filter(
       (c) => c.selectedText &&
              typeof c.startOffset === 'number' &&
              typeof c.endOffset === 'number' &&
              c.startOffset >= 0 &&
-             c.endOffset > c.startOffset
+             c.endOffset > c.startOffset &&
+             c.endOffset <= containerText.length
     );
 
     for (const comment of selectionComments) {
+      // Verify the text at offsets matches the stored selectedText (allows for minor differences)
+      const textAtOffsets = containerText.slice(comment.startOffset!, comment.endOffset!);
+      const storedText = comment.selectedText!;
+      // Skip if text doesn't match (content has changed since comment was created)
+      if (textAtOffsets !== storedText && !textAtOffsets.includes(storedText) && !storedText.includes(textAtOffsets)) {
+        continue;
+      }
+
       const { rects, context } = getRangeRectsWithContext(
         container,
         comment.startOffset!,
