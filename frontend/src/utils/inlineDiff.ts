@@ -19,6 +19,35 @@ function escapeHtml(text: string): string {
 }
 
 /**
+ * Makes whitespace deletions visible by replacing with symbols.
+ * Line breaks become visible ↵ symbols so reviewers can see what was removed.
+ *
+ * @param text - The text to process
+ * @param isDeleted - Whether this text is being deleted
+ * @returns Text with visible whitespace indicators (if deleted)
+ */
+function makeWhitespaceVisible(text: string, isDeleted: boolean): string {
+  if (!isDeleted) return text;
+
+  // Count line breaks in the text
+  const lineBreakCount = (text.match(/\n/g) || []).length;
+
+  // If the entire content is just whitespace/line breaks
+  if (text.trim() === '' && text.length > 0) {
+    if (lineBreakCount > 0) {
+      // Show a visible placeholder for removed line breaks
+      return `[${lineBreakCount} line break${lineBreakCount > 1 ? 's' : ''} removed]`;
+    }
+    // Just spaces/tabs
+    return '[whitespace removed]';
+  }
+
+  // For mixed content (text + line breaks), add visible symbols
+  // Replace each line break with the symbol + the actual line break
+  return text.replace(/\n/g, '↵\n');
+}
+
+/**
  * Generates unified diff markdown showing both additions and deletions inline.
  * Used for unified view where both changes appear interleaved.
  *
@@ -43,7 +72,10 @@ export function generateUnifiedDiffMarkdown(
   return diff
     .map((part) => {
       if (part.added) return `<ins>${escapeHtml(part.value)}</ins>`;
-      if (part.removed) return `<del>${escapeHtml(part.value)}</del>`;
+      if (part.removed) {
+        const visible = makeWhitespaceVisible(part.value, true);
+        return `<del>${escapeHtml(visible)}</del>`;
+      }
       return part.value;
     })
     .join('');
@@ -69,7 +101,10 @@ export function generateOldSideDiffMarkdown(
   return diff
     .filter((part) => !part.added) // Exclude additions
     .map((part) => {
-      if (part.removed) return `<del>${escapeHtml(part.value)}</del>`;
+      if (part.removed) {
+        const visible = makeWhitespaceVisible(part.value, true);
+        return `<del>${escapeHtml(visible)}</del>`;
+      }
       return part.value;
     })
     .join('');

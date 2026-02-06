@@ -549,3 +549,50 @@
   border-radius: 2px;
   padding: 0 2px;
 }
+
+/* ============================================
+   DELETED IMAGE STYLES
+   ============================================ */
+
+/* Container for deleted images with badge */
+.deletedImageContainer {
+  position: relative;
+  display: block;
+  margin: var(--space-4) 0;
+}
+
+/* Deleted image styling */
+.deletedImage {
+  opacity: 0.5;
+  border: 3px solid var(--red-9);
+  filter: grayscale(50%);
+  margin: 0; /* Override default image margin since container has it */
+}
+
+/* "Removed" badge on deleted images */
+.deletedImageBadge {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  background: var(--red-9);
+  color: white;
+  font-size: var(--font-size-1);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-2);
+}
+
+/* ============================================
+   VISIBLE WHITESPACE DELETION STYLES
+   ============================================ */
+
+/* Visible line break indicator in deletions */
+.deletedLineBreak {
+  display: inline;
+  color: var(--red-11);
+  background: var(--red-3);
+  font-size: var(--font-size-1);
+  padding: 0 2px;
+  border-radius: 2px;
+  font-family: var(--code-font-family);
+}

@@ -5,10 +5,17 @@
  * Metadata changes are shown in the header, not in the body.
  */
 
+import { createContext, useContext } from 'react';
 import Markdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import { VideoEmbed, detectVideoType } from '../editor/VideoEmbed';
 import styles from './FullArticleDiffView.module.css';
+
+/**
+ * Context to track whether content is inside a deletion block.
+ * Used to apply special styling to images and other elements.
+ */
+const DeletionContext = createContext(false);
 
 interface DiffMarkdownRendererProps {
   content: string;
@@ -120,9 +127,13 @@ export function DiffMarkdownRenderer({ content }: DiffMarkdownRendererProps) {
             <ins className={styles.inlineDiffAddition}>{children}</ins>
           ),
           del: ({ children }) => (
-            <del className={styles.inlineDiffDeletion}>{children}</del>
+            <DeletionContext.Provider value={true}>
+              <del className={styles.inlineDiffDeletion}>{children}</del>
+            </DeletionContext.Provider>
           ),
-          img: ({ src, alt }) => {
+          img: function ImageRenderer({ src, alt }) {
+            const isDeleted = useContext(DeletionContext);
+
             if (!src || src === '') {
               return (
                 <span className={styles.imagePlaceholder}>
@@ -134,7 +145,29 @@ export function DiffMarkdownRenderer({ content }: DiffMarkdownRendererProps) {
             // Check if this is a video URL
             const videoType = detectVideoType(src);
             if (videoType !== 'unknown') {
+              if (isDeleted) {
+                return (
+                  <span className={styles.deletedImageContainer}>
+                    <VideoEmbed src={src} alt={alt} />
+                    <span className={styles.deletedImageBadge}>Removed</span>
+                  </span>
+                );
+              }
               return <VideoEmbed src={src} alt={alt} />;
+            }
+
+            if (isDeleted) {
+              return (
+                <span className={styles.deletedImageContainer}>
+                  <img
+                    src={src}
+                    alt={alt}
+                    className={`${styles.image} ${styles.deletedImage}`}
+                    loading="lazy"
+                  />
+                  <span className={styles.deletedImageBadge}>Removed</span>
+                </span>
+              );
             }
 
             return (
