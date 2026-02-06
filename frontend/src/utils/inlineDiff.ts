@@ -48,6 +48,40 @@ function makeWhitespaceVisible(text: string, isDeleted: boolean): string {
 }
 
 /**
+ * Processes deleted content, converting image markdown to HTML and escaping other content.
+ * This ensures images render inside <del> tags (markdown inside raw HTML isn't parsed).
+ *
+ * @param text - The deleted text to process
+ * @returns HTML string safe to wrap in <del> tags
+ */
+function processDeletedContent(text: string): string {
+  // Extract images and replace with placeholders
+  const images: Array<{ alt: string; src: string }> = [];
+  const withPlaceholders = text.replace(
+    /!\[([^\]]*)\]\(([^)]+)\)/g,
+    (_match, alt, src) => {
+      images.push({ alt, src });
+      return `__DELETED_IMAGE_${images.length - 1}__`;
+    }
+  );
+
+  // Make whitespace visible and escape HTML
+  const visible = makeWhitespaceVisible(withPlaceholders, true);
+  const escaped = escapeHtml(visible);
+
+  // Replace placeholders with img HTML
+  let result = escaped;
+  images.forEach((img, i) => {
+    result = result.replace(
+      `__DELETED_IMAGE_${i}__`,
+      `<img src="${escapeHtml(img.src)}" alt="${escapeHtml(img.alt)}" />`
+    );
+  });
+
+  return result;
+}
+
+/**
  * Generates unified diff markdown showing both additions and deletions inline.
  * Used for unified view where both changes appear interleaved.
  *
@@ -73,8 +107,7 @@ export function generateUnifiedDiffMarkdown(
     .map((part) => {
       if (part.added) return `<ins>${escapeHtml(part.value)}</ins>`;
       if (part.removed) {
-        const visible = makeWhitespaceVisible(part.value, true);
-        return `<del>${escapeHtml(visible)}</del>`;
+        return `<del>${processDeletedContent(part.value)}</del>`;
       }
       return part.value;
     })
@@ -102,8 +135,7 @@ export function generateOldSideDiffMarkdown(
     .filter((part) => !part.added) // Exclude additions
     .map((part) => {
       if (part.removed) {
-        const visible = makeWhitespaceVisible(part.value, true);
-        return `<del>${escapeHtml(visible)}</del>`;
+        return `<del>${processDeletedContent(part.value)}</del>`;
       }
       return part.value;
     })
