@@ -11,6 +11,8 @@ export interface ReviewComment {
   id: string;
   reviewId?: string;                   // Which review this comment belongs to (populated by backend)
   authorId: string;
+  authorName?: string;                 // Display name of author (populated by backend)
+  authorAvatarUrl?: string;            // Avatar URL of author (populated by backend)
   content: string;
   path?: string;
   line?: number;
@@ -26,6 +28,7 @@ export interface ReviewComment {
   // Resolution tracking
   resolvedAt?: string;
   resolvedBy?: string;
+  resolvedByName?: string;             // Display name of who resolved (populated by backend)
   createdAt: string;
   updatedAt: string;
 }

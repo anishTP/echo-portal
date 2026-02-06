@@ -54,6 +54,14 @@
   text-overflow: ellipsis;
 }
 
+/* Author name */
+.author {
+  font-size: var(--font-size-2);
+  font-weight: 500;
+  color: var(--gray-12);
+  margin-bottom: var(--space-1);
+}
+
 /* Comment content */
 .content {
   color: var(--gray-12);
@@ -95,6 +103,13 @@
 
 .reply:last-child {
   margin-bottom: 0;
+}
+
+.replyAuthor {
+  font-size: var(--font-size-1);
+  font-weight: 500;
+  color: var(--gray-11);
+  margin-bottom: var(--space-1);
 }
 
 .replyContent {

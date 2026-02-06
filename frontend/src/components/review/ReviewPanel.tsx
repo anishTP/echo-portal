@@ -25,6 +25,8 @@ export interface ReviewResponse {
 export interface ReviewComment {
   id: string;
   authorId: string;
+  authorName?: string;
+  authorAvatarUrl?: string;
   content: string;
   path?: string;
   line?: number;

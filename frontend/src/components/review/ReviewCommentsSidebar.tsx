@@ -180,6 +180,9 @@ export function ReviewCommentsSidebar({
                       {/* Comment meta */}
                       <Flex justify="between" align="center">
                         <Flex align="center" gap="2">
+                          <Text size="1" weight="medium">
+                            {comment.authorName || 'Unknown'}
+                          </Text>
                           {comment.line && (
                             <Text size="1" color="gray">
                               Line {comment.line}
@@ -204,9 +207,14 @@ export function ReviewCommentsSidebar({
                         <div className={styles.replyThread}>
                           {repliesByParent.get(comment.id)!.map((reply) => (
                             <Flex key={reply.id} direction="column" gap="1">
-                              <Text size="1" color="gray">
-                                {new Date(reply.createdAt).toLocaleDateString()}
-                              </Text>
+                              <Flex align="center" gap="2">
+                                <Text size="1" weight="medium">
+                                  {reply.authorName || 'Unknown'}
+                                </Text>
+                                <Text size="1" color="gray">
+                                  {new Date(reply.createdAt).toLocaleDateString()}
+                                </Text>
+                              </Flex>
                               <Text size="2">{reply.content}</Text>
                             </Flex>
                           ))}

@@ -191,7 +191,10 @@ export function CommentViewPopover({
           </div>
         )}
 
-        {/* Comment content */}
+        {/* Comment author and content */}
+        {comment.authorName && (
+          <div className={styles.author}>{comment.authorName}</div>
+        )}
         <div className={styles.content}>{comment.content}</div>
 
         {/* Timestamp */}
@@ -202,6 +205,9 @@ export function CommentViewPopover({
           <div className={styles.replies}>
             {replies.map((reply) => (
               <div key={reply.id} className={styles.reply}>
+                {reply.authorName && (
+                  <div className={styles.replyAuthor}>{reply.authorName}</div>
+                )}
                 <div className={styles.replyContent}>{reply.content}</div>
                 <div className={styles.replyTimestamp}>{formatRelativeTime(reply.createdAt)}</div>
               </div>

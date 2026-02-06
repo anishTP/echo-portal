@@ -1,9 +1,12 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
+import { inArray } from 'drizzle-orm';
 import { reviewService } from '../../services/review/review-service.js';
 import { reviewCommentService } from '../../services/review/comments.js';
 import { snapshotService } from '../../services/review/snapshot-service.js';
+import { db } from '../../db/index.js';
+import { users } from '../../db/schema/users.js';
 import { requireAuth, type AuthEnv } from '../middleware/auth.js';
 import { success, created, paginated, noContent } from '../utils/responses.js';
 import { NotFoundError, ForbiddenError } from '../utils/errors.js';
@@ -17,8 +20,82 @@ import {
   listReviewsQuerySchema,
   validateReviewStatusFilter,
 } from '../schemas/reviews.js';
+import type { ReviewModel } from '../../models/review.js';
+import type { ReviewComment } from '@echo-portal/shared';
 
 const reviewRoutes = new Hono<AuthEnv>();
+
+/**
+ * Helper to build a user map for enriching comments with author info
+ */
+async function buildUserMap(reviews: ReviewModel[]): Promise<Map<string, { displayName: string; avatarUrl?: string }>> {
+  // Collect all unique user IDs from comments
+  const userIds = new Set<string>();
+  for (const review of reviews) {
+    for (const comment of review.comments) {
+      userIds.add(comment.authorId);
+      if (comment.resolvedBy) {
+        userIds.add(comment.resolvedBy);
+      }
+    }
+  }
+
+  if (userIds.size === 0) {
+    return new Map();
+  }
+
+  // Fetch user info
+  const userRecords = await db
+    .select({ id: users.id, displayName: users.displayName, avatarUrl: users.avatarUrl })
+    .from(users)
+    .where(inArray(users.id, Array.from(userIds)));
+
+  // Build map
+  const userMap = new Map<string, { displayName: string; avatarUrl?: string }>();
+  for (const user of userRecords) {
+    userMap.set(user.id, { displayName: user.displayName, avatarUrl: user.avatarUrl ?? undefined });
+  }
+
+  return userMap;
+}
+
+/**
+ * Helper to enrich comments array with author info
+ */
+async function enrichCommentsWithAuthors(comments: ReviewComment[]): Promise<ReviewComment[]> {
+  const userIds = new Set<string>();
+  for (const comment of comments) {
+    userIds.add(comment.authorId);
+    if (comment.resolvedBy) {
+      userIds.add(comment.resolvedBy);
+    }
+  }
+
+  if (userIds.size === 0) {
+    return comments;
+  }
+
+  const userRecords = await db
+    .select({ id: users.id, displayName: users.displayName, avatarUrl: users.avatarUrl })
+    .from(users)
+    .where(inArray(users.id, Array.from(userIds)));
+
+  const userMap = new Map<string, { displayName: string; avatarUrl?: string }>();
+  for (const user of userRecords) {
+    userMap.set(user.id, { displayName: user.displayName, avatarUrl: user.avatarUrl ?? undefined });
+  }
+
+  return comments.map((comment) => {
+    const author = userMap.get(comment.authorId);
+    const resolvedByUser = comment.resolvedBy ? userMap.get(comment.resolvedBy) : undefined;
+    return {
+      ...comment,
+      authorName: author?.displayName,
+      authorAvatarUrl: author?.avatarUrl,
+      resolvedByName: resolvedByUser?.displayName,
+    };
+  });
+}
 
 /**
  * POST /api/v1/reviews - Request a new review
@@ -102,7 +179,8 @@ reviewRoutes.get(
       throw new NotFoundError('Review', id);
     }
 
-    const response: Record<string, unknown> = review.toResponse();
+    const userMap = await buildUserMap([review]);
+    const response: Record<string, unknown> = review.toResponse(userMap);
 
     if (includeSnapshot) {
       const snapshot = await snapshotService.getByReviewId(id);
@@ -203,7 +281,8 @@ reviewRoutes.get(
     const { id } = c.req.valid('param');
 
     const comments = await reviewCommentService.getComments(id);
-    return success(c, comments);
+    const enrichedComments = await enrichCommentsWithAuthors(comments);
+    return success(c, enrichedComments);
   }
 );
 
@@ -274,9 +353,10 @@ reviewRoutes.get(
     const branchId = c.req.param('branchId');
 
     const reviews = await reviewService.getByBranch(branchId);
+    const userMap = await buildUserMap(reviews);
     return success(
       c,
-      reviews.map((r) => r.toResponse())
+      reviews.map((r) => r.toResponse(userMap))
     );
   }
 );

@@ -13,6 +13,8 @@ export interface ReviewComment {
   id: string;
   reviewId?: string;                   // Which review this comment belongs to (populated when aggregating)
   authorId: string;
+  authorName?: string;                 // Display name of author (populated on fetch)
+  authorAvatarUrl?: string;            // Avatar URL of author (populated on fetch)
   content: string;
   // Anchoring (all optional for general comments)
   path?: string;                       // File path
