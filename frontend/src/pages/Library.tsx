@@ -8,8 +8,9 @@ import {
   ContentMetadataSidebar,
 } from '../components/library';
 import { InlineEditView, type DraftContent, type InlineEditViewHandle } from '../components/library/InlineEditView';
-import { EditMetadataSidebar } from '../components/library/EditMetadataSidebar';
 import { EditModeHeader } from '../components/library/EditModeHeader';
+import { ReviewModeHeader } from '../components/library/ReviewModeHeader';
+import { ReviewDiffView } from '../components/library/ReviewDiffView';
 import { BranchCreateDialog } from '../components/editor/BranchCreateDialog';
 import { usePublishedContent, useContentBySlug } from '../hooks/usePublishedContent';
 import { useEditBranch } from '../hooks/useEditBranch';
@@ -17,9 +18,13 @@ import { useBranch } from '../hooks/useBranch';
 import { useContent, useContentList, useDeleteContent, contentKeys } from '../hooks/useContent';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { useDraftSync } from '../hooks/useDraftSync';
+import { useContentComparison, useContentComparisonStats } from '../hooks/useContentComparison';
+import { useBranchReviews, useApproveReview, useRequestChanges } from '../hooks/useReview';
+import { useBranchComments } from '../hooks/useBranchComments';
 import { useBranchStore } from '../stores/branchStore';
 import { useAuth } from '../context/AuthContext';
 import type { ContentSummary } from '@echo-portal/shared';
+import type { TextSelection } from '../hooks/useTextSelection';
 
 type ContentType = 'all' | 'guideline' | 'asset' | 'opinion';
 
@@ -37,16 +42,19 @@ export default function Library() {
   // State for selected content in branch mode (uses content ID, not slug)
   const [selectedBranchContentId, setSelectedBranchContentId] = useState<string | null>(null);
 
-  // Extract mode and branch from URL (for inline edit mode)
-  const mode = (searchParams.get('mode') as 'view' | 'edit') || 'view';
+  // Extract mode and branch from URL (for inline edit mode and review mode)
+  const mode = (searchParams.get('mode') as 'view' | 'edit' | 'review') || 'view';
   const branchId = searchParams.get('branchId') || undefined;
   const contentIdParam = searchParams.get('contentId') || undefined;
 
   // Determine if we're in inline edit mode (editing branch content)
   const isEditMode = mode === 'edit' && !!branchId && !!contentIdParam;
 
-  // Effective branch ID for content list (from store or URL params in edit mode)
-  const effectiveBranchId = currentBranch?.id || (isEditMode ? branchId : undefined);
+  // Determine if we're in review mode (in-context review overlay)
+  const isReviewMode = mode === 'review' && !!branchId;
+
+  // Effective branch ID for content list (from store or URL params in edit/review mode)
+  const effectiveBranchId = currentBranch?.id || ((isEditMode || isReviewMode) ? branchId : undefined);
 
   // Extract filters from URL
   const type = (searchParams.get('type') as ContentType) || 'all';
@@ -114,6 +122,68 @@ export default function Library() {
   // Fetch branch data for the effective branch (either from URL in edit mode, or from store in branch mode)
   // This ensures the query is active so invalidation after submit-for-review triggers a refetch
   const { data: activeBranch } = useBranch(effectiveBranchId);
+
+  // Content comparison for review mode (DB-backed, bypasses git worktrees)
+  const { data: contentComparison, isLoading: isComparisonLoading } = useContentComparison(
+    isReviewMode ? branchId : undefined
+  );
+  const { data: comparisonStats } = useContentComparisonStats(
+    isReviewMode ? effectiveBranchId : undefined
+  );
+
+  // Reviews for review mode OR for checking if there's feedback to view
+  // Fetch for the effectiveBranchId (even if not in review mode) to check for completed feedback
+  const { data: branchReviews } = useBranchReviews(effectiveBranchId);
+  const approveReview = useApproveReview();
+  const requestChanges = useRequestChanges();
+
+  // Find the active review (current user's pending/in_progress review)
+  const activeReview = branchReviews?.find(
+    (r) => r.reviewerId === user?.id && (r.status === 'pending' || r.status === 'in_progress')
+  ) ?? null;
+
+  // Find any active review on the branch (for author to reply to reviewer comments)
+  const activeReviewOnBranch = branchReviews?.find(
+    (r) => r.status === 'pending' || r.status === 'in_progress'
+  ) ?? null;
+
+  // Find the most recent review with feedback (for showing comments to author after changes requested)
+  // This allows authors to see the comments from completed reviews
+  const reviewWithFeedback = branchReviews?.find(
+    (r) => r.status === 'completed' && r.decision === 'changes_requested'
+  ) ?? null;
+
+  // Use active review if available, otherwise any active review on branch, otherwise review with feedback
+  const reviewForComments = activeReview ?? activeReviewOnBranch ?? reviewWithFeedback;
+
+  // Check if there's feedback to view (for drafts after changes_requested)
+  // Only show when branch is in DRAFT state (not after resubmission when it goes to REVIEW)
+  const branchInDraftState = activeBranch?.state === 'draft' || currentBranch?.state === 'draft';
+  const hasFeedbackToView = !!reviewWithFeedback && branchInDraftState;
+
+  // Check if we're in feedback viewing mode (viewing comments from completed review, no active review)
+  // Only valid when branch is in DRAFT state - after resubmission it should exit feedback mode
+  const isFeedbackMode = isReviewMode && !activeReview && !!reviewWithFeedback && branchInDraftState;
+
+  // Aggregate comments from ALL reviews on the branch (so author and reviewers see all comments)
+  const {
+    comments,
+    addComment,
+    replyToComment,
+    resolveComment,
+    unresolveComment,
+  } = useBranchComments(effectiveBranchId, branchReviews, user?.id);
+
+  // Selection-based commenting no longer needs explicit state tracking
+  // The CommentPopover handles its own state via useTextSelection
+
+  // Review display mode state
+  const [reviewDisplayMode, setReviewDisplayMode] = useState<'unified' | 'split'>('unified');
+
+  // Find the selected item's diff in review mode
+  const selectedFileDiff = contentComparison?.files.find(
+    (f) => f.contentId === (selectedBranchContentId || contentIdParam)
+  ) ?? null;
 
   // Fetch branch content when in edit mode
   const { data: editModeContent } = useContent(contentIdParam);
@@ -235,6 +305,28 @@ export default function Library() {
     setCurrentDraft(null);
     setIsDirty(false);
   }, [setSearchParams]);
+
+  // Exit review mode
+  const exitReviewMode = useCallback(() => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('mode');
+      next.delete('branchId');
+      return next;
+    });
+  }, [setSearchParams]);
+
+  // Enter feedback viewing mode (view comments from completed review)
+  const enterFeedbackMode = useCallback(() => {
+    if (effectiveBranchId) {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('mode', 'review');
+        next.set('branchId', effectiveBranchId);
+        return next;
+      });
+    }
+  }, [effectiveBranchId, setSearchParams]);
 
   // Handle edit request from ContentRenderer
   const handleEditRequest = useCallback(() => {
@@ -398,6 +490,20 @@ export default function Library() {
     handleDiscard();
   }, [handleDiscard]);
 
+  // Handler for submitting a selection-based comment
+  const handleSubmitComment = useCallback(async (content: string, selection: TextSelection, filePath: string) => {
+    await addComment.mutateAsync({
+      content,
+      path: filePath,
+      line: selection.startOffset, // Keep for backwards compatibility
+      side: 'new', // Default to 'new' side for selection-based comments
+      // Store full selection data for highlighting
+      selectedText: selection.text,
+      startOffset: selection.startOffset,
+      endOffset: selection.endOffset,
+    });
+  }, [addComment]);
+
   // Handle delete content
   const handleDeleteContent = useCallback(async () => {
     if (!contentIdParam) return;
@@ -485,6 +591,7 @@ export default function Library() {
 
   return (
     <DocumentationLayout
+      fullWidth={isReviewMode && reviewDisplayMode === 'split'}
       sidebar={
         <LibrarySidebar
           search={search}
@@ -505,34 +612,30 @@ export default function Library() {
           canSubmitForReview={activeBranch?.permissions?.canSubmitForReview}
           onSubmitForReviewSuccess={() => {
             // Branch query is already invalidated by SubmitForReviewButton via invalidateWorkflowQueries
-            // This callback can be used for any additional UI updates if needed
+            // If we were in feedback mode, exit review mode since branch is now in review state
+            if (isFeedbackMode) {
+              exitReviewMode();
+            }
           }}
+          onOpenReview={
+            (activeBranch?.state || currentBranch?.state) === 'review' && effectiveBranchId
+              ? () => {
+                  setSearchParams((prev) => {
+                    const next = new URLSearchParams(prev);
+                    next.set('mode', 'review');
+                    next.set('branchId', effectiveBranchId);
+                    return next;
+                  });
+                }
+              : undefined
+          }
+          reviewStats={isReviewMode ? comparisonStats : undefined}
+          hasFeedbackToView={hasFeedbackToView}
+          onViewFeedback={hasFeedbackToView ? enterFeedbackMode : undefined}
         />
       }
       rightSidebar={
-        isEditMode && currentDraft ? (
-          <EditMetadataSidebar
-            title={currentDraft.title}
-            category={currentDraft.metadata?.category}
-            tags={currentDraft.metadata?.tags || []}
-            description={currentDraft.metadata?.description}
-            branchName={activeBranch?.name || 'Edit Branch'}
-            saveStatus={autoSave.state.status}
-            syncStatus={draftSync.state.status}
-            isDirty={isDirty || autoSave.state.isDirty}
-            onTitleChange={handleTitleChange}
-            onCategoryChange={handleCategoryChange}
-            onTagsChange={handleTagsChange}
-            onDescriptionChange={handleDescriptionChange}
-            onSaveDraft={handleSaveDraft}
-            onDoneEditing={handleDoneEditing}
-            onDiscard={handleDiscard}
-            isSaving={autoSave.state.status === 'saving'}
-            onDelete={handleDeleteContent}
-            isDeleting={deleteMutation.isPending}
-            deleteError={deleteError}
-          />
-        ) : contentForView ? (
+        isEditMode || isReviewMode ? undefined : contentForView ? (
           <ContentMetadataSidebar
             author={{
               name: contentForView.createdBy.displayName,
@@ -550,20 +653,69 @@ export default function Library() {
           <EditModeHeader
             branchName={activeBranch.name}
             contentTitle={currentDraft?.title || selectedContent?.title || 'Untitled'}
-            hasUnsavedChanges={isDirty}
+            hasUnsavedChanges={isDirty || autoSave.state.isDirty}
+            saveStatus={autoSave.state.status}
             onDone={handleDoneEditing}
             onCancel={handleCancel}
+            onSaveDraft={handleSaveDraft}
+            onDelete={handleDeleteContent}
             isSaving={autoSave.state.status === 'saving'}
+            isDeleting={deleteMutation.isPending}
+            deleteError={deleteError}
+          />
+        ) : isReviewMode ? (
+          <ReviewModeHeader
+            branchName={activeBranch?.name || ''}
+            onClose={exitReviewMode}
+            stats={contentComparison?.stats ?? null}
+            displayMode={reviewDisplayMode}
+            onDisplayModeChange={setReviewDisplayMode}
+            reviews={branchReviews ?? []}
+            activeReview={activeReview}
+            currentUserId={user?.id || ''}
+            onApprove={async (reason) => {
+              if (activeReview) {
+                await approveReview.mutateAsync({ id: activeReview.id, reason });
+              }
+            }}
+            onRequestChanges={async (reason) => {
+              if (activeReview) {
+                await requestChanges.mutateAsync({ id: activeReview.id, reason });
+              }
+            }}
+            isSubmitting={approveReview.isPending || requestChanges.isPending}
+            feedbackMode={isFeedbackMode}
           />
         ) : undefined
       }
     >
-      {isEditMode && editModeContent && currentDraft ? (
+      {isReviewMode ? (
+        <ReviewDiffView
+          file={selectedFileDiff}
+          displayMode={reviewDisplayMode}
+          isLoading={isComparisonLoading}
+          comments={comments}
+          onSubmitComment={handleSubmitComment}
+          currentUserId={user?.id}
+          branchAuthorId={activeBranch?.ownerId}
+          onResolve={(commentId) => resolveComment.mutateAsync(commentId)}
+          onUnresolve={(commentId) => unresolveComment.mutateAsync(commentId)}
+          onReply={(commentId, content) => replyToComment.mutateAsync({ commentId, content })}
+        />
+      ) : isEditMode && editModeContent && currentDraft ? (
         <InlineEditView
           ref={inlineEditViewRef}
           content={editModeContent}
           branchId={branchId}
           branchName={activeBranch?.name || 'Edit Branch'}
+          title={currentDraft.title}
+          category={currentDraft.metadata?.category}
+          description={currentDraft.metadata?.description}
+          tags={currentDraft.metadata?.tags}
+          onTitleChange={handleTitleChange}
+          onCategoryChange={handleCategoryChange}
+          onDescriptionChange={handleDescriptionChange}
+          onTagsChange={handleTagsChange}
           onExitEditMode={exitEditMode}
         />
       ) : (
@@ -575,6 +727,7 @@ export default function Library() {
             onRetry={() => isInBranchMode ? undefined : refetchPublishedContent()}
             onEditRequest={handleEditRequest}
             branchMode={isInBranchMode}
+            branchState={activeBranch?.state}
           />
 
           {/* Branch creation dialog (only for published content) */}

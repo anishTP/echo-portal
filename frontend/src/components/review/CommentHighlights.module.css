@@ -1,0 +1,92 @@
+/* CommentHighlights.module.css */
+/* Styles for comment highlight overlays and indicators */
+
+.highlightGroup {
+  /* Container for a single comment's highlights */
+}
+
+/* ============================================
+   HIGHLIGHT OVERLAYS
+   ============================================ */
+
+/* Base highlight styles */
+.highlight {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 2px;
+  transition: opacity 0.15s ease;
+  z-index: 1; /* Above text content but below indicator */
+}
+
+/* Default (amber) - for normal text */
+.highlight--default {
+  background: var(--amber-5);
+  opacity: 0.6;
+}
+
+/* Addition context (green) - darker green on green background */
+.highlight--addition {
+  background: var(--green-7);
+  opacity: 0.5;
+}
+
+/* Deletion context (red) - darker red on red background */
+.highlight--deletion {
+  background: var(--red-7);
+  opacity: 0.5;
+}
+
+/* Highlight on hover - increase opacity */
+.highlightGroup:hover .highlight {
+  opacity: 0.8;
+}
+
+/* ============================================
+   COMMENT INDICATOR ICONS
+   ============================================ */
+
+/* Just the icon, no container background */
+.indicator {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: transparent;
+  color: var(--accent-9);
+  border: none;
+  cursor: pointer;
+  z-index: 10;
+  transition: color 0.15s ease, transform 0.15s ease;
+  transform: translateY(-50%); /* Center vertically on the line */
+}
+
+.indicator:hover {
+  color: var(--accent-11);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.indicator:focus-visible {
+  outline: 2px solid var(--accent-7);
+  outline-offset: 2px;
+  border-radius: var(--radius-1);
+}
+
+.indicator svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* All contextual variants use the same brand color */
+.indicator--default,
+.indicator--addition,
+.indicator--deletion {
+  color: var(--accent-9);
+}
+
+.indicator--default:hover,
+.indicator--addition:hover,
+.indicator--deletion:hover {
+  color: var(--accent-11);
+}

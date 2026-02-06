@@ -33,6 +33,11 @@ export const addReviewCommentBodySchema = z.object({
   content: z.string().min(1, 'Comment content is required').max(10000),
   path: z.string().max(500).optional(),
   line: z.coerce.number().int().positive().optional(),
+  hunkId: z.string().uuid().optional(),
+  side: z.enum(['old', 'new']).optional(),
+  selectedText: z.string().max(10000).optional(),
+  startOffset: z.coerce.number().int().nonnegative().optional(),
+  endOffset: z.coerce.number().int().nonnegative().optional(),
 });
 
 export type AddReviewCommentBody = z.infer<typeof addReviewCommentBodySchema>;
@@ -89,6 +94,14 @@ export const reviewCommentResponseSchema = z.object({
   content: z.string(),
   path: z.string().nullable().optional(),
   line: z.number().nullable().optional(),
+  hunkId: z.string().nullable().optional(),
+  side: z.enum(['old', 'new']).nullable().optional(),
+  selectedText: z.string().nullable().optional(),
+  startOffset: z.number().nullable().optional(),
+  endOffset: z.number().nullable().optional(),
+  parentId: z.string().nullable().optional(),
+  isOutdated: z.boolean(),
+  outdatedReason: z.string().nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

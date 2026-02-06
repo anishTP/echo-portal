@@ -205,18 +205,15 @@ export class GitOperations {
 
   /**
    * Get the changes between a branch and its base
+   *
+   * Compares worktree files (where edits are stored) rather than
+   * git commits, since commitChanges() doesn't create real commits.
    */
   async getChanges(gitRef: string, baseBranch: string): Promise<BranchChanges> {
-    const branchCommit = await this.branchService.getCommit(gitRef);
-    const baseCommit = await this.branchService.getCommit(baseBranch);
-
-    if (!branchCommit || !baseCommit) {
-      throw new Error('Could not resolve branch commits');
-    }
-
-    // Get files at both commits
-    const branchFiles = await this.repo.listFilesAtCommit(branchCommit);
-    const baseFiles = await this.repo.listFilesAtCommit(baseCommit);
+    // Compare worktree files — content edits are written to worktrees,
+    // not committed to git, so commit-level comparison would always be empty
+    const branchFiles = await this.listFiles(gitRef);
+    const baseFiles = await this.listFiles(baseBranch);
 
     const branchSet = new Set(branchFiles);
     const baseSet = new Set(baseFiles);
@@ -239,11 +236,11 @@ export class GitOperations {
       }
     }
 
-    // Find modified files (compare content)
+    // Find modified files (compare worktree content)
     for (const file of branchFiles) {
       if (baseSet.has(file)) {
-        const branchContent = await this.repo.readFileAtCommit(branchCommit, file);
-        const baseContent = await this.repo.readFileAtCommit(baseCommit, file);
+        const branchContent = await this.readFile(gitRef, file);
+        const baseContent = await this.readFile(baseBranch, file);
         if (branchContent !== baseContent) {
           modified.push(file);
         }

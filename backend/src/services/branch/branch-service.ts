@@ -175,8 +175,18 @@ export class BranchService {
   /**
    * Auto-repair a branch if it's stuck in 'review' state after changes were requested.
    * Returns the repaired branch model if repair was needed, null otherwise.
+   *
+   * NOTE: This should only trigger if:
+   * 1. Branch is in REVIEW state
+   * 2. There's a completed review with changes_requested
+   * 3. There are NO pending reviews (which would indicate a resubmission)
    */
   private async autoRepairIfNeeded(branch: typeof branches.$inferSelect): Promise<BranchModel | null> {
+    // Only auto-repair if branch is currently in review state
+    if (branch.state !== 'review') {
+      return null;
+    }
+
     // Import reviews table dynamically to avoid circular dependency
     const { reviews } = await import('../../db/schema/reviews.js');
 
@@ -190,11 +200,26 @@ export class BranchService {
     });
 
     if (!stuckReview) {
-      return null; // Not stuck, normal review state
+      return null; // No changes_requested review, not stuck
     }
 
-    // Auto-repair: transition to draft
-    console.log(`[BranchService] Auto-repairing stuck branch ${branch.id} (was in review with changes_requested)`);
+    // Check if there are any active reviews (pending or in_progress)
+    // This indicates a resubmission or active review, not a stuck branch
+    const activeReview = await db.query.reviews.findFirst({
+      where: and(
+        eq(reviews.branchId, branch.id),
+        sql`${reviews.status} IN ('pending', 'in_progress')`
+      ),
+    });
+
+    if (activeReview) {
+      // There's an active review, so the branch was legitimately resubmitted
+      // Don't auto-repair
+      return null;
+    }
+
+    // Auto-repair: transition to draft (only if truly stuck)
+    console.log(`[BranchService] Auto-repairing stuck branch ${branch.id} (was in review with changes_requested and no pending reviews)`);
 
     const [updated] = await db
       .update(branches)

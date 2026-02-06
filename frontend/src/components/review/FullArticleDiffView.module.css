@@ -1,0 +1,586 @@
+/* FullArticleDiffView.module.css */
+/* Full article diff display with unified prose and split raw text views */
+
+/* ============================================
+   UNIFIED VIEW - ARTICLE PROSE STYLES
+   ============================================ */
+
+.article {
+  max-width: 100%;
+  padding: var(--space-4);
+  position: relative; /* Required for comment highlight overlays */
+}
+
+/* Breadcrumb */
+.breadcrumb {
+  margin-bottom: var(--space-4);
+  font-size: var(--font-size-2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.breadcrumb a {
+  color: var(--accent-11);
+  text-decoration: none;
+  font-weight: var(--font-weight-medium);
+}
+
+.breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+/* Inline highlight for changed content */
+.highlightAddition {
+  background: var(--green-3);
+  border-radius: var(--radius-2);
+  padding: var(--space-1) var(--space-2);
+  margin: calc(var(--space-1) * -1) calc(var(--space-2) * -1);
+}
+
+.highlightDeletion {
+  background: var(--red-3);
+  border-radius: var(--radius-2);
+  padding: var(--space-1) var(--space-2);
+  margin: calc(var(--space-1) * -1) calc(var(--space-2) * -1);
+  text-decoration: line-through;
+  color: var(--gray-10);
+}
+
+/* Header */
+.header {
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--gray-4);
+}
+
+.title {
+  font-size: var(--font-size-8);
+  font-weight: var(--font-weight-bold);
+  color: var(--gray-12);
+  line-height: 1.2;
+  margin: 0;
+}
+
+.titleChange {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: var(--space-3);
+  font-size: var(--font-size-4);
+  font-weight: var(--font-weight-normal);
+}
+
+.oldTitle {
+  color: var(--red-11);
+  text-decoration: line-through;
+  background: var(--red-2);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-1);
+}
+
+.arrow {
+  color: var(--gray-9);
+}
+
+.description {
+  margin-top: var(--space-3);
+  font-size: var(--font-size-4);
+  color: var(--gray-11);
+  line-height: 1.6;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Body content */
+.body {
+  color: var(--gray-12);
+  line-height: 1.7;
+}
+
+.markdownBody {
+  max-width: 100%;
+}
+
+/* Markdown content styles (matching ContentRenderer) */
+.heading1 {
+  font-size: var(--font-size-7);
+  font-weight: var(--font-weight-bold);
+  color: var(--gray-12);
+  margin-top: var(--space-8);
+  margin-bottom: var(--space-4);
+}
+
+.heading2 {
+  font-size: var(--font-size-6);
+  font-weight: var(--font-weight-bold);
+  color: var(--gray-12);
+  margin-top: var(--space-7);
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--gray-4);
+}
+
+.heading3 {
+  font-size: var(--font-size-5);
+  font-weight: var(--font-weight-medium);
+  color: var(--gray-12);
+  margin-top: var(--space-6);
+  margin-bottom: var(--space-3);
+}
+
+.heading4 {
+  font-size: var(--font-size-4);
+  font-weight: var(--font-weight-medium);
+  color: var(--gray-12);
+  margin-top: var(--space-5);
+  margin-bottom: var(--space-2);
+}
+
+.heading5,
+.heading6 {
+  font-size: var(--font-size-3);
+  font-weight: var(--font-weight-medium);
+  color: var(--gray-11);
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+.paragraph {
+  margin-bottom: var(--space-4);
+  font-size: var(--font-size-3);
+  line-height: 1.75;
+}
+
+.list {
+  margin-bottom: var(--space-4);
+  padding-left: var(--space-5);
+  list-style-type: disc;
+}
+
+.orderedList {
+  margin-bottom: var(--space-4);
+  padding-left: var(--space-5);
+  list-style-type: decimal;
+}
+
+.listItem {
+  margin-bottom: var(--space-2);
+  line-height: 1.6;
+}
+
+.listItem::marker {
+  color: var(--gray-9);
+}
+
+.link {
+  color: var(--accent-11);
+  text-decoration: none;
+  border-bottom: 1px solid var(--accent-6);
+  transition: border-color 0.15s ease;
+}
+
+.link:hover {
+  border-color: var(--accent-9);
+}
+
+.inlineCode {
+  padding: 2px var(--space-1);
+  background: var(--gray-3);
+  color: var(--accent-11);
+  font-family: var(--code-font-family);
+  font-size: 0.875em;
+  border-radius: var(--radius-1);
+}
+
+.codeBlock {
+  margin: var(--space-4) 0;
+  padding: var(--space-4);
+  background: var(--gray-2);
+  border: 1px solid var(--gray-4);
+  border-radius: var(--radius-3);
+  font-family: var(--code-font-family);
+  font-size: var(--font-size-2);
+  line-height: 1.6;
+  overflow-x: auto;
+}
+
+.blockquote {
+  margin: var(--space-4) 0;
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--accent-7);
+  background: var(--accent-2);
+  color: var(--gray-11);
+  font-style: italic;
+  border-radius: 0 var(--radius-2) var(--radius-2) 0;
+}
+
+.blockquote p {
+  margin: 0;
+}
+
+.image {
+  max-width: 100%;
+  height: auto;
+  margin: var(--space-4) 0;
+  border-radius: var(--radius-2);
+  display: block;
+}
+
+.imagePlaceholder {
+  display: block;
+  padding: var(--space-3) var(--space-4);
+  margin: var(--space-4) 0;
+  background: var(--gray-3);
+  border: 1px dashed var(--gray-6);
+  border-radius: var(--radius-2);
+  color: var(--gray-10);
+  font-size: var(--font-size-2);
+  font-style: italic;
+}
+
+/* ============================================
+   BLOCK-LEVEL DIFF HIGHLIGHTING (UNIFIED VIEW)
+   ============================================ */
+
+.blockAddition {
+  background: var(--green-2);
+  border-left: 3px solid var(--green-9);
+  padding-left: var(--space-3);
+  margin-left: calc(var(--space-3) * -1);
+  border-radius: 0 var(--radius-2) var(--radius-2) 0;
+}
+
+.blockDeletion {
+  background: var(--red-2);
+  border-left: 3px solid var(--red-9);
+  padding-left: var(--space-3);
+  margin-left: calc(var(--space-3) * -1);
+  border-radius: 0 var(--radius-2) var(--radius-2) 0;
+  text-decoration: line-through;
+  color: var(--gray-10);
+}
+
+.blockMixed {
+  background: var(--amber-2);
+  border-left: 3px solid var(--amber-9);
+  padding-left: var(--space-3);
+  margin-left: calc(var(--space-3) * -1);
+  border-radius: 0 var(--radius-2) var(--radius-2) 0;
+}
+
+/* Deleted content details */
+.deletedContent {
+  margin-top: var(--space-6);
+  border: 1px solid var(--red-5);
+  border-radius: var(--radius-3);
+}
+
+.deletedSummary {
+  padding: var(--space-3) var(--space-4);
+  background: var(--red-2);
+  color: var(--red-11);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  border-radius: var(--radius-3);
+}
+
+.deletedSummary:hover {
+  background: var(--red-3);
+}
+
+.deletedContent[open] .deletedSummary {
+  border-radius: var(--radius-3) var(--radius-3) 0 0;
+}
+
+.deletedBody {
+  padding: var(--space-4);
+  background: var(--red-1);
+  border-radius: 0 0 var(--radius-3) var(--radius-3);
+  opacity: 0.8;
+}
+
+/* ============================================
+   SPLIT VIEW LAYOUT
+   ============================================ */
+
+.splitContainer {
+  display: flex;
+  width: 100%;
+  gap: var(--space-4);
+  position: relative; /* Required for comment highlight overlays */
+}
+
+.panel {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.panelOld {
+  border-right: 1px solid var(--gray-6);
+  padding-right: var(--space-4);
+}
+
+.panelNew {
+  /* No additional styling needed */
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--gray-2);
+  border-radius: var(--radius-2);
+  margin-bottom: var(--space-3);
+  font-size: var(--font-size-1);
+}
+
+.panelHeaderOld {
+  color: var(--red-11);
+  background: var(--red-2);
+}
+
+.panelHeaderNew {
+  color: var(--green-11);
+  background: var(--green-2);
+}
+
+.panelHeaderIcon {
+  font-size: var(--font-size-3);
+}
+
+.panelHeaderCount {
+  font-weight: var(--font-weight-medium);
+}
+
+/* Split article prose content */
+.splitArticle {
+  padding: var(--space-3);
+}
+
+.splitTitle {
+  font-size: var(--font-size-6);
+  font-weight: var(--font-weight-bold);
+  color: var(--gray-12);
+  line-height: 1.2;
+  margin: 0 0 var(--space-3) 0;
+  padding: var(--space-1) var(--space-2);
+  margin-left: calc(var(--space-2) * -1);
+  border-radius: var(--radius-2);
+}
+
+.splitDescription {
+  font-size: var(--font-size-3);
+  color: var(--gray-11);
+  line-height: 1.6;
+  margin: 0 0 var(--space-4) 0;
+  padding: var(--space-2);
+  margin-left: calc(var(--space-2) * -1);
+  border-radius: var(--radius-2);
+}
+
+.splitBody {
+  border-top: 1px solid var(--gray-4);
+  padding-top: var(--space-4);
+}
+
+.panelMetaTitle {
+  display: block;
+  font-size: var(--font-size-4);
+  font-weight: var(--font-weight-bold);
+  color: var(--gray-12);
+  margin-bottom: var(--space-1);
+}
+
+.panelMetaDesc {
+  display: block;
+  font-size: var(--font-size-2);
+  color: var(--gray-10);
+}
+
+.panelTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* ============================================
+   LINE NUMBER GUTTER
+   ============================================ */
+
+.lineNumber {
+  width: 48px;
+  min-width: 48px;
+  padding: 0 var(--space-2);
+  text-align: right;
+  color: var(--gray-10);
+  background: var(--gray-3);
+  user-select: none;
+  font-size: var(--font-size-1);
+  vertical-align: top;
+}
+
+.lineNumberAddition {
+  background: var(--green-3);
+  color: var(--green-11);
+}
+
+.lineNumberDeletion {
+  background: var(--red-3);
+  color: var(--red-11);
+}
+
+/* ============================================
+   LINE CONTENT
+   ============================================ */
+
+.lineContent {
+  padding: 0 var(--space-3);
+  white-space: pre-wrap;
+  word-break: break-all;
+  vertical-align: top;
+}
+
+.lineAddition {
+  background: var(--green-2);
+}
+
+.lineDeletion {
+  background: var(--red-2);
+}
+
+.lineContext {
+  background: var(--color-background);
+}
+
+.lineEmpty {
+  background: var(--gray-2);
+}
+
+/* ============================================
+   CHARACTER-LEVEL HIGHLIGHTS
+   ============================================ */
+
+.charHighlightAdd {
+  background: var(--green-5);
+  border-radius: 2px;
+}
+
+.charHighlightDel {
+  background: var(--red-5);
+  border-radius: 2px;
+}
+
+/* ============================================
+   SPLIT VIEW ROWS
+   ============================================ */
+
+.splitRow {
+  transition: background 0.1s ease;
+}
+
+.splitRow:hover .lineContent {
+  filter: brightness(0.97);
+}
+
+.splitRowClickable {
+  cursor: pointer;
+}
+
+/* ============================================
+   COMMENT INDICATOR
+   ============================================ */
+
+.commentBadge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: var(--space-2);
+  padding: 0 var(--space-2);
+  height: 20px;
+  font-size: var(--font-size-1);
+  font-weight: var(--font-weight-medium);
+  background: var(--blue-3);
+  color: var(--blue-11);
+  border-radius: var(--radius-full);
+}
+
+/* ============================================
+   ERROR STATE
+   ============================================ */
+
+.error {
+  padding: var(--space-4);
+  color: var(--red-11);
+  background: var(--red-2);
+  border: 1px solid var(--red-5);
+  border-radius: var(--radius-3);
+  text-align: center;
+}
+
+/* ============================================
+   SELECTION HINT
+   ============================================ */
+
+/* User selection styling for comment-enabled areas */
+.article::selection,
+.splitContainer::selection {
+  background: var(--accent-4);
+}
+
+/* ============================================
+   INLINE DIFF HIGHLIGHTING (WORD-LEVEL)
+   ============================================ */
+
+/* Inline additions (green background, no strikethrough) */
+.inlineDiffAddition {
+  background: var(--green-3);
+  text-decoration: none;
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+/* Inline deletions (red background with strikethrough) */
+.inlineDiffDeletion {
+  background: var(--red-3);
+  text-decoration: line-through;
+  color: var(--gray-10);
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+/* ============================================
+   DELETED IMAGE STYLES
+   ============================================ */
+
+/* Images inside deletion blocks - use descendant selector */
+.inlineDiffDeletion img,
+.markdownBody del img {
+  opacity: 0.5;
+  border: 3px solid var(--red-9);
+  filter: grayscale(50%);
+  text-decoration: none; /* Remove strikethrough from image */
+}
+
+/* Adjust del styling when containing images */
+.inlineDiffDeletion:has(img),
+.markdownBody del:has(img) {
+  text-decoration: none; /* Remove strikethrough when containing image */
+  background: transparent; /* Remove red background for image deletions */
+}
+
+/* ============================================
+   VISIBLE WHITESPACE DELETION STYLES
+   ============================================ */
+
+/* Visible line break indicator in deletions */
+.deletedLineBreak {
+  display: inline;
+  color: var(--red-11);
+  background: var(--red-3);
+  font-size: var(--font-size-1);
+  padding: 0 2px;
+  border-radius: 2px;
+  font-family: var(--code-font-family);
+}

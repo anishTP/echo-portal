@@ -1,0 +1,62 @@
+/* ReviewerManagementPanel.module.css */
+
+.root {
+  padding: var(--space-4);
+  border-radius: var(--radius-3);
+  background: var(--color-panel-solid);
+  border: 1px solid var(--gray-6);
+}
+
+.reviewerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-2);
+  transition: background-color 0.15s ease;
+}
+
+.reviewerRow:hover {
+  background: var(--gray-3);
+}
+
+.reviewerAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(28px * var(--scaling));
+  height: calc(28px * var(--scaling));
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-1);
+  font-weight: var(--font-weight-bold);
+  background: var(--accent-4);
+  color: var(--accent-11);
+}
+
+.removeButton {
+  padding: var(--space-1);
+  border-radius: var(--radius-2);
+  border: none;
+  background: transparent;
+  color: var(--gray-9);
+  cursor: pointer;
+  font-family: var(--default-font-family);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.removeButton:hover {
+  background: var(--red-3);
+  color: var(--red-11);
+}
+
+.addSection {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--gray-5);
+}
+
+.selectWrapper {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}

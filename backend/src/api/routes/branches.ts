@@ -201,7 +201,9 @@ branchRoutes.get('/:id', zValidator('param', branchIdParamSchema), async (c) => 
   const { id } = c.req.valid('param');
   const context = getAccessContext(c);
 
+  console.log('[GET /branches/:id] Fetching branch:', id);
   const branch = await branchService.getById(id);
+  console.log('[GET /branches/:id] Branch state from DB:', branch?.state);
   if (!branch) {
     throw new NotFoundError('Branch', id);
   }
@@ -472,8 +474,9 @@ branchRoutes.post(
       throw new ValidationError('At least one reviewer is required');
     }
 
-    // Add reviewers first (validates mutual exclusion)
-    await branchService.addReviewers(id, reviewerIds, user.id);
+    // Add reviewers first (validates mutual exclusion) - returns branch with all reviewers
+    const branchWithReviewers = await branchService.addReviewers(id, reviewerIds, user.id);
+    const allReviewerIds = branchWithReviewers.reviewers ?? reviewerIds;
 
     // Then transition to review state
     const result = await transitionService.executeTransition({
@@ -488,18 +491,17 @@ branchRoutes.post(
       throw new ValidationError(result.error || 'Failed to submit for review');
     }
 
-    // Create review records for ALL reviewers on the branch (not just the
-    // ones in this request) so pre-existing reviewers also appear in the queue
-    const updatedBranch = await branchService.getById(id);
-    const allReviewerIds = updatedBranch?.reviewers ?? reviewerIds;
+    // Create review records for ALL reviewers BEFORE fetching branch
+    // (prevents auto-repair from triggering due to missing pending reviews)
     await Promise.all(
       allReviewerIds.map((reviewerId) =>
         reviewService.create({ branchId: id, reviewerId }, user.id).catch((err) => {
           // Only ignore duplicate/conflict errors — not permission or other failures
           if (err?.code === 'CONFLICT' || err?.message?.includes('already exists')) {
-            return; // Duplicate review record, safe to ignore
+            return null; // Duplicate review record, safe to ignore
           }
           console.error(`[submit-for-review] Failed to create review for reviewer ${reviewerId}:`, err);
+          return null;
         })
       )
     );
@@ -518,7 +520,19 @@ branchRoutes.post(
       }
     );
 
-    return success(c, result);
+    // Return the updated branch to avoid race condition with refetch
+    const freshBranch = await branchService.getById(id);
+    const { hasContent, hasBranchChanges } = await checkBranchHasContent(id);
+    const branchResponse = freshBranch?.toResponseForUser({
+      ...getBranchUserContext(c),
+      hasContent,
+      hasEditedContent: hasBranchChanges,
+    });
+
+    return success(c, {
+      transition: result,
+      branch: branchResponse,
+    });
   }
 );
 

@@ -8,9 +8,14 @@
   min-height: 400px;
 }
 
-.editorWrapper {
+.article {
   flex: 1;
   overflow-y: auto;
+  max-width: 100%;
+}
+
+.editorWrapper {
+  /* Body editor area */
 }
 
 .statusBar {

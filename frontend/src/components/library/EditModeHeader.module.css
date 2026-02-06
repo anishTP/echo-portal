@@ -43,8 +43,16 @@
   flex-shrink: 0;
 }
 
+.editingText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
 .unsavedIndicator {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
+  flex-shrink: 0;
 }

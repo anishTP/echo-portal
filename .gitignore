@@ -69,10 +69,8 @@ data/
 /playwright/.cache/
 
 
-# AI workspace files
-.claude/
-.beads/
-specs/
+# Beads directory (JSONL tracked via .beads/.gitignore)
+# Note: .claude/ and specs/ are now tracked for speckit and Claude skills
 
 # Uploaded files
 backend/uploads/

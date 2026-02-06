@@ -36,6 +36,7 @@ export function invalidateWorkflowQueries(
   queryClient: QueryClient,
   branchId?: string
 ) {
+  // Invalidate list queries
   queryClient.invalidateQueries({ queryKey: branchKeys.myBranches() });
   queryClient.invalidateQueries({ queryKey: branchKeys.reviewBranches() });
   queryClient.invalidateQueries({ queryKey: reviewKeys.myReviews() });

@@ -3,7 +3,8 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { Dialog, Button, TextArea, Text, Callout, Flex, Avatar, Badge } from '@radix-ui/themes';
 import { branchService } from '../../services/branchService';
 import { api } from '../../services/api';
-import { invalidateWorkflowQueries } from '../../hooks/queryKeys';
+import { branchKeys, reviewKeys } from '../../hooks/queryKeys';
+import { useBranchStore } from '../../stores/branchStore';
 import { TeamMemberPicker, type TeamMember } from './TeamMemberPicker';
 
 interface SubmitForReviewButtonProps {
@@ -27,6 +28,7 @@ export function SubmitForReviewButton({
   const [showModal, setShowModal] = useState(false);
   const [reason, setReason] = useState('');
   const queryClient = useQueryClient();
+  const setCurrentBranch = useBranchStore((s) => s.setCurrentBranch);
 
   // Fetch current reviewers
   const { data: reviewers = [], refetch: refetchReviewers } = useQuery<TeamMember[]>({
@@ -40,14 +42,21 @@ export function SubmitForReviewButton({
       const reviewerIds = reviewers.map((r) => r.id);
       return branchService.submitForReview(branchId, reviewerIds, reason || undefined);
     },
-    onSuccess: () => {
-      invalidateWorkflowQueries(queryClient, branchId);
+    onSuccess: (data) => {
+      // Update both React Query cache and Zustand store to avoid race condition
+      if (data.branch) {
+        queryClient.setQueryData(branchKeys.detail(branchId), data.branch);
+        setCurrentBranch(data.branch);
+      }
+      // Invalidate list queries (these don't suffer from race conditions)
+      queryClient.invalidateQueries({ queryKey: branchKeys.myBranches() });
+      queryClient.invalidateQueries({ queryKey: branchKeys.reviewBranches() });
+      queryClient.invalidateQueries({ queryKey: reviewKeys.myReviews() });
+      queryClient.invalidateQueries({ queryKey: branchKeys.lists() });
+
       setShowModal(false);
       setReason('');
       onSuccess?.();
-    },
-    onError: (error: any) => {
-      console.error('Failed to submit for review:', error);
     },
   });
 

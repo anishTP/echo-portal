@@ -21,8 +21,18 @@ import {
   ReviewDecision,
   BranchState,
   TransitionEvent,
+  type ReviewCycleSummary,
+  type CycleOutcome,
+  type ReviewSubState,
 } from '@echo-portal/shared';
 import { transitionService } from '../workflow/transitions.js';
+import { snapshotService } from './snapshot-service.js';
+import {
+  notifyReviewApproved,
+  notifyChangesRequested,
+  notifyReviewerAdded,
+  notifyReviewerRemoved,
+} from './review-notifications.js';
 
 export interface ReviewListOptions {
   branchId?: string;
@@ -97,16 +107,32 @@ export class ReviewService {
       );
     }
 
+    // Determine the review cycle (increment if previous cycle had changes_requested)
+    const existingReviews = await db.query.reviews.findMany({
+      where: eq(reviews.branchId, branchId),
+    });
+    const maxCycle = existingReviews.reduce((max, r) => Math.max(max, r.reviewCycle || 1), 0);
+    const reviewCycle = branch.state === BranchState.DRAFT && maxCycle > 0 ? maxCycle + 1 : Math.max(maxCycle, 1);
+
     // Create the review
     const newReview: NewReview = {
       branchId,
       reviewerId,
       requestedById,
       status: ReviewStatus.PENDING,
+      reviewCycle,
       comments: [],
     };
 
     const [inserted] = await db.insert(reviews).values(newReview).returning();
+
+    // Create snapshot for this review (FR-003)
+    try {
+      await snapshotService.createSnapshot(inserted.id, branchId);
+    } catch (error) {
+      console.error('[Review] Failed to create snapshot:', error);
+      // Continue - snapshot creation failure shouldn't block review creation
+    }
 
     // Add reviewer to branch if not already present
     const currentReviewers = branch.reviewers || [];
@@ -295,8 +321,44 @@ export class ReviewService {
       .where(eq(reviews.id, id))
       .returning();
 
+    // Get branch name for notifications
+    const branchName = branch.name || branch.id;
+
     // Trigger branch state transition based on decision
     if (decision === ReviewDecision.APPROVED) {
+      // FR-016: Check that automated approval is not the sole approval
+      const isAutomatedActor = actorRoles.includes('system') || actorRoles.includes('automation');
+      if (isAutomatedActor) {
+        const stats = await this.getBranchReviewStats(review.branchId);
+        // Count existing human approvals (excluding this one since we just set it)
+        const allBranchReviews = await db.query.reviews.findMany({
+          where: eq(reviews.branchId, review.branchId),
+        });
+        const humanApprovals = allBranchReviews.filter(
+          (r) =>
+            r.id !== id &&
+            r.status === ReviewStatus.COMPLETED &&
+            r.decision === ReviewDecision.APPROVED
+        );
+        if (humanApprovals.length === 0) {
+          // Automated approval recorded but won't trigger transition alone
+          console.log(
+            '[Review] Automated approval recorded but not sole approval - waiting for human approval'
+          );
+          return createReviewModel(updated);
+        }
+      }
+
+      // Send approval notification (FR-013)
+      notifyReviewApproved(
+        {
+          id: review.id,
+          branchId: review.branchId,
+          reviewerId: actorId,
+          requestedById: review.requestedById,
+        },
+        branchName
+      ).catch((err) => console.error('[Review] Failed to send approval notification:', err));
       // Check if approval threshold is met
       const branch = await db.query.branches.findFirst({
         where: eq(branches.id, review.branchId),
@@ -331,6 +393,18 @@ export class ReviewService {
       }
       // Otherwise, branch stays in review state, just accumulating approvals
     } else if (decision === ReviewDecision.CHANGES_REQUESTED) {
+      // Send changes requested notification (FR-010)
+      notifyChangesRequested(
+        {
+          id: review.id,
+          branchId: review.branchId,
+          reviewerId: actorId,
+          requestedById: review.requestedById,
+        },
+        branchName,
+        reason
+      ).catch((err) => console.error('[Review] Failed to send changes requested notification:', err));
+
       // Transition branch back to draft state (resets approval count)
       const transitionResult = await transitionService.executeTransition({
         branchId: review.branchId,
@@ -465,6 +539,272 @@ export class ReviewService {
       cancelled: allReviews.filter((r) => r.status === ReviewStatus.CANCELLED)
         .length,
     };
+  }
+
+  /**
+   * Get review cycles for a branch
+   * Returns summary of all review cycles for tracking iterative review progress
+   */
+  async getReviewCycles(branchId: string): Promise<ReviewCycleSummary[]> {
+    const allReviews = await db.query.reviews.findMany({
+      where: eq(reviews.branchId, branchId),
+      orderBy: [desc(reviews.createdAt)],
+    });
+
+    const branch = await db.query.branches.findFirst({
+      where: eq(branches.id, branchId),
+    });
+
+    if (!branch) {
+      throw new NotFoundError('Branch', branchId);
+    }
+
+    // Group reviews by cycle
+    const cycleMap = new Map<number, Review[]>();
+    for (const review of allReviews) {
+      const cycle = review.reviewCycle || 1;
+      if (!cycleMap.has(cycle)) {
+        cycleMap.set(cycle, []);
+      }
+      cycleMap.get(cycle)!.push(review);
+    }
+
+    // Build cycle summaries
+    return Array.from(cycleMap.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([cycleNumber, cycleReviews]) => ({
+        cycleNumber,
+        submittedAt: cycleReviews[0]?.createdAt?.toISOString() || new Date().toISOString(),
+        outcome: this.deriveCycleOutcome(cycleReviews, branch.requiredApprovals || 1),
+        approvalCount: cycleReviews.filter(
+          (r) => r.status === ReviewStatus.COMPLETED && r.decision === ReviewDecision.APPROVED
+        ).length,
+        requiredApprovals: branch.requiredApprovals || 1,
+        reviewerCount: cycleReviews.length,
+      }));
+  }
+
+  /**
+   * Derive the outcome of a review cycle
+   */
+  deriveCycleOutcome(cycleReviews: Review[], requiredApprovals: number): CycleOutcome {
+    const active = cycleReviews.filter((r) => r.status !== ReviewStatus.CANCELLED);
+
+    // Check for changes requested (any reviewer)
+    if (active.some((r) => r.decision === ReviewDecision.CHANGES_REQUESTED)) {
+      return 'changes_requested';
+    }
+
+    // Check for approval threshold met
+    const approvedCount = active.filter(
+      (r) => r.status === ReviewStatus.COMPLETED && r.decision === ReviewDecision.APPROVED
+    ).length;
+
+    if (approvedCount >= requiredApprovals) {
+      return 'approved';
+    }
+
+    // Check if all reviews were cancelled (withdrawn)
+    if (cycleReviews.length > 0 && cycleReviews.every((r) => r.status === ReviewStatus.CANCELLED)) {
+      return 'withdrawn';
+    }
+
+    return 'pending';
+  }
+
+  /**
+   * Derive the review sub-state for a branch in review state
+   */
+  async deriveReviewSubState(branchId: string): Promise<ReviewSubState> {
+    const allReviews = await db.query.reviews.findMany({
+      where: eq(reviews.branchId, branchId),
+    });
+
+    // Get the current cycle's reviews
+    const maxCycle = allReviews.reduce((max, r) => Math.max(max, r.reviewCycle || 1), 0);
+    const currentCycleReviews = allReviews.filter((r) => (r.reviewCycle || 1) === maxCycle);
+    const active = currentCycleReviews.filter((r) => r.status !== ReviewStatus.CANCELLED);
+
+    // Check for changes requested
+    if (active.some((r) => r.decision === ReviewDecision.CHANGES_REQUESTED)) {
+      return 'changes_requested';
+    }
+
+    // Check for all approved
+    if (
+      active.length > 0 &&
+      active.every((r) => r.status === ReviewStatus.COMPLETED && r.decision === ReviewDecision.APPROVED)
+    ) {
+      return 'approved';
+    }
+
+    // Check if any discussion (comments added)
+    if (
+      active.some(
+        (r) =>
+          r.status === ReviewStatus.IN_PROGRESS ||
+          (Array.isArray(r.comments) && r.comments.length > 0)
+      )
+    ) {
+      return 'in_discussion';
+    }
+
+    return 'pending_review';
+  }
+
+  /**
+   * Add a reviewer to a branch (creates a new pending review)
+   * T065: POST /reviews/:reviewId/reviewers
+   */
+  async addReviewer(
+    reviewId: string,
+    reviewerId: string,
+    actorId: string
+  ): Promise<ReviewModel> {
+    // Get the source review to find the branch
+    const sourceReview = await this.getByIdOrThrow(reviewId);
+
+    const branch = await db.query.branches.findFirst({
+      where: eq(branches.id, sourceReview.branchId),
+    });
+
+    if (!branch) {
+      throw new NotFoundError('Branch', sourceReview.branchId);
+    }
+
+    // Only branch owner or admin can add reviewers
+    if (branch.ownerId !== actorId) {
+      throw new ForbiddenError('Only the branch owner can add reviewers');
+    }
+
+    // Cannot add self as reviewer
+    if (reviewerId === branch.ownerId) {
+      throw new ValidationError('Cannot add the branch owner as a reviewer');
+    }
+
+    // Branch must be in review state
+    if (branch.state !== BranchState.REVIEW) {
+      throw new ValidationError(
+        `Cannot add reviewers when branch is in '${branch.state}' state`
+      );
+    }
+
+    // Check for existing active review from this reviewer
+    const existing = await db.query.reviews.findFirst({
+      where: and(
+        eq(reviews.branchId, branch.id),
+        eq(reviews.reviewerId, reviewerId),
+        sql`${reviews.status} IN ('pending', 'in_progress')`
+      ),
+    });
+
+    if (existing) {
+      throw new ConflictError(
+        'This reviewer already has an active review for this branch'
+      );
+    }
+
+    // Determine cycle
+    const allReviews = await db.query.reviews.findMany({
+      where: eq(reviews.branchId, branch.id),
+    });
+    const maxCycle = allReviews.reduce((max, r) => Math.max(max, r.reviewCycle || 1), 0);
+
+    // Create new review for the added reviewer
+    const [inserted] = await db
+      .insert(reviews)
+      .values({
+        branchId: branch.id,
+        reviewerId,
+        requestedById: actorId,
+        status: ReviewStatus.PENDING,
+        reviewCycle: Math.max(maxCycle, 1),
+        comments: [],
+      })
+      .returning();
+
+    // Add to branch reviewers list
+    const currentReviewers = branch.reviewers || [];
+    if (!currentReviewers.includes(reviewerId)) {
+      await db
+        .update(branches)
+        .set({
+          reviewers: [...currentReviewers, reviewerId],
+          updatedAt: new Date(),
+        })
+        .where(eq(branches.id, branch.id));
+    }
+
+    // T069: Send notification
+    const branchName = branch.name || branch.id;
+    notifyReviewerAdded(branch.id, reviewerId, branchName, actorId).catch(
+      (err) => console.error('[Review] Failed to send reviewer added notification:', err)
+    );
+
+    return createReviewModel(inserted);
+  }
+
+  /**
+   * Remove a reviewer from a branch
+   * T066: DELETE /reviews/:reviewId/reviewers/:userId
+   * T067: Preserves existing feedback (review stays completed, just cancels pending)
+   */
+  async removeReviewer(
+    reviewId: string,
+    reviewerId: string,
+    actorId: string
+  ): Promise<void> {
+    const sourceReview = await this.getByIdOrThrow(reviewId);
+
+    const branch = await db.query.branches.findFirst({
+      where: eq(branches.id, sourceReview.branchId),
+    });
+
+    if (!branch) {
+      throw new NotFoundError('Branch', sourceReview.branchId);
+    }
+
+    // Only branch owner or admin can remove reviewers
+    if (branch.ownerId !== actorId) {
+      throw new ForbiddenError('Only the branch owner can remove reviewers');
+    }
+
+    // Find active (pending/in_progress) reviews from this reviewer and cancel them
+    // Completed reviews are preserved (T067: feedback remains visible)
+    const activeReviews = await db.query.reviews.findMany({
+      where: and(
+        eq(reviews.branchId, branch.id),
+        eq(reviews.reviewerId, reviewerId),
+        sql`${reviews.status} IN ('pending', 'in_progress')`
+      ),
+    });
+
+    for (const review of activeReviews) {
+      await db
+        .update(reviews)
+        .set({
+          status: ReviewStatus.CANCELLED,
+          updatedAt: new Date(),
+        })
+        .where(eq(reviews.id, review.id));
+    }
+
+    // Remove from branch reviewers list
+    const currentReviewers = branch.reviewers || [];
+    const updatedReviewers = currentReviewers.filter((id: string) => id !== reviewerId);
+    await db
+      .update(branches)
+      .set({
+        reviewers: updatedReviewers,
+        updatedAt: new Date(),
+      })
+      .where(eq(branches.id, branch.id));
+
+    // T069: Send notification
+    const branchName = branch.name || branch.id;
+    notifyReviewerRemoved(branch.id, reviewerId, branchName, actorId).catch(
+      (err) => console.error('[Review] Failed to send reviewer removed notification:', err)
+    );
   }
 }
 

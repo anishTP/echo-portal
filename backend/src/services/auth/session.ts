@@ -96,18 +96,12 @@ export async function validateSession(token: string): Promise<Session | null> {
   // Check cache first
   const cached = sessionCache.get(token);
   if (cached && Date.now() - cached.cachedAt < SESSION_CACHE_TTL_MS) {
-    console.log('[SESSION] Cache hit', {
-      sessionId: cached.session.id,
-      userId: cached.session.userId
-    });
     // Update sliding expiry in background (don't await)
     updateSessionActivity(cached.session.id).catch(() => {
       // Ignore errors in background activity update
     });
     return cached.session;
   }
-
-  console.log('[SESSION] Cache miss, validating from database');
 
   // Fetch from database
   const [sessionRecord] = await db
@@ -121,9 +115,6 @@ export async function validateSession(token: string): Promise<Session | null> {
     .limit(1);
 
   if (!sessionRecord) {
-    console.warn('[SESSION] Session not found', {
-      tokenPrefix: token.substring(0, 8)
-    });
     sessionCache.delete(token);
     return null;
   }
@@ -160,12 +151,6 @@ export async function validateSession(token: string): Promise<Session | null> {
   sessionCache.set(token, {
     session: validSession,
     cachedAt: Date.now(),
-  });
-
-  console.log('[SESSION] Valid session found', {
-    sessionId: validSession.id,
-    userId: validSession.userId,
-    expiresAt: validSession.expiresAt
   });
 
   // Update sliding expiry (24h from last activity)

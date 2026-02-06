@@ -2,14 +2,33 @@ import { api } from './api';
 import type {
   ReviewStatusType,
   ReviewDecisionType,
+  ReviewSnapshot,
+  ReviewCycleSummary,
+  ReviewStatusResponse,
 } from '@echo-portal/shared';
 
 export interface ReviewComment {
   id: string;
+  reviewId?: string;                   // Which review this comment belongs to (populated by backend)
   authorId: string;
+  authorName?: string;                 // Display name of author (populated by backend)
+  authorAvatarUrl?: string;            // Avatar URL of author (populated by backend)
   content: string;
   path?: string;
   line?: number;
+  hunkId?: string;
+  side?: 'old' | 'new';
+  // Selection-based comment data (for text highlighting)
+  selectedText?: string;
+  startOffset?: number;
+  endOffset?: number;
+  parentId?: string;
+  isOutdated: boolean;
+  outdatedReason?: string;
+  // Resolution tracking
+  resolvedAt?: string;
+  resolvedBy?: string;
+  resolvedByName?: string;             // Display name of who resolved (populated by backend)
   createdAt: string;
   updatedAt: string;
 }
@@ -172,12 +191,19 @@ export const reviewService = {
     id: string,
     content: string,
     path?: string,
-    line?: number
+    line?: number,
+    options?: {
+      side?: 'old' | 'new';
+      selectedText?: string;
+      startOffset?: number;
+      endOffset?: number;
+    }
   ): Promise<ReviewComment> => {
     return api.post<ReviewComment>(`/reviews/${id}/comments`, {
       content,
       path,
       line,
+      ...options,
     });
   },
 
@@ -199,6 +225,82 @@ export const reviewService = {
    */
   deleteComment: (reviewId: string, commentId: string): Promise<void> => {
     return api.delete(`/reviews/${reviewId}/comments/${commentId}`);
+  },
+
+  /**
+   * Reply to a comment (threading)
+   */
+  replyToComment: (
+    reviewId: string,
+    commentId: string,
+    content: string
+  ): Promise<ReviewComment> => {
+    return api.post<ReviewComment>(
+      `/reviews/${reviewId}/comments/${commentId}/reply`,
+      { content }
+    );
+  },
+
+  /**
+   * Refresh outdated comment status
+   */
+  refreshComments: (
+    reviewId: string
+  ): Promise<{ updatedCount: number; comments: ReviewComment[] }> => {
+    return api.post<{ updatedCount: number; comments: ReviewComment[] }>(
+      `/reviews/${reviewId}/refresh-comments`
+    );
+  },
+
+  /**
+   * Resolve a comment (mark as addressed)
+   */
+  resolveComment: (reviewId: string, commentId: string): Promise<ReviewComment> => {
+    return api.post<ReviewComment>(`/reviews/${reviewId}/comments/${commentId}/resolve`);
+  },
+
+  /**
+   * Unresolve a comment
+   */
+  unresolveComment: (reviewId: string, commentId: string): Promise<ReviewComment> => {
+    return api.post<ReviewComment>(`/reviews/${reviewId}/comments/${commentId}/unresolve`);
+  },
+
+  /**
+   * Get review snapshot
+   */
+  getSnapshot: (reviewId: string): Promise<ReviewSnapshot> => {
+    return api.get<ReviewSnapshot>(`/reviews/${reviewId}/snapshot`);
+  },
+
+  /**
+   * Get review cycles for a branch
+   */
+  getReviewCycles: (branchId: string): Promise<{ branchId: string; cycles: ReviewCycleSummary[]; currentCycle: number }> => {
+    return api.get<{ branchId: string; cycles: ReviewCycleSummary[]; currentCycle: number }>(
+      `/branches/${branchId}/review-cycles`
+    );
+  },
+
+  /**
+   * Get review status for a branch
+   */
+  getReviewStatus: (branchId: string): Promise<ReviewStatusResponse> => {
+    return api.get<ReviewStatusResponse>(`/branches/${branchId}/review-status`);
+  },
+
+  /**
+   * Add a reviewer to a review/branch
+   */
+  addReviewer: (reviewId: string, reviewerId: string): Promise<ReviewResponse> => {
+    return api.post<ReviewResponse>(`/reviews/${reviewId}/reviewers`, { reviewerId });
+  },
+
+  /**
+   * Remove a reviewer from a review/branch
+   */
+  removeReviewer: (reviewId: string, userId: string): Promise<void> => {
+    return api.delete(`/reviews/${reviewId}/reviewers/${userId}`);
   },
 };
 

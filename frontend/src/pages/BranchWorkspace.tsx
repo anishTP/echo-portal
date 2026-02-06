@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button, TextField, TextArea, Select, Callout } from '@radix-ui/themes';
 import { useBranch, useUpdateBranch } from '../hooks/useBranch';
 import { BranchDetail } from '../components/branch/BranchDetail';
@@ -18,6 +18,7 @@ type ContentView =
 
 export default function BranchWorkspace() {
   const { id, contentId: urlContentId } = useParams<{ id: string; contentId?: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { data: branch, isLoading, error } = useBranch(id);
   const updateBranch = useUpdateBranch();
@@ -272,7 +273,13 @@ export default function BranchWorkspace() {
           <BranchReviewSection
             reviews={branch.reviews || []}
             currentUserId={user.id}
+            branchId={branch.id}
+            branchName={branch.name}
+            branchOwnerId={branch.ownerId}
             branchState={branch.state}
+            onOpenInContext={() => {
+              navigate(`/library?mode=review&branchId=${branch.id}`);
+            }}
           />
         )}
 

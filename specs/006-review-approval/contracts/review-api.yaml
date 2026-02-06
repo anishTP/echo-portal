@@ -1,0 +1,1174 @@
+openapi: 3.1.0
+info:
+  title: Echo Portal Review and Approval API
+  version: 1.0.0
+  description: |
+    API contracts for the in-context review and approval workflow.
+    Extends existing review endpoints with comparison, snapshot, and enhanced comment capabilities.
+
+servers:
+  - url: /api/v1
+    description: API v1
+
+paths:
+  # ============================================
+  # COMPARISON ENDPOINTS (NEW)
+  # ============================================
+
+  /branches/{branchId}/comparison:
+    get:
+      operationId: getBranchComparison
+      summary: Get branch comparison for review
+      description: |
+        Returns the diff between the branch head and its base state.
+        Includes divergence detection if the base has moved since branch creation.
+      tags:
+        - Comparison
+      parameters:
+        - $ref: '#/components/parameters/BranchId'
+        - name: snapshotId
+          in: query
+          description: Optional snapshot ID to compare against (for reviewing specific cycle)
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Comparison data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BranchComparison'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - bearerAuth: []
+
+  /branches/{branchId}/comparison/files/{filePath}:
+    get:
+      operationId: getFileDiff
+      summary: Get diff for a specific file
+      description: Returns detailed diff for a single file, useful for large comparisons.
+      tags:
+        - Comparison
+      parameters:
+        - $ref: '#/components/parameters/BranchId'
+        - name: filePath
+          in: path
+          required: true
+          description: URL-encoded file path
+          schema:
+            type: string
+        - name: snapshotId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: File diff
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileDiff'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+
+  # ============================================
+  # REVIEW SNAPSHOT ENDPOINTS (NEW)
+  # ============================================
+
+  /reviews/{reviewId}/snapshot:
+    get:
+      operationId: getReviewSnapshot
+      summary: Get comparison snapshot for a review
+      description: Returns the frozen snapshot state captured at review submission time.
+      tags:
+        - Snapshots
+      parameters:
+        - $ref: '#/components/parameters/ReviewId'
+      responses:
+        '200':
+          description: Review snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewSnapshot'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+
+  # ============================================
+  # ENHANCED REVIEW ENDPOINTS (EXISTING + EXTENSIONS)
+  # ============================================
+
+  /reviews:
+    post:
+      operationId: createReview
+      summary: Create a review request
+      description: |
+        Creates a new review request for a branch. Automatically creates a comparison snapshot.
+        Branch must be in 'review' state.
+      tags:
+        - Reviews
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReviewRequest'
+      responses:
+        '201':
+          description: Review created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - bearerAuth: []
+
+  /reviews/{reviewId}:
+    get:
+      operationId: getReview
+      summary: Get review details
+      description: Returns full review details including comments and snapshot reference.
+      tags:
+        - Reviews
+      parameters:
+        - $ref: '#/components/parameters/ReviewId'
+        - name: includeSnapshot
+          in: query
+          description: Include snapshot data in response
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Review details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewDetailResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+
+  /reviews/{reviewId}/approve:
+    post:
+      operationId: approveReview
+      summary: Approve a review
+      description: |
+        Submit an approval decision. Optionally include inline comments with the decision.
+        If this approval meets the required approval threshold, the branch transitions to 'approved' state.
+      tags:
+        - Reviews
+      parameters:
+        - $ref: '#/components/parameters/ReviewId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewDecisionRequest'
+      responses:
+        '200':
+          description: Approval recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewDecisionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: Cannot approve own branch or not assigned reviewer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+  /reviews/{reviewId}/request-changes:
+    post:
+      operationId: requestChanges
+      summary: Request changes on a review
+      description: |
+        Submit a request-changes decision with required reason.
+        Branch transitions back to 'draft' state for contributor to address feedback.
+      tags:
+        - Reviews
+      parameters:
+        - $ref: '#/components/parameters/ReviewId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestChangesRequest'
+      responses:
+        '200':
+          description: Changes requested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewDecisionResponse'
+        '400':
+          description: Reason required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - bearerAuth: []
+
+  # ============================================
+  # COMMENT ENDPOINTS (ENHANCED)
+  # ============================================
+
+  /reviews/{reviewId}/comments:
+    get:
+      operationId: getReviewComments
+      summary: Get all comments for a review
+      description: Returns comments organized by file path and threading.
+      tags:
+        - Comments
+      parameters:
+        - $ref: '#/components/parameters/ReviewId'
+        - name: path
+          in: query
+          description: Filter by file path
+          schema:
+            type: string
+        - name: includeOutdated
+          in: query
+          description: Include outdated comments
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Comments list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentsResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+
+    post:
+      operationId: addComment
+      summary: Add a comment to a review
+      description: |
+        Add an inline comment anchored to a specific diff location,
+        or a general comment without anchoring.
+      tags:
+        - Comments
+      parameters:
+        - $ref: '#/components/parameters/ReviewId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCommentRequest'
+      responses:
+        '201':
+          description: Comment added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewComment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - bearerAuth: []
+
+  /reviews/{reviewId}/comments/{commentId}:
+    patch:
+      operationId: updateComment
+      summary: Update a comment
+      description: Only the comment author can update their comment.
+      tags:
+        - Comments
+      parameters:
+        - $ref: '#/components/parameters/ReviewId'
+        - $ref: '#/components/parameters/CommentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCommentRequest'
+      responses:
+        '200':
+          description: Comment updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewComment'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+
+    delete:
+      operationId: deleteComment
+      summary: Delete a comment
+      description: Only the comment author can delete their comment.
+      tags:
+        - Comments
+      parameters:
+        - $ref: '#/components/parameters/ReviewId'
+        - $ref: '#/components/parameters/CommentId'
+      responses:
+        '204':
+          description: Comment deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+
+  /reviews/{reviewId}/comments/{commentId}/reply:
+    post:
+      operationId: replyToComment
+      summary: Reply to a comment
+      description: Add a threaded reply to an existing comment. Max 2 levels deep.
+      tags:
+        - Comments
+      parameters:
+        - $ref: '#/components/parameters/ReviewId'
+        - $ref: '#/components/parameters/CommentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplyRequest'
+      responses:
+        '201':
+          description: Reply added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewComment'
+        '400':
+          description: Cannot reply to a reply (max depth exceeded)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+  /reviews/{reviewId}/refresh-comments:
+    post:
+      operationId: refreshComments
+      summary: Refresh comment outdated status
+      description: |
+        Compares comment anchors against current diff state and marks
+        outdated comments when their referenced content has changed.
+      tags:
+        - Comments
+      parameters:
+        - $ref: '#/components/parameters/ReviewId'
+      responses:
+        '200':
+          description: Comments refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshCommentsResponse'
+      security:
+        - bearerAuth: []
+
+  # ============================================
+  # REVIEW CYCLE ENDPOINTS (NEW)
+  # ============================================
+
+  /branches/{branchId}/review-cycles:
+    get:
+      operationId: getReviewCycles
+      summary: Get review cycle history for a branch
+      description: Returns summary of all review cycles for tracking iterative review progress.
+      tags:
+        - Review Cycles
+      parameters:
+        - $ref: '#/components/parameters/BranchId'
+      responses:
+        '200':
+          description: Review cycles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewCyclesResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+
+  /branches/{branchId}/review-status:
+    get:
+      operationId: getReviewStatus
+      summary: Get current review status for a branch
+      description: |
+        Returns derived review sub-state and approval progress.
+        Used for UI status indicators.
+      tags:
+        - Review Cycles
+      parameters:
+        - $ref: '#/components/parameters/BranchId'
+      responses:
+        '200':
+          description: Review status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewStatusResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+
+components:
+  parameters:
+    BranchId:
+      name: branchId
+      in: path
+      required: true
+      description: Branch UUID
+      schema:
+        type: string
+        format: uuid
+
+    ReviewId:
+      name: reviewId
+      in: path
+      required: true
+      description: Review UUID
+      schema:
+        type: string
+        format: uuid
+
+    CommentId:
+      name: commentId
+      in: path
+      required: true
+      description: Comment UUID
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    # ============================================
+    # COMPARISON SCHEMAS
+    # ============================================
+
+    BranchComparison:
+      type: object
+      required:
+        - branchId
+        - baseCommit
+        - headCommit
+        - files
+        - stats
+        - baseState
+      properties:
+        branchId:
+          type: string
+          format: uuid
+        baseCommit:
+          type: string
+          pattern: '^[a-f0-9]{40}$'
+        headCommit:
+          type: string
+          pattern: '^[a-f0-9]{40}$'
+        baseRef:
+          type: string
+          description: Human-readable base reference
+        headRef:
+          type: string
+          description: Human-readable head reference
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileDiff'
+        stats:
+          $ref: '#/components/schemas/DiffStats'
+        baseState:
+          type: string
+          enum: [current, diverged]
+          description: Whether the base has moved since branch creation
+        divergedCommit:
+          type: string
+          pattern: '^[a-f0-9]{40}$'
+          description: If diverged, the commit main moved to
+
+    FileDiff:
+      type: object
+      required:
+        - path
+        - status
+        - additions
+        - deletions
+        - hunks
+      properties:
+        path:
+          type: string
+        status:
+          type: string
+          enum: [added, modified, deleted, renamed]
+        oldPath:
+          type: string
+          description: Original path for renamed files
+        additions:
+          type: integer
+          minimum: 0
+        deletions:
+          type: integer
+          minimum: 0
+        hunks:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiffHunk'
+
+    DiffHunk:
+      type: object
+      required:
+        - id
+        - oldStart
+        - oldLines
+        - newStart
+        - newLines
+        - lines
+      properties:
+        id:
+          type: string
+          description: Unique hunk identifier for comment anchoring
+        oldStart:
+          type: integer
+        oldLines:
+          type: integer
+        newStart:
+          type: integer
+        newLines:
+          type: integer
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiffLine'
+
+    DiffLine:
+      type: object
+      required:
+        - type
+        - content
+      properties:
+        type:
+          type: string
+          enum: [context, addition, deletion]
+        content:
+          type: string
+        oldLineNumber:
+          type: integer
+          nullable: true
+        newLineNumber:
+          type: integer
+          nullable: true
+
+    DiffStats:
+      type: object
+      required:
+        - filesChanged
+        - additions
+        - deletions
+      properties:
+        filesChanged:
+          type: integer
+          minimum: 0
+        additions:
+          type: integer
+          minimum: 0
+        deletions:
+          type: integer
+          minimum: 0
+
+    # ============================================
+    # REVIEW SCHEMAS
+    # ============================================
+
+    CreateReviewRequest:
+      type: object
+      required:
+        - branchId
+        - reviewerId
+      properties:
+        branchId:
+          type: string
+          format: uuid
+        reviewerId:
+          type: string
+          format: uuid
+
+    ReviewResponse:
+      type: object
+      required:
+        - id
+        - branchId
+        - reviewerId
+        - requestedById
+        - status
+        - reviewCycle
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        branchId:
+          type: string
+          format: uuid
+        reviewerId:
+          type: string
+          format: uuid
+        requestedById:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/ReviewStatus'
+        decision:
+          $ref: '#/components/schemas/ReviewDecision'
+        reviewCycle:
+          type: integer
+          minimum: 1
+        snapshotId:
+          type: string
+          format: uuid
+        commentCount:
+          type: integer
+          minimum: 0
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        reviewer:
+          $ref: '#/components/schemas/UserSummary'
+
+    ReviewDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/ReviewResponse'
+        - type: object
+          properties:
+            comments:
+              type: array
+              items:
+                $ref: '#/components/schemas/ReviewComment'
+            snapshot:
+              $ref: '#/components/schemas/ReviewSnapshot'
+
+    ReviewSnapshot:
+      type: object
+      required:
+        - id
+        - reviewId
+        - branchId
+        - baseCommit
+        - headCommit
+        - snapshotData
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        reviewId:
+          type: string
+          format: uuid
+        branchId:
+          type: string
+          format: uuid
+        baseCommit:
+          type: string
+          pattern: '^[a-f0-9]{40}$'
+        headCommit:
+          type: string
+          pattern: '^[a-f0-9]{40}$'
+        snapshotData:
+          $ref: '#/components/schemas/SnapshotData'
+        createdAt:
+          type: string
+          format: date-time
+
+    SnapshotData:
+      type: object
+      required:
+        - files
+        - stats
+        - baseRef
+        - headRef
+      properties:
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileSummary'
+        stats:
+          $ref: '#/components/schemas/DiffStats'
+        baseRef:
+          type: string
+        headRef:
+          type: string
+
+    FileSummary:
+      type: object
+      required:
+        - path
+        - status
+        - additions
+        - deletions
+      properties:
+        path:
+          type: string
+        status:
+          type: string
+          enum: [added, modified, deleted, renamed]
+        oldPath:
+          type: string
+        additions:
+          type: integer
+          minimum: 0
+        deletions:
+          type: integer
+          minimum: 0
+
+    ReviewStatus:
+      type: string
+      enum: [pending, in_progress, completed, cancelled]
+
+    ReviewDecision:
+      type: string
+      enum: [approved, changes_requested]
+      nullable: true
+
+    ReviewDecisionRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 2000
+          description: Optional comment with approval
+        inlineComments:
+          type: array
+          items:
+            $ref: '#/components/schemas/InlineCommentInput'
+          description: Optional inline comments to submit with decision
+
+    RequestChangesRequest:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: Required explanation of what needs to change
+        inlineComments:
+          type: array
+          items:
+            $ref: '#/components/schemas/InlineCommentInput'
+
+    ReviewDecisionResponse:
+      type: object
+      required:
+        - review
+        - branchState
+      properties:
+        review:
+          $ref: '#/components/schemas/ReviewResponse'
+        branchState:
+          type: string
+          enum: [draft, review, approved, published, archived]
+          description: Updated branch state after decision
+        approvalProgress:
+          $ref: '#/components/schemas/ApprovalProgress'
+
+    ApprovalProgress:
+      type: object
+      required:
+        - approved
+        - required
+        - remaining
+      properties:
+        approved:
+          type: integer
+          minimum: 0
+        required:
+          type: integer
+          minimum: 1
+        remaining:
+          type: integer
+          minimum: 0
+
+    # ============================================
+    # COMMENT SCHEMAS
+    # ============================================
+
+    ReviewComment:
+      type: object
+      required:
+        - id
+        - authorId
+        - content
+        - isOutdated
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        authorId:
+          type: string
+          format: uuid
+        content:
+          type: string
+          minLength: 1
+          maxLength: 10000
+        path:
+          type: string
+          description: File path for anchored comments
+        line:
+          type: integer
+          minimum: 1
+          description: Line number in diff
+        hunkId:
+          type: string
+          description: Diff hunk identifier
+        side:
+          type: string
+          enum: [old, new]
+          description: Which side of diff (deletion vs addition)
+        parentId:
+          type: string
+          format: uuid
+          description: Parent comment ID for threading
+        isOutdated:
+          type: boolean
+          default: false
+        outdatedReason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        author:
+          $ref: '#/components/schemas/UserSummary'
+        replies:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewComment'
+          description: Nested replies (only for top-level comments)
+
+    CommentsResponse:
+      type: object
+      required:
+        - comments
+        - totalCount
+        - outdatedCount
+      properties:
+        comments:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewComment'
+        totalCount:
+          type: integer
+          minimum: 0
+        outdatedCount:
+          type: integer
+          minimum: 0
+        byFile:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/ReviewComment'
+          description: Comments grouped by file path
+
+    AddCommentRequest:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 10000
+        path:
+          type: string
+        line:
+          type: integer
+          minimum: 1
+        hunkId:
+          type: string
+        side:
+          type: string
+          enum: [old, new]
+
+    InlineCommentInput:
+      type: object
+      required:
+        - content
+        - path
+        - line
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 10000
+        path:
+          type: string
+        line:
+          type: integer
+          minimum: 1
+        hunkId:
+          type: string
+        side:
+          type: string
+          enum: [old, new]
+
+    UpdateCommentRequest:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 10000
+
+    ReplyRequest:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 10000
+
+    RefreshCommentsResponse:
+      type: object
+      required:
+        - updatedCount
+        - comments
+      properties:
+        updatedCount:
+          type: integer
+          minimum: 0
+          description: Number of comments marked as outdated
+        comments:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewComment'
+
+    # ============================================
+    # REVIEW CYCLE SCHEMAS
+    # ============================================
+
+    ReviewCyclesResponse:
+      type: object
+      required:
+        - branchId
+        - cycles
+        - currentCycle
+      properties:
+        branchId:
+          type: string
+          format: uuid
+        cycles:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewCycleSummary'
+        currentCycle:
+          type: integer
+          minimum: 1
+
+    ReviewCycleSummary:
+      type: object
+      required:
+        - cycleNumber
+        - submittedAt
+        - outcome
+        - approvalCount
+        - requiredApprovals
+        - reviewerCount
+      properties:
+        cycleNumber:
+          type: integer
+          minimum: 1
+        submittedAt:
+          type: string
+          format: date-time
+        outcome:
+          type: string
+          enum: [pending, approved, changes_requested, withdrawn]
+        approvalCount:
+          type: integer
+          minimum: 0
+        requiredApprovals:
+          type: integer
+          minimum: 1
+        reviewerCount:
+          type: integer
+          minimum: 0
+
+    ReviewStatusResponse:
+      type: object
+      required:
+        - branchId
+        - branchState
+        - reviewSubState
+        - approvalProgress
+        - hasBlockingChangesRequested
+      properties:
+        branchId:
+          type: string
+          format: uuid
+        branchState:
+          type: string
+          enum: [draft, review, approved, published, archived]
+        reviewSubState:
+          type: string
+          enum: [pending_review, in_discussion, changes_requested, approved]
+          nullable: true
+          description: Null if branch not in review state
+        approvalProgress:
+          $ref: '#/components/schemas/ApprovalProgress'
+        hasBlockingChangesRequested:
+          type: boolean
+          description: True if any reviewer has requested changes
+        pendingReviewers:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserSummary'
+        completedReviewers:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewerDecision'
+
+    ReviewerDecision:
+      type: object
+      required:
+        - reviewer
+        - decision
+        - decidedAt
+      properties:
+        reviewer:
+          $ref: '#/components/schemas/UserSummary'
+        decision:
+          $ref: '#/components/schemas/ReviewDecision'
+        decidedAt:
+          type: string
+          format: date-time
+
+    # ============================================
+    # COMMON SCHEMAS
+    # ============================================
+
+    UserSummary:
+      type: object
+      required:
+        - id
+        - displayName
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        avatarUrl:
+          type: string
+          format: uri
+
+    Error:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+        details:
+          type: object
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+tags:
+  - name: Comparison
+    description: Branch comparison and diff operations
+  - name: Snapshots
+    description: Review snapshot management
+  - name: Reviews
+    description: Review creation and decisions
+  - name: Comments
+    description: Inline review comments
+  - name: Review Cycles
+    description: Review cycle tracking and status

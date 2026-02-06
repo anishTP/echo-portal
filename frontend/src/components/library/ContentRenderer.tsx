@@ -3,7 +3,7 @@ import Markdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import { Badge, Button, Callout } from '@radix-ui/themes';
 import { Pencil1Icon } from '@radix-ui/react-icons';
-import type { ContentDetail } from '@echo-portal/shared';
+import type { ContentDetail, BranchStateType } from '@echo-portal/shared';
 import styles from './ContentRenderer.module.css';
 import { useAuth } from '../../hooks/useAuth';
 import { VideoEmbed, detectVideoType } from '../editor/VideoEmbed';
@@ -24,6 +24,8 @@ interface ContentRendererProps {
   onEditRequest?: () => void;
   /** Whether viewing content from a draft branch (enables Edit button for unpublished content) */
   branchMode?: boolean;
+  /** Current branch state - Edit button hidden when 'review' or 'approved' */
+  branchState?: BranchStateType;
 }
 
 /**
@@ -139,6 +141,7 @@ export function ContentRenderer({
   onRetry,
   onEditRequest,
   branchMode = false,
+  branchState,
 }: ContentRendererProps) {
   const { isAuthenticated, user } = useAuth();
 
@@ -180,7 +183,8 @@ export function ContentRenderer({
       <header className={styles.header}>
         <div className={styles.headerRow}>
           <h1 className={styles.title}>{content.title}</h1>
-          {canEdit && (content.isPublished || branchMode) && onEditRequest && (
+          {canEdit && (content.isPublished || branchMode) && onEditRequest &&
+           branchState !== 'review' && branchState !== 'approved' && (
             <Button
               variant="soft"
               size="2"

@@ -11,6 +11,8 @@ export interface DocumentationLayoutProps {
   rightSidebar?: ReactNode;
   /** Optional header content (e.g., edit mode banner) */
   header?: ReactNode;
+  /** Whether main content should expand to full width (no max-width constraint) */
+  fullWidth?: boolean;
 }
 
 /**
@@ -29,6 +31,7 @@ export function DocumentationLayout({
   children,
   rightSidebar,
   header,
+  fullWidth = false,
 }: DocumentationLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -62,7 +65,7 @@ export function DocumentationLayout({
       {/* Main Content */}
       <main className={styles.main}>
         {header && <div className={styles.contentHeader}>{header}</div>}
-        <div className={styles.mainContent}>{children}</div>
+        <div className={fullWidth ? styles.mainContentFullWidth : styles.mainContent}>{children}</div>
       </main>
 
       {/* Right Sidebar (optional) */}

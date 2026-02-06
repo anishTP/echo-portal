@@ -1,0 +1,41 @@
+/* ReviewDiffView.module.css */
+/* Single-item diff renderer for main content area in review mode */
+
+.container {
+  padding: var(--space-4);
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.containerUnified {
+  /* Let unified view flow like prose content */
+  padding: 0;
+}
+
+.diffWrapper {
+  border: 1px solid var(--gray-5);
+  border-radius: var(--radius-3);
+  overflow: hidden;
+}
+
+.diffWrapperUnified {
+  /* Remove border for unified mode to feel more like the editor */
+  border: none;
+  border-radius: 0;
+}
+
+.hunks {
+  overflow-x: auto;
+}
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
+.emptyText {
+  color: var(--gray-10);
+  font-size: var(--font-size-3);
+}

@@ -126,8 +126,12 @@ export const branchService = {
   /**
    * Submit a branch for review with assigned reviewers
    * FR-017a: At least one reviewer must be assigned
+   * Returns the updated branch along with transition result
    */
-  submitForReview: (id: string, reviewerIds: string[], reason?: string): Promise<any> => {
+  submitForReview: (id: string, reviewerIds: string[], reason?: string): Promise<{
+    transition: { success: boolean; toState?: string; error?: string };
+    branch: BranchResponse;
+  }> => {
     return api.post(`/branches/${id}/submit-for-review`, { reviewerIds, reason });
   },
 

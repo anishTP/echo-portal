@@ -16,6 +16,7 @@ import { contentRoutes } from './routes/contents.js';
 import { notificationRoutes } from './routes/notifications.js';
 import { rebaseRoutes } from './routes/rebase.js';
 import { uploadRoutes } from './routes/uploads.js';
+import { comparisonRoutes } from './routes/comparison.js';
 
 // Create Hono app
 const app = new Hono();
@@ -84,6 +85,8 @@ api.route('/notifications', notificationRoutes);
 // Rebase routes are mounted on branches path for convenience
 api.route('/branches', rebaseRoutes);
 api.route('/uploads', uploadRoutes);
+// Comparison routes for in-context review (006-review-approval)
+api.route('/', comparisonRoutes);
 
 app.route('/api/v1', api);
 

@@ -328,6 +328,75 @@
   text-align: center;
 }
 
+/* Review Changes Section */
+.reviewSection {
+  padding: var(--space-3);
+  margin-bottom: var(--space-2);
+  background: var(--blue-2);
+  border: 1px solid var(--blue-6);
+  border-radius: var(--radius-2);
+}
+
+.reviewButton {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--blue-9);
+  color: var(--blue-contrast);
+  border: none;
+  border-radius: var(--radius-2);
+  font-size: var(--font-size-2);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.reviewButton:hover {
+  background: var(--blue-10);
+}
+
+.reviewButton:focus-visible {
+  outline: 2px solid var(--focus-8);
+  outline-offset: 2px;
+}
+
+/* View Feedback Section (for drafts with changes requested) */
+.feedbackSection {
+  padding: var(--space-3);
+  margin-bottom: var(--space-2);
+  background: var(--orange-2);
+  border: 1px solid var(--orange-6);
+  border-radius: var(--radius-2);
+}
+
+.feedbackButton {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--orange-9);
+  color: var(--orange-contrast);
+  border: none;
+  border-radius: var(--radius-2);
+  font-size: var(--font-size-2);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.feedbackButton:hover {
+  background: var(--orange-10);
+}
+
+.feedbackButton:focus-visible {
+  outline: 2px solid var(--focus-8);
+  outline-offset: 2px;
+}
+
+.feedbackHint {
+  margin: var(--space-2) 0 0 0;
+  font-size: var(--font-size-1);
+  color: var(--orange-11);
+  text-align: center;
+}
+
 /* Edited Content Indicator */
 .editedIcon {
   flex-shrink: 0;
@@ -349,4 +418,21 @@
 .contentItem[data-edited="true"][data-active="true"] {
   background: var(--blue-4);
   border-left-color: var(--blue-9);
+}
+
+/* Diff stats in review mode */
+.diffStats {
+  display: flex;
+  gap: var(--space-1);
+  font-size: 11px;
+  font-family: var(--code-font-family);
+  flex-shrink: 0;
+}
+
+.diffStats .additions {
+  color: var(--green-11);
+}
+
+.diffStats .deletions {
+  color: var(--red-11);
 }

@@ -154,10 +154,18 @@ export function ReviewComments({
             <div key={comment.id} className="rounded-lg bg-gray-50 p-4">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-full bg-gray-300" />
+                  {comment.authorAvatarUrl ? (
+                    <img
+                      src={comment.authorAvatarUrl}
+                      alt=""
+                      className="h-8 w-8 rounded-full"
+                    />
+                  ) : (
+                    <div className="h-8 w-8 rounded-full bg-gray-300" />
+                  )}
                   <div>
                     <span className="text-sm font-medium text-gray-900">
-                      {comment.authorId === currentUserId ? 'You' : `User ${comment.authorId.slice(0, 8)}`}
+                      {comment.authorId === currentUserId ? 'You' : (comment.authorName || `User ${comment.authorId.slice(0, 8)}`)}
                     </span>
                     <span className="ml-2 text-xs text-gray-500">
                       {formatDate(comment.createdAt)}

@@ -1,0 +1,283 @@
+/* CommentViewPopover.module.css */
+/* Styles for the comment view popover */
+
+.popover {
+  position: fixed;
+  background: var(--color-background);
+  border: 1px solid var(--gray-6);
+  border-radius: var(--radius-3);
+  box-shadow: var(--shadow-4);
+  padding: var(--space-3);
+  max-width: 320px;
+  min-width: 260px;
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  z-index: 50;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Quoted text section */
+.quotedText {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  margin-bottom: var(--space-2);
+  background: var(--amber-2);
+  border-left: 3px solid var(--amber-7);
+  border-radius: 0 var(--radius-2) var(--radius-2) 0;
+  font-size: var(--font-size-2);
+  color: var(--gray-11);
+  font-style: italic;
+}
+
+.quoteIcon {
+  color: var(--amber-9);
+  font-size: var(--font-size-4);
+  line-height: 1;
+}
+
+.quoteContent {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Author name */
+.author {
+  font-size: var(--font-size-2);
+  font-weight: 500;
+  color: var(--gray-12);
+  margin-bottom: var(--space-1);
+}
+
+/* Comment content */
+.content {
+  color: var(--gray-12);
+  font-size: var(--font-size-2);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-bottom: var(--space-1);
+}
+
+/* Timestamp */
+.timestamp {
+  font-size: var(--font-size-1);
+  color: var(--gray-9);
+  margin-bottom: var(--space-3);
+}
+
+/* Scrollable content area (quoted text + content + replies) */
+.scrollableContent {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0; /* Required for flex child scrolling */
+}
+
+/* Replies section */
+.replies {
+  border-top: 1px solid var(--gray-4);
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.reply {
+  padding: var(--space-2);
+  margin-bottom: var(--space-2);
+  background: var(--gray-2);
+  border-radius: var(--radius-2);
+}
+
+.reply:last-child {
+  margin-bottom: 0;
+}
+
+.replyAuthor {
+  font-size: var(--font-size-1);
+  font-weight: 500;
+  color: var(--gray-11);
+  margin-bottom: var(--space-1);
+}
+
+.replyContent {
+  color: var(--gray-12);
+  font-size: var(--font-size-2);
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-bottom: var(--space-1);
+}
+
+.replyTimestamp {
+  font-size: var(--font-size-1);
+  color: var(--gray-9);
+}
+
+/* Reply input section */
+.replySection {
+  flex-shrink: 0; /* Prevent from being hidden when content scrolls */
+  border-top: 1px solid var(--gray-4);
+  padding-top: var(--space-3);
+}
+
+.replyInput {
+  width: 100%;
+  padding: var(--space-2);
+  font-size: var(--font-size-2);
+  color: var(--gray-12);
+  background: var(--gray-2);
+  border: 1px solid var(--gray-6);
+  border-radius: var(--radius-2);
+  margin-bottom: var(--space-2);
+}
+
+.replyInput:focus {
+  outline: none;
+  border-color: var(--accent-7);
+  background: var(--color-background);
+}
+
+.replyInput:disabled {
+  opacity: 0.6;
+}
+
+/* Action buttons container */
+.actionButtons {
+  flex-shrink: 0; /* Prevent from being hidden when content scrolls */
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+/* Reply button */
+.replyButton {
+  padding: 6px 12px;
+  font-size: var(--font-size-1);
+  font-weight: 500;
+  color: white;
+  background: var(--accent-9);
+  border: none;
+  border-radius: var(--radius-2);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.replyButton:hover:not(:disabled) {
+  background: var(--accent-10);
+}
+
+.replyButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Resolve button */
+.resolveButton {
+  padding: 6px 12px;
+  font-size: var(--font-size-1);
+  font-weight: 500;
+  color: var(--green-11);
+  background: var(--green-3);
+  border: 1px solid var(--green-6);
+  border-radius: var(--radius-2);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.resolveButton:hover:not(:disabled) {
+  background: var(--green-4);
+  border-color: var(--green-7);
+}
+
+.resolveButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Resolved state */
+.resolvedState {
+  flex-shrink: 0; /* Prevent from being hidden when content scrolls */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  margin-top: var(--space-2);
+  background: var(--green-2);
+  border: 1px solid var(--green-6);
+  border-radius: var(--radius-2);
+}
+
+.resolvedMessage {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--green-11);
+  font-size: var(--font-size-2);
+  font-weight: 500;
+}
+
+.resolvedMessage svg {
+  color: var(--green-9);
+}
+
+.unresolveLink {
+  padding: 2px 8px;
+  font-size: var(--font-size-1);
+  color: var(--gray-11);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-1);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.unresolveLink:hover {
+  color: var(--gray-12);
+}
+
+.unresolveLink:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Close button */
+.closeButton {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-2);
+  color: var(--gray-9);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.closeButton:hover {
+  background: var(--gray-3);
+  color: var(--gray-11);
+}
+
+.closeButton:focus-visible {
+  outline: 2px solid var(--accent-7);
+  outline-offset: 1px;
+}

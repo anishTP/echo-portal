@@ -1,7 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { MagnifyingGlassIcon, Cross2Icon, Pencil1Icon } from '@radix-ui/react-icons';
-import type { ContentSummary, BranchStateType } from '@echo-portal/shared';
+import type { ContentSummary, BranchStateType, ContentComparisonStats } from '@echo-portal/shared';
 import { NavSection } from './NavSection';
 import { LifecycleStatus } from '../branch/LifecycleStatus';
 import { SubmitForReviewButton } from '../branch/SubmitForReviewButton';
@@ -51,6 +51,14 @@ export interface LibrarySidebarProps {
   canSubmitForReview?: boolean;
   /** Callback when submit for review succeeds */
   onSubmitForReviewSuccess?: () => void;
+  /** Callback to open the in-context review overlay (when branch is in review state) */
+  onOpenReview?: () => void;
+  /** Content comparison stats for review mode (per-item +X/-Y display) */
+  reviewStats?: ContentComparisonStats;
+  /** Whether there is feedback from a completed review with changes_requested */
+  hasFeedbackToView?: boolean;
+  /** Callback to view feedback from a completed review */
+  onViewFeedback?: () => void;
 }
 
 // Git branch icon for branch mode indicator
@@ -99,6 +107,10 @@ export function LibrarySidebar({
   isOwner = false,
   canSubmitForReview = false,
   onSubmitForReviewSuccess,
+  onOpenReview,
+  reviewStats,
+  hasFeedbackToView = false,
+  onViewFeedback,
 }: LibrarySidebarProps) {
   const location = useLocation();
 
@@ -114,6 +126,12 @@ export function LibrarySidebar({
 
   // Show submit button for draft branches owned by user
   const showSubmitButton = branchMode && branchId && branchState === 'draft' && isOwner;
+
+  // Show review button for branches in review state
+  const showReviewButton = branchMode && branchState === 'review';
+
+  // Show feedback button for draft branches that have completed review feedback
+  const showFeedbackButton = branchMode && branchState === 'draft' && hasFeedbackToView;
 
   // Group items by category
   const groupedItems = useMemo(() => {
@@ -181,6 +199,33 @@ export function LibrarySidebar({
           {!hasEditedContent && (
             <p className={styles.submitHint}>Edit content to enable submission</p>
           )}
+        </div>
+      )}
+
+      {/* Review Changes Button (review state only) */}
+      {showReviewButton && onOpenReview && (
+        <div className={styles.reviewSection}>
+          <button
+            type="button"
+            className={styles.reviewButton}
+            onClick={onOpenReview}
+          >
+            Review Changes
+          </button>
+        </div>
+      )}
+
+      {/* View Feedback Button (draft state with completed feedback) */}
+      {showFeedbackButton && onViewFeedback && (
+        <div className={styles.feedbackSection}>
+          <button
+            type="button"
+            className={styles.feedbackButton}
+            onClick={onViewFeedback}
+          >
+            View Feedback
+          </button>
+          <p className={styles.feedbackHint}>A reviewer has requested changes</p>
         </div>
       )}
 
@@ -258,6 +303,16 @@ export function LibrarySidebar({
                       >
                         {item.contentType.charAt(0).toUpperCase()}
                       </span>
+                      {reviewStats && (() => {
+                        const stat = reviewStats.items.find(s => s.contentId === item.id);
+                        if (!stat) return null;
+                        return (
+                          <span className={styles.diffStats}>
+                            {stat.additions > 0 && <span className={styles.additions}>+{stat.additions}</span>}
+                            {stat.deletions > 0 && <span className={styles.deletions}>-{stat.deletions}</span>}
+                          </span>
+                        );
+                      })()}
                     </Link>
                   </li>
                 );

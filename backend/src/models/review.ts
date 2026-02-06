@@ -38,6 +38,10 @@ export const addReviewCommentSchema = z.object({
     .max(10000, 'Comment must be 10000 characters or less'),
   path: z.string().max(500).optional(),
   line: z.number().int().positive().optional(),
+  side: z.enum(['old', 'new']).optional(),
+  selectedText: z.string().max(10000).optional(),
+  startOffset: z.number().int().nonnegative().optional(),
+  endOffset: z.number().int().nonnegative().optional(),
 });
 
 export type AddReviewCommentInput = z.infer<typeof addReviewCommentSchema>;
@@ -197,8 +201,23 @@ export class ReviewModel {
 
   /**
    * Get a serializable representation for API responses
+   * @param userMap Optional map of userId -> { displayName, avatarUrl } for enriching comment authors
    */
-  toResponse(): Record<string, unknown> {
+  toResponse(userMap?: Map<string, { displayName: string; avatarUrl?: string }>): Record<string, unknown> {
+    // Enrich comments with author info if userMap provided
+    const enrichedComments = userMap
+      ? this.comments.map((comment) => {
+          const author = userMap.get(comment.authorId);
+          const resolvedByUser = comment.resolvedBy ? userMap.get(comment.resolvedBy) : undefined;
+          return {
+            ...comment,
+            authorName: author?.displayName,
+            authorAvatarUrl: author?.avatarUrl,
+            resolvedByName: resolvedByUser?.displayName,
+          };
+        })
+      : this.comments;
+
     return {
       id: this.id,
       branchId: this.branchId,
@@ -206,7 +225,7 @@ export class ReviewModel {
       requestedById: this.requestedById,
       status: this.status,
       decision: this.decision,
-      comments: this.comments,
+      comments: enrichedComments,
       createdAt: this.createdAt.toISOString(),
       updatedAt: this.updatedAt.toISOString(),
       completedAt: this.completedAt?.toISOString() ?? null,

@@ -2,14 +2,7 @@
 .inline-editor {
   width: 100%;
   min-height: 300px;
-  border: 1px solid var(--gray-6);
-  border-radius: var(--radius-2);
   background: var(--color-background);
-}
-
-.inline-editor:focus-within {
-  border-color: var(--accent-8);
-  box-shadow: 0 0 0 1px var(--accent-8);
 }
 
 /* Milkdown editor overrides */

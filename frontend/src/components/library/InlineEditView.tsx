@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { InlineEditor } from '../editor/InlineEditor';
 import { EditorStatusBar } from '../editor/EditorStatusBar';
+import { InlineMetadataHeader } from './InlineMetadataHeader';
+import { InlineTagsEditor } from './InlineTagsEditor';
 import { useAutoSave, type DraftContent } from '../../hooks/useAutoSave';
 import { useEditSession } from '../../hooks/useEditSession';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
@@ -24,6 +26,22 @@ export interface InlineEditViewProps {
   branchId: string;
   /** Branch name for display */
   branchName: string;
+  /** Current title from parent */
+  title?: string;
+  /** Current category from parent */
+  category?: string;
+  /** Current description from parent */
+  description?: string;
+  /** Current tags from parent */
+  tags?: string[];
+  /** Callback when title changes */
+  onTitleChange?: (title: string) => void;
+  /** Callback when category changes */
+  onCategoryChange?: (category: string) => void;
+  /** Callback when description changes */
+  onDescriptionChange?: (description: string) => void;
+  /** Callback when tags change */
+  onTagsChange?: (tags: string[]) => void;
   /** Callback when user requests to exit edit mode */
   onExitEditMode?: () => void;
   /** CSS class name */
@@ -35,7 +53,20 @@ export interface InlineEditViewProps {
  * Wraps InlineEditor with auto-save, sync, and session tracking.
  */
 const InlineEditViewComponent = forwardRef<InlineEditViewHandle, InlineEditViewProps>(
-  function InlineEditViewComponent({ content, branchId, branchName, className = '' }, ref) {
+  function InlineEditViewComponent({
+    content,
+    branchId,
+    branchName,
+    title: propTitle,
+    category: propCategory,
+    description: propDescription,
+    tags: propTags,
+    onTitleChange,
+    onCategoryChange,
+    onDescriptionChange,
+    onTagsChange,
+    className = '',
+  }, ref) {
   const { user } = useAuth();
   const { isOnline } = useOnlineStatus();
   const editorRef = useRef<HTMLDivElement>(null);
@@ -43,14 +74,20 @@ const InlineEditViewComponent = forwardRef<InlineEditViewHandle, InlineEditViewP
   // Use ref to track content without triggering re-renders
   // This prevents any state updates from causing focus loss
   const contentRef = useRef<DraftContent>({
-    title: content.title,
+    title: propTitle ?? content.title,
     body: content.currentVersion?.body || '',
     metadata: {
-      category: content.category,
-      tags: content.tags,
-      description: content.description,
+      category: propCategory ?? content.category,
+      tags: propTags ?? content.tags,
+      description: propDescription ?? content.description,
     },
   });
+
+  // Derived values for display (use props if available, otherwise from content)
+  const displayTitle = propTitle ?? content.title;
+  const displayCategory = propCategory ?? content.category ?? '';
+  const displayDescription = propDescription ?? content.description ?? '';
+  const displayTags = propTags ?? content.tags ?? [];
 
   // Initial value for the editor (only used on mount)
   const initialBody = useRef(content.currentVersion?.body || '');
@@ -143,13 +180,32 @@ const InlineEditViewComponent = forwardRef<InlineEditViewHandle, InlineEditViewP
       onKeyDown={stopKeyPropagation}
       onKeyUp={stopKeyPropagation}
     >
-      <div className={styles.editorWrapper}>
-        <InlineEditor
-          defaultValue={initialBody.current}
-          onChange={handleBodyChange}
-          onFocus={handleEditorFocus}
+      <article className={styles.article}>
+        {/* Inline metadata header: category, title, description */}
+        <InlineMetadataHeader
+          category={displayCategory}
+          title={displayTitle}
+          description={displayDescription}
+          onCategoryChange={onCategoryChange ?? (() => {})}
+          onTitleChange={onTitleChange ?? (() => {})}
+          onDescriptionChange={onDescriptionChange ?? (() => {})}
         />
-      </div>
+
+        {/* Editor for body content */}
+        <div className={styles.editorWrapper}>
+          <InlineEditor
+            defaultValue={initialBody.current}
+            onChange={handleBodyChange}
+            onFocus={handleEditorFocus}
+          />
+        </div>
+
+        {/* Inline tags editor in footer */}
+        <InlineTagsEditor
+          tags={displayTags}
+          onTagsChange={onTagsChange ?? (() => {})}
+        />
+      </article>
 
       <EditorStatusBar
         saveStatus={autoSaveState.status}
