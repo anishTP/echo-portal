@@ -4,7 +4,7 @@
  * Shows the comment content, author info, and timestamp in a floating popover.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReviewComment } from '../../services/reviewService';
 import styles from './CommentViewPopover.module.css';
 
@@ -12,6 +12,14 @@ interface CommentViewPopoverProps {
   comment: ReviewComment;
   position: { top: number; left: number };
   onClose: () => void;
+  /** Current user ID for permission checks */
+  currentUserId?: string;
+  /** Branch author ID for permission checks */
+  branchAuthorId?: string;
+  /** Callback when resolving a comment */
+  onResolve?: (commentId: string) => Promise<unknown>;
+  /** Callback when unresolving a comment */
+  onUnresolve?: (commentId: string) => Promise<unknown>;
 }
 
 function formatRelativeTime(dateString: string): string {
@@ -37,8 +45,41 @@ export function CommentViewPopover({
   comment,
   position,
   onClose,
+  currentUserId,
+  branchAuthorId,
+  onResolve,
+  onUnresolve,
 }: CommentViewPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
+  const [isResolving, setIsResolving] = useState(false);
+
+  const isResolved = !!comment.resolvedAt;
+  // Can resolve if: not a reply AND (branch author OR comment author)
+  const canResolve = !comment.parentId && currentUserId && (
+    currentUserId === branchAuthorId || currentUserId === comment.authorId
+  );
+
+  const handleResolve = async () => {
+    if (onResolve && !isResolving) {
+      setIsResolving(true);
+      try {
+        await onResolve(comment.id);
+      } finally {
+        setIsResolving(false);
+      }
+    }
+  };
+
+  const handleUnresolve = async () => {
+    if (onUnresolve && !isResolving) {
+      setIsResolving(true);
+      try {
+        await onUnresolve(comment.id);
+      } finally {
+        setIsResolving(false);
+      }
+    }
+  };
 
   // Handle escape key to close
   useEffect(() => {
@@ -98,7 +139,7 @@ export function CommentViewPopover({
       {/* Comment content */}
       <div className={styles.content}>{comment.content}</div>
 
-      {/* Footer with timestamp */}
+      {/* Footer with timestamp and actions */}
       <div className={styles.footer}>
         <span className={styles.timestamp}>{formatRelativeTime(comment.createdAt)}</span>
         {comment.isOutdated && (
@@ -106,10 +147,38 @@ export function CommentViewPopover({
             Outdated
           </span>
         )}
-        {comment.resolvedAt && (
+        {isResolved && (
           <span className={styles.resolvedBadge}>
             Resolved
           </span>
+        )}
+        {/* Resolve/Unresolve button */}
+        {canResolve && (onResolve || onUnresolve) && (
+          <button
+            type="button"
+            className={styles.resolveButton}
+            onClick={isResolved ? handleUnresolve : handleResolve}
+            disabled={isResolving}
+            title={isResolved ? 'Unresolve' : 'Resolve'}
+          >
+            {isResolving ? (
+              '...'
+            ) : isResolved ? (
+              <>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                </svg>
+                Unresolve
+              </>
+            ) : (
+              <>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                Resolve
+              </>
+            )}
+          </button>
         )}
       </div>
 

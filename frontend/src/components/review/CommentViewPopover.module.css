@@ -91,6 +91,32 @@
   border-radius: var(--radius-full);
 }
 
+/* Resolve/Unresolve button */
+.resolveButton {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 4px 8px;
+  font-size: var(--font-size-1);
+  color: var(--gray-11);
+  background: var(--gray-3);
+  border: none;
+  border-radius: var(--radius-2);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.resolveButton:hover {
+  background: var(--gray-4);
+  color: var(--gray-12);
+}
+
+.resolveButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Close button */
 .closeButton {
   position: absolute;

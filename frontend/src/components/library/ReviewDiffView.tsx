@@ -15,6 +15,14 @@ export interface ReviewDiffViewProps {
   comments?: ReviewComment[];
   /** Called when user submits a comment on selected text */
   onSubmitComment?: (content: string, selection: TextSelection, filePath: string) => Promise<void>;
+  /** Current user ID for permission checks */
+  currentUserId?: string;
+  /** Branch author ID for permission checks */
+  branchAuthorId?: string;
+  /** Callback when resolving a comment */
+  onResolve?: (commentId: string) => Promise<unknown>;
+  /** Callback when unresolving a comment */
+  onUnresolve?: (commentId: string) => Promise<unknown>;
 }
 
 
@@ -30,6 +38,10 @@ export function ReviewDiffView({
   isLoading,
   comments,
   onSubmitComment,
+  currentUserId,
+  branchAuthorId,
+  onResolve,
+  onUnresolve,
 }: ReviewDiffViewProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -85,6 +97,10 @@ export function ReviewDiffView({
               ? (content, selection) => onSubmitComment(content, selection, file.path)
               : undefined
           }
+          currentUserId={currentUserId}
+          branchAuthorId={branchAuthorId}
+          onResolve={onResolve}
+          onUnresolve={onUnresolve}
         />
       </div>
     );

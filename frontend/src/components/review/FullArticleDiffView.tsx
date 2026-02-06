@@ -30,6 +30,14 @@ interface FullArticleDiffViewProps {
   comments?: ReviewComment[];
   /** Called when user submits a comment on selected text */
   onSubmitComment?: (content: string, selection: TextSelection) => Promise<void>;
+  /** Current user ID for permission checks */
+  currentUserId?: string;
+  /** Branch author ID for permission checks */
+  branchAuthorId?: string;
+  /** Callback when resolving a comment */
+  onResolve?: (commentId: string) => Promise<unknown>;
+  /** Callback when unresolving a comment */
+  onUnresolve?: (commentId: string) => Promise<unknown>;
 }
 
 export function FullArticleDiffView({
@@ -37,6 +45,10 @@ export function FullArticleDiffView({
   displayMode,
   comments,
   onSubmitComment,
+  currentUserId,
+  branchAuthorId,
+  onResolve,
+  onUnresolve,
 }: FullArticleDiffViewProps) {
   const { fullContent, additions, deletions } = file;
 
@@ -62,6 +74,10 @@ export function FullArticleDiffView({
         metadata={metadata}
         comments={fileComments}
         onSubmitComment={onSubmitComment}
+        currentUserId={currentUserId}
+        branchAuthorId={branchAuthorId}
+        onResolve={onResolve}
+        onUnresolve={onUnresolve}
       />
     );
   }
@@ -76,6 +92,10 @@ export function FullArticleDiffView({
       deletions={deletions}
       comments={fileComments}
       onSubmitComment={onSubmitComment}
+      currentUserId={currentUserId}
+      branchAuthorId={branchAuthorId}
+      onResolve={onResolve}
+      onUnresolve={onUnresolve}
     />
   );
 }
@@ -91,6 +111,10 @@ function UnifiedArticleView({
   metadata,
   comments,
   onSubmitComment,
+  currentUserId,
+  branchAuthorId,
+  onResolve,
+  onUnresolve,
 }: {
   oldContent: string | null;
   newContent: string | null;
@@ -100,6 +124,10 @@ function UnifiedArticleView({
   };
   comments?: ReviewComment[];
   onSubmitComment?: (content: string, selection: TextSelection) => Promise<void>;
+  currentUserId?: string;
+  branchAuthorId?: string;
+  onResolve?: (commentId: string) => Promise<unknown>;
+  onUnresolve?: (commentId: string) => Promise<unknown>;
 }) {
   const articleRef = useRef<HTMLElement>(null);
   const { selection, clearSelection } = useTextSelection(articleRef);
@@ -180,6 +208,10 @@ function UnifiedArticleView({
         <CommentHighlights
           comments={comments}
           containerRef={articleRef}
+          currentUserId={currentUserId}
+          branchAuthorId={branchAuthorId}
+          onResolve={onResolve}
+          onUnresolve={onUnresolve}
         />
       )}
 
@@ -205,8 +237,12 @@ function SplitArticleView({
   metadata,
   additions,
   deletions,
-  comments,
+  comments: _comments,
   onSubmitComment,
+  currentUserId: _currentUserId,
+  branchAuthorId: _branchAuthorId,
+  onResolve: _onResolve,
+  onUnresolve: _onUnresolve,
 }: {
   oldContent: string | null;
   newContent: string | null;
@@ -218,6 +254,10 @@ function SplitArticleView({
   deletions: number;
   comments?: ReviewComment[];
   onSubmitComment?: (content: string, selection: TextSelection) => Promise<void>;
+  currentUserId?: string;
+  branchAuthorId?: string;
+  onResolve?: (commentId: string) => Promise<unknown>;
+  onUnresolve?: (commentId: string) => Promise<unknown>;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { selection, clearSelection } = useTextSelection(containerRef);

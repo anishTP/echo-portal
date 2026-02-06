@@ -164,6 +164,8 @@ export default function Library() {
   const {
     comments,
     addComment,
+    resolveComment,
+    unresolveComment,
   } = useReviewComments(reviewForComments?.id);
 
   // Selection-based commenting no longer needs explicit state tracking
@@ -688,6 +690,10 @@ export default function Library() {
           isLoading={isComparisonLoading}
           comments={comments}
           onSubmitComment={handleSubmitComment}
+          currentUserId={user?.id}
+          branchAuthorId={reviewForComments?.requestedById}
+          onResolve={(commentId) => resolveComment.mutateAsync(commentId)}
+          onUnresolve={(commentId) => unresolveComment.mutateAsync(commentId)}
         />
       ) : isEditMode && editModeContent && currentDraft ? (
         <InlineEditView

@@ -17,6 +17,14 @@ interface CommentHighlightsProps {
   containerRef: RefObject<HTMLElement | null>;
   /** Callback when a comment indicator is clicked */
   onCommentClick?: (comment: ReviewComment) => void;
+  /** Current user ID for permission checks */
+  currentUserId?: string;
+  /** Branch author ID for permission checks */
+  branchAuthorId?: string;
+  /** Callback when resolving a comment */
+  onResolve?: (commentId: string) => Promise<unknown>;
+  /** Callback when unresolving a comment */
+  onUnresolve?: (commentId: string) => Promise<unknown>;
 }
 
 type HighlightContext = 'default' | 'addition' | 'deletion';
@@ -124,6 +132,10 @@ export function CommentHighlights({
   comments,
   containerRef,
   onCommentClick,
+  currentUserId,
+  branchAuthorId,
+  onResolve,
+  onUnresolve,
 }: CommentHighlightsProps) {
   const [highlights, setHighlights] = useState<HighlightPosition[]>([]);
   const [selectedComment, setSelectedComment] = useState<ReviewComment | null>(null);
@@ -287,6 +299,10 @@ export function CommentHighlights({
           comment={selectedComment}
           position={popoverPosition}
           onClose={handleClosePopover}
+          currentUserId={currentUserId}
+          branchAuthorId={branchAuthorId}
+          onResolve={onResolve}
+          onUnresolve={onUnresolve}
         />
       )}
     </>
