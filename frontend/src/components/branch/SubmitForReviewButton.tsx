@@ -38,16 +38,18 @@ export function SubmitForReviewButton({
   const submitMutation = useMutation({
     mutationFn: () => {
       const reviewerIds = reviewers.map((r) => r.id);
+      console.log('[SubmitForReview] Submitting with:', { branchId, reviewerIds, reason });
       return branchService.submitForReview(branchId, reviewerIds, reason || undefined);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('[SubmitForReview] Success:', data);
       invalidateWorkflowQueries(queryClient, branchId);
       setShowModal(false);
       setReason('');
       onSuccess?.();
     },
     onError: (error: any) => {
-      console.error('Failed to submit for review:', error);
+      console.error('[SubmitForReview] Error:', error);
     },
   });
 

@@ -476,6 +476,7 @@ branchRoutes.post(
     await branchService.addReviewers(id, reviewerIds, user.id);
 
     // Then transition to review state
+    console.log('[submit-for-review] Executing transition for branch:', id, 'by user:', user.id);
     const result = await transitionService.executeTransition({
       branchId: id,
       event: TransitionEvent.SUBMIT_FOR_REVIEW,
@@ -483,6 +484,7 @@ branchRoutes.post(
       actorRoles: user.roles || [],
       reason,
     });
+    console.log('[submit-for-review] Transition result:', result);
 
     if (!result.success) {
       throw new ValidationError(result.error || 'Failed to submit for review');
