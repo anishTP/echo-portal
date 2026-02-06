@@ -86,8 +86,11 @@ export function ReviewDiffView({
 
   // Use full article view when fullContent is available
   if (file.fullContent) {
-    // Filter comments for this specific file
-    const fileComments = comments?.filter((c) => c.path === file.path);
+    // Filter comments for this specific file (include replies whose parent is on this file)
+    const directComments = comments?.filter((c) => c.path === file.path) || [];
+    const directCommentIds = new Set(directComments.map(c => c.id));
+    const replies = comments?.filter((c) => c.parentId && directCommentIds.has(c.parentId)) || [];
+    const fileComments = [...directComments, ...replies];
 
     return (
       <div className={displayMode === 'unified' ? styles.containerUnified : styles.container}>
