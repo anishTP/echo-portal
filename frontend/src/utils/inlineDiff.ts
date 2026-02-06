@@ -51,6 +51,10 @@ function makeWhitespaceVisible(text: string, isDeleted: boolean): string {
  * Processes deleted content, converting image markdown to HTML and escaping other content.
  * This ensures images render inside <del> tags (markdown inside raw HTML isn't parsed).
  *
+ * Also replaces blank lines with <br/> to prevent markdown from breaking the del block
+ * into multiple paragraphs (blank lines in markdown create paragraph breaks which can
+ * escape inline elements like <del>).
+ *
  * @param text - The deleted text to process
  * @returns HTML string safe to wrap in <del> tags
  */
@@ -69,8 +73,13 @@ function processDeletedContent(text: string): string {
   const visible = makeWhitespaceVisible(withPlaceholders, true);
   const escaped = escapeHtml(visible);
 
+  // Replace consecutive newlines with <br/> to prevent paragraph breaks
+  // that would escape the <del> tag. Single newlines become <br/>,
+  // multiple become multiple <br/>.
+  const withLineBreaks = escaped.replace(/\n/g, '<br/>');
+
   // Replace placeholders with img HTML
-  let result = escaped;
+  let result = withLineBreaks;
   images.forEach((img, i) => {
     result = result.replace(
       `__DELETED_IMAGE_${i}__`,
