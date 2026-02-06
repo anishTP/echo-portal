@@ -31,6 +31,7 @@ export interface ReviewComment {
   // Resolution tracking
   resolvedAt?: string;                 // ISO timestamp when resolved
   resolvedBy?: string;                 // userId who resolved
+  resolvedByName?: string;             // Display name of who resolved (populated on fetch)
   // Timestamps
   createdAt: string;
   updatedAt: string;

@@ -1,6 +1,7 @@
 import { db } from '../../db/index.js';
 import { reviews } from '../../db/schema/reviews.js';
-import { eq } from 'drizzle-orm';
+import { users } from '../../db/schema/users.js';
+import { eq, inArray } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import {
   addReviewCommentSchema,
@@ -226,7 +227,31 @@ export class ReviewCommentService {
 
     // Add reviewId to each comment for cross-review aggregation
     const comments = (review.comments as ReviewComment[]) || [];
-    return comments.map(c => ({ ...c, reviewId }));
+
+    // Collect unique resolver user IDs
+    const resolverIds = Array.from(new Set(
+      comments
+        .filter(c => c.resolvedBy)
+        .map(c => c.resolvedBy!)
+    ));
+
+    // Fetch resolver names if there are any resolved comments
+    let resolverNames: Record<string, string> = {};
+    if (resolverIds.length > 0) {
+      const resolvers = await db.query.users.findMany({
+        where: inArray(users.id, resolverIds),
+        columns: { id: true, displayName: true },
+      });
+      resolverNames = Object.fromEntries(
+        resolvers.map(u => [u.id, u.displayName])
+      );
+    }
+
+    return comments.map(c => ({
+      ...c,
+      reviewId,
+      resolvedByName: c.resolvedBy ? resolverNames[c.resolvedBy] : undefined,
+    }));
   }
 
   /**

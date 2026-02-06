@@ -217,7 +217,11 @@ export function CommentViewPopover({
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
-            {(justResolved || comment.resolvedBy === currentUserId) ? 'Resolved by you' : 'Comment resolved'}
+            {justResolved || comment.resolvedBy === currentUserId
+              ? 'Resolved by you'
+              : comment.resolvedByName
+                ? `Resolved by ${comment.resolvedByName}`
+                : 'Comment resolved'}
           </div>
           {canResolve && onUnresolve && (
             <button
