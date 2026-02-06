@@ -8,8 +8,8 @@
   border-radius: var(--radius-3);
   box-shadow: var(--shadow-4);
   padding: var(--space-3);
-  max-width: 350px;
-  min-width: 200px;
+  max-width: 320px;
+  min-width: 260px;
   z-index: 50;
   animation: fadeIn 0.15s ease;
 }
@@ -58,102 +58,20 @@
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
+  margin-bottom: var(--space-1);
 }
 
-/* Footer with metadata */
-.footer {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-  padding-top: var(--space-2);
-  border-top: 1px solid var(--gray-4);
-}
-
+/* Timestamp */
 .timestamp {
   font-size: var(--font-size-1);
   color: var(--gray-9);
+  margin-bottom: var(--space-3);
 }
 
-.outdatedBadge {
-  font-size: var(--font-size-1);
-  color: var(--amber-11);
-  background: var(--amber-3);
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-full);
-}
-
-.resolvedBadge {
-  font-size: var(--font-size-1);
-  color: var(--green-11);
-  background: var(--green-3);
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-full);
-}
-
-/* Actions container */
-.actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-left: auto;
-}
-
-/* Base action button */
-.actionButton {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  font-size: var(--font-size-1);
-  font-weight: 500;
-  color: var(--gray-12);
-  background: var(--gray-4);
-  border: 1px solid var(--gray-6);
-  border-radius: var(--radius-2);
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-.actionButton:hover {
-  background: var(--gray-5);
-  border-color: var(--gray-7);
-}
-
-.actionButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Resolve button variant */
-.resolveButton {
-  color: var(--green-11);
-  background: var(--green-3);
-  border-color: var(--green-6);
-}
-
-.resolveButton:hover {
-  background: var(--green-4);
-  border-color: var(--green-7);
-}
-
-/* Unresolve button variant */
-.unresolveButton {
-  color: var(--gray-11);
-  background: var(--gray-3);
-  border-color: var(--gray-6);
-}
-
-.unresolveButton:hover {
-  background: var(--gray-4);
-  border-color: var(--gray-7);
-}
-
-/* Reply form */
-.replyForm {
-  margin-top: var(--space-2);
-  padding-top: var(--space-2);
+/* Reply section */
+.replySection {
   border-top: 1px solid var(--gray-4);
+  padding-top: var(--space-3);
 }
 
 .replyInput {
@@ -164,37 +82,29 @@
   background: var(--gray-2);
   border: 1px solid var(--gray-6);
   border-radius: var(--radius-2);
-  resize: none;
+  margin-bottom: var(--space-2);
 }
 
 .replyInput:focus {
   outline: none;
   border-color: var(--accent-7);
+  background: var(--color-background);
 }
 
-.replyActions {
+.replyInput:disabled {
+  opacity: 0.6;
+}
+
+/* Action buttons container */
+.actionButtons {
   display: flex;
-  justify-content: flex-end;
   gap: var(--space-2);
-  margin-top: var(--space-2);
+  justify-content: flex-end;
 }
 
-.cancelButton {
-  padding: 4px 10px;
-  font-size: var(--font-size-1);
-  color: var(--gray-11);
-  background: transparent;
-  border: 1px solid var(--gray-6);
-  border-radius: var(--radius-2);
-  cursor: pointer;
-}
-
-.cancelButton:hover {
-  background: var(--gray-3);
-}
-
-.submitButton {
-  padding: 4px 10px;
+/* Reply button */
+.replyButton {
+  padding: 6px 12px;
   font-size: var(--font-size-1);
   font-weight: 500;
   color: white;
@@ -202,13 +112,82 @@
   border: none;
   border-radius: var(--radius-2);
   cursor: pointer;
+  transition: background 0.15s ease;
 }
 
-.submitButton:hover {
+.replyButton:hover:not(:disabled) {
   background: var(--accent-10);
 }
 
-.submitButton:disabled {
+.replyButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Resolve button */
+.resolveButton {
+  padding: 6px 12px;
+  font-size: var(--font-size-1);
+  font-weight: 500;
+  color: var(--green-11);
+  background: var(--green-3);
+  border: 1px solid var(--green-6);
+  border-radius: var(--radius-2);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.resolveButton:hover:not(:disabled) {
+  background: var(--green-4);
+  border-color: var(--green-7);
+}
+
+.resolveButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Resolved state */
+.resolvedState {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  margin-top: var(--space-2);
+  background: var(--green-2);
+  border: 1px solid var(--green-6);
+  border-radius: var(--radius-2);
+}
+
+.resolvedMessage {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--green-11);
+  font-size: var(--font-size-2);
+  font-weight: 500;
+}
+
+.resolvedMessage svg {
+  color: var(--green-9);
+}
+
+.unresolveLink {
+  padding: 2px 8px;
+  font-size: var(--font-size-1);
+  color: var(--gray-11);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-1);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.unresolveLink:hover {
+  color: var(--gray-12);
+}
+
+.unresolveLink:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }

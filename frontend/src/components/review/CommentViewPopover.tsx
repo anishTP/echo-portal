@@ -2,6 +2,7 @@
  * CommentViewPopover - Displays an existing comment when clicking its indicator.
  *
  * Shows the comment content, author info, and timestamp in a floating popover.
+ * Includes reply input and resolve functionality.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -54,24 +55,30 @@ export function CommentViewPopover({
   onReply,
 }: CommentViewPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
-  const [isResolving, setIsResolving] = useState(false);
-  const [isReplying, setIsReplying] = useState(false);
   const [replyContent, setReplyContent] = useState('');
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+  const [isResolving, setIsResolving] = useState(false);
+  const [justResolved, setJustResolved] = useState(false);
 
-  const isResolved = !!comment.resolvedAt;
+  const isResolved = !!comment.resolvedAt || justResolved;
+
   // Can resolve if: not a reply AND (branch author OR comment author)
   const canResolve = !comment.parentId && currentUserId && (
     currentUserId === branchAuthorId || currentUserId === comment.authorId
-  );
-  // Can reply if: not already a reply (max 2 levels) AND user is logged in
+  ) && (onResolve || onUnresolve);
+
+  // Can reply if: not already a reply (max 2 levels) AND user is logged in AND has callback
   const canReply = !comment.parentId && currentUserId && onReply;
 
   const handleResolve = async () => {
-    if (onResolve && !isResolving) {
+    if (onResolve && !isResolving && !isResolved) {
       setIsResolving(true);
       try {
         await onResolve(comment.id);
+        setJustResolved(true);
+        setReplyContent(''); // Clear reply input
+      } catch (error) {
+        console.error('Failed to resolve comment:', error);
       } finally {
         setIsResolving(false);
       }
@@ -79,10 +86,13 @@ export function CommentViewPopover({
   };
 
   const handleUnresolve = async () => {
-    if (onUnresolve && !isResolving) {
+    if (onUnresolve && !isResolving && isResolved) {
       setIsResolving(true);
       try {
         await onUnresolve(comment.id);
+        setJustResolved(false);
+      } catch (error) {
+        console.error('Failed to unresolve comment:', error);
       } finally {
         setIsResolving(false);
       }
@@ -95,16 +105,12 @@ export function CommentViewPopover({
       try {
         await onReply(comment.id, replyContent.trim());
         setReplyContent('');
-        setIsReplying(false);
+      } catch (error) {
+        console.error('Failed to submit reply:', error);
       } finally {
         setIsSubmittingReply(false);
       }
     }
-  };
-
-  const handleCancelReply = () => {
-    setReplyContent('');
-    setIsReplying(false);
   };
 
   // Handle escape key to close
@@ -137,7 +143,7 @@ export function CommentViewPopover({
     if (rect.bottom > viewportHeight - 16) {
       popover.style.top = `${position.top - rect.height - 16}px`;
     }
-  }, [position]);
+  }, [position, isResolved]);
 
   return (
     <div
@@ -165,96 +171,86 @@ export function CommentViewPopover({
       {/* Comment content */}
       <div className={styles.content}>{comment.content}</div>
 
-      {/* Reply form */}
-      {isReplying && (
-        <div className={styles.replyForm}>
-          <textarea
-            className={styles.replyInput}
-            placeholder="Write a reply..."
-            value={replyContent}
-            onChange={(e) => setReplyContent(e.target.value)}
-            rows={2}
-            autoFocus
-          />
-          <div className={styles.replyActions}>
-            <button
-              type="button"
-              className={styles.cancelButton}
-              onClick={handleCancelReply}
-              disabled={isSubmittingReply}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              className={styles.submitButton}
-              onClick={handleSubmitReply}
-              disabled={isSubmittingReply || !replyContent.trim()}
-            >
-              {isSubmittingReply ? 'Sending...' : 'Reply'}
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Timestamp */}
+      <div className={styles.timestamp}>{formatRelativeTime(comment.createdAt)}</div>
 
-      {/* Footer with timestamp and actions */}
-      <div className={styles.footer}>
-        <span className={styles.timestamp}>{formatRelativeTime(comment.createdAt)}</span>
-        {comment.isOutdated && (
-          <span className={styles.outdatedBadge} title={comment.outdatedReason}>
-            Outdated
-          </span>
-        )}
-        {isResolved && (
-          <span className={styles.resolvedBadge}>
-            Resolved
-          </span>
-        )}
-        <div className={styles.actions}>
-          {/* Reply button */}
-          {canReply && !isReplying && (
+      {/* Resolved state - shows when resolved, hides reply input */}
+      {isResolved ? (
+        <div className={styles.resolvedState}>
+          <div className={styles.resolvedMessage}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+            Comment resolved
+          </div>
+          {canResolve && onUnresolve && (
             <button
               type="button"
-              className={styles.actionButton}
-              onClick={() => setIsReplying(true)}
-              title="Reply"
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-              </svg>
-              Reply
-            </button>
-          )}
-          {/* Resolve/Unresolve button */}
-          {canResolve && (onResolve || onUnresolve) && (
-            <button
-              type="button"
-              className={`${styles.actionButton} ${isResolved ? styles.unresolveButton : styles.resolveButton}`}
-              onClick={isResolved ? handleUnresolve : handleResolve}
+              className={styles.unresolveLink}
+              onClick={handleUnresolve}
               disabled={isResolving}
-              title={isResolved ? 'Unresolve' : 'Resolve'}
             >
-              {isResolving ? (
-                '...'
-              ) : isResolved ? (
-                <>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                  Unresolve
-                </>
-              ) : (
-                <>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                  Resolve
-                </>
-              )}
+              {isResolving ? 'Unresolving...' : 'Undo'}
             </button>
           )}
         </div>
-      </div>
+      ) : (
+        <>
+          {/* Reply input - always visible when not resolved */}
+          {canReply && (
+            <div className={styles.replySection}>
+              <input
+                type="text"
+                className={styles.replyInput}
+                placeholder="Write a reply..."
+                value={replyContent}
+                onChange={(e) => setReplyContent(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey && replyContent.trim()) {
+                    e.preventDefault();
+                    handleSubmitReply();
+                  }
+                }}
+                disabled={isSubmittingReply}
+              />
+              <div className={styles.actionButtons}>
+                <button
+                  type="button"
+                  className={styles.replyButton}
+                  onClick={handleSubmitReply}
+                  disabled={isSubmittingReply || !replyContent.trim()}
+                >
+                  {isSubmittingReply ? 'Sending...' : 'Reply'}
+                </button>
+                {canResolve && onResolve && (
+                  <button
+                    type="button"
+                    className={styles.resolveButton}
+                    onClick={handleResolve}
+                    disabled={isResolving}
+                  >
+                    {isResolving ? 'Resolving...' : 'Resolve'}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Show resolve button even if can't reply */}
+          {!canReply && canResolve && onResolve && (
+            <div className={styles.actionButtons}>
+              <button
+                type="button"
+                className={styles.resolveButton}
+                onClick={handleResolve}
+                disabled={isResolving}
+              >
+                {isResolving ? 'Resolving...' : 'Resolve'}
+              </button>
+            </div>
+          )}
+        </>
+      )}
 
       {/* Close button */}
       <button
