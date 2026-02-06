@@ -57,6 +57,7 @@ export function CommentViewPopover({
   onUnresolve,
   onReply,
 }: CommentViewPopoverProps) {
+  console.log('[CommentViewPopover] Rendering with:', { comment, replies, repliesLength: replies.length });
   const popoverRef = useRef<HTMLDivElement>(null);
   const [replyContent, setReplyContent] = useState('');
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);

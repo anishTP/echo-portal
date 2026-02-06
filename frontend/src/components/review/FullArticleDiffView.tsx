@@ -57,13 +57,20 @@ export function FullArticleDiffView({
 
   // Filter comments for this file (include replies whose parent is on this file)
   const fileComments = useMemo(() => {
+    console.log('[FullArticleDiffView] All comments received:', comments);
+    console.log('[FullArticleDiffView] File path:', file.path);
     if (!comments) return [];
     // First get direct comments on this file
     const directComments = comments.filter((c) => c.path === file.path);
+    console.log('[FullArticleDiffView] Direct comments on file:', directComments);
     const directCommentIds = new Set(directComments.map(c => c.id));
+    console.log('[FullArticleDiffView] Direct comment IDs:', Array.from(directCommentIds));
     // Then include replies whose parent is a direct comment on this file
     const replies = comments.filter((c) => c.parentId && directCommentIds.has(c.parentId));
-    return [...directComments, ...replies];
+    console.log('[FullArticleDiffView] Replies found:', replies);
+    const result = [...directComments, ...replies];
+    console.log('[FullArticleDiffView] Final fileComments:', result);
+    return result;
   }, [comments, file.path]);
 
   if (!fullContent) {

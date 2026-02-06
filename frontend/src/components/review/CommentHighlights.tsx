@@ -298,19 +298,28 @@ export function CommentHighlights({
       ))}
 
       {/* Comment view popover */}
-      {selectedComment && popoverPosition && (
-        <CommentViewPopover
-          comment={selectedComment}
-          replies={comments.filter(c => c.parentId === selectedComment.id)}
-          position={popoverPosition}
-          onClose={handleClosePopover}
-          currentUserId={currentUserId}
-          branchAuthorId={branchAuthorId}
-          onResolve={onResolve}
-          onUnresolve={onUnresolve}
-          onReply={onReply}
-        />
-      )}
+      {selectedComment && popoverPosition && (() => {
+        const replies = comments.filter(c => c.parentId === selectedComment.id);
+        console.log('[CommentHighlights] All comments in component:', comments);
+        console.log('[CommentHighlights] Selected comment:', selectedComment);
+        console.log('[CommentHighlights] Selected comment ID:', selectedComment.id);
+        console.log('[CommentHighlights] Filtering replies with parentId:', selectedComment.id);
+        console.log('[CommentHighlights] Found replies:', replies);
+        console.log('[CommentHighlights] All comments with any parentId:', comments.filter(c => c.parentId));
+        return (
+          <CommentViewPopover
+            comment={selectedComment}
+            replies={replies}
+            position={popoverPosition}
+            onClose={handleClosePopover}
+            currentUserId={currentUserId}
+            branchAuthorId={branchAuthorId}
+            onResolve={onResolve}
+            onUnresolve={onUnresolve}
+            onReply={onReply}
+          />
+        );
+      })()}
     </>
   );
 }
