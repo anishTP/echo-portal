@@ -697,7 +697,7 @@ export default function Library() {
           comments={comments}
           onSubmitComment={handleSubmitComment}
           currentUserId={user?.id}
-          branchAuthorId={reviewForComments?.requestedById}
+          branchAuthorId={activeBranch?.ownerId}
           onResolve={(commentId) => resolveComment.mutateAsync(commentId)}
           onUnresolve={(commentId) => unresolveComment.mutateAsync(commentId)}
           onReply={(commentId, content) => replyToComment.mutateAsync({ commentId, content })}
