@@ -4,6 +4,7 @@ import { Dialog, Button, TextArea, Text, Callout, Flex, Avatar, Badge } from '@r
 import { branchService } from '../../services/branchService';
 import { api } from '../../services/api';
 import { branchKeys, reviewKeys } from '../../hooks/queryKeys';
+import { useBranchStore } from '../../stores/branchStore';
 import { TeamMemberPicker, type TeamMember } from './TeamMemberPicker';
 
 interface SubmitForReviewButtonProps {
@@ -27,6 +28,7 @@ export function SubmitForReviewButton({
   const [showModal, setShowModal] = useState(false);
   const [reason, setReason] = useState('');
   const queryClient = useQueryClient();
+  const setCurrentBranch = useBranchStore((s) => s.setCurrentBranch);
 
   // Fetch current reviewers
   const { data: reviewers = [], refetch: refetchReviewers } = useQuery<TeamMember[]>({
@@ -41,9 +43,10 @@ export function SubmitForReviewButton({
       return branchService.submitForReview(branchId, reviewerIds, reason || undefined);
     },
     onSuccess: (data) => {
-      // Update cache immediately with returned branch data to avoid race condition
+      // Update both React Query cache and Zustand store to avoid race condition
       if (data.branch) {
         queryClient.setQueryData(branchKeys.detail(branchId), data.branch);
+        setCurrentBranch(data.branch);
       }
       // Invalidate list queries (these don't suffer from race conditions)
       queryClient.invalidateQueries({ queryKey: branchKeys.myBranches() });
