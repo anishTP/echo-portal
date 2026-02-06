@@ -9,6 +9,7 @@ import type {
 
 export interface ReviewComment {
   id: string;
+  reviewId?: string;                   // Which review this comment belongs to (populated by backend)
   authorId: string;
   content: string;
   path?: string;

@@ -20,7 +20,7 @@ import { useAutoSave } from '../hooks/useAutoSave';
 import { useDraftSync } from '../hooks/useDraftSync';
 import { useContentComparison, useContentComparisonStats } from '../hooks/useContentComparison';
 import { useBranchReviews, useApproveReview, useRequestChanges } from '../hooks/useReview';
-import { useReviewComments } from '../hooks/useReviewComments';
+import { useBranchComments } from '../hooks/useBranchComments';
 import { useBranchStore } from '../stores/branchStore';
 import { useAuth } from '../context/AuthContext';
 import type { ContentSummary } from '@echo-portal/shared';
@@ -165,14 +165,14 @@ export default function Library() {
   // Only valid when branch is in DRAFT state - after resubmission it should exit feedback mode
   const isFeedbackMode = isReviewMode && !activeReview && !!reviewWithFeedback && branchInDraftState;
 
-  // Review comments for the active or feedback review
+  // Aggregate comments from ALL reviews on the branch (so author and reviewers see all comments)
   const {
     comments,
     addComment,
     replyToComment,
     resolveComment,
     unresolveComment,
-  } = useReviewComments(reviewForComments?.id);
+  } = useBranchComments(effectiveBranchId, branchReviews, user?.id);
 
   // Selection-based commenting no longer needs explicit state tracking
   // The CommentPopover handles its own state via useTextSelection

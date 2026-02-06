@@ -11,6 +11,7 @@ export type { DiffStats, UserSummary };
 
 export interface ReviewComment {
   id: string;
+  reviewId?: string;                   // Which review this comment belongs to (populated when aggregating)
   authorId: string;
   content: string;
   // Anchoring (all optional for general comments)

@@ -224,7 +224,9 @@ export class ReviewCommentService {
       throw new NotFoundError('Review', reviewId);
     }
 
-    return (review.comments as ReviewComment[]) || [];
+    // Add reviewId to each comment for cross-review aggregation
+    const comments = (review.comments as ReviewComment[]) || [];
+    return comments.map(c => ({ ...c, reviewId }));
   }
 
   /**
