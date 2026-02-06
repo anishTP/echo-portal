@@ -103,11 +103,23 @@ export function generateUnifiedDiffMarkdown(
   if (oldText === newText) return newText;
 
   const diff = diffWords(oldText, newText);
+
+  // DEBUG: Log diff parts to understand what's being detected
+  console.log('[inlineDiff] Diff parts:', diff.map(p => ({
+    added: p.added,
+    removed: p.removed,
+    value: p.value.substring(0, 100) + (p.value.length > 100 ? '...' : ''),
+    hasImage: /!\[/.test(p.value)
+  })));
+
   return diff
     .map((part) => {
       if (part.added) return `<ins>${escapeHtml(part.value)}</ins>`;
       if (part.removed) {
-        return `<del>${processDeletedContent(part.value)}</del>`;
+        // DEBUG: Log deleted content processing
+        const processed = processDeletedContent(part.value);
+        console.log('[inlineDiff] Deleted content:', { original: part.value.substring(0, 200), processed: processed.substring(0, 200) });
+        return `<del>${processed}</del>`;
       }
       return part.value;
     })
