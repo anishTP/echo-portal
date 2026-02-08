@@ -45,6 +45,10 @@ export interface EditModeHeaderProps {
   onUndo?: () => void;
   /** Redo callback */
   onRedo?: () => void;
+  /** Whether undo is available */
+  canUndo?: boolean;
+  /** Whether redo is available */
+  canRedo?: boolean;
 }
 
 /**
@@ -67,6 +71,8 @@ export function EditModeHeader({
   aiPanelOpen = false,
   onUndo,
   onRedo,
+  canUndo = false,
+  canRedo = false,
 }: EditModeHeaderProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -110,7 +116,7 @@ export function EditModeHeader({
               variant="soft"
               size="2"
               onClick={onUndo}
-              disabled={isSaving}
+              disabled={isSaving || !canUndo}
               title="Undo (Ctrl+Z)"
               aria-label="Undo"
             >
@@ -124,7 +130,7 @@ export function EditModeHeader({
               variant="soft"
               size="2"
               onClick={onRedo}
-              disabled={isSaving}
+              disabled={isSaving || !canRedo}
               title="Redo (Ctrl+Shift+Z)"
               aria-label="Redo"
             >

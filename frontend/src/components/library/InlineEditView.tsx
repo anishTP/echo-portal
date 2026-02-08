@@ -24,6 +24,10 @@ export interface InlineEditViewHandle {
   undo: () => void;
   /** Redo last undone action */
   redo: () => void;
+  /** Whether undo is available */
+  canUndo: boolean;
+  /** Whether redo is available */
+  canRedo: boolean;
 }
 
 export interface InlineEditViewProps {
@@ -51,6 +55,8 @@ export interface InlineEditViewProps {
   onTagsChange?: (tags: string[]) => void;
   /** Callback when user requests to exit edit mode */
   onExitEditMode?: () => void;
+  /** Callback when undo/redo availability changes */
+  onHistoryChange?: (canUndo: boolean, canRedo: boolean) => void;
   /** CSS class name */
   className?: string;
 }
@@ -72,6 +78,7 @@ const InlineEditViewComponent = forwardRef<InlineEditViewHandle, InlineEditViewP
     onCategoryChange,
     onDescriptionChange,
     onTagsChange,
+    onHistoryChange: onHistoryChangeProp,
     className = '',
   }, ref) {
   const { user } = useAuth();
@@ -106,6 +113,16 @@ const InlineEditViewComponent = forwardRef<InlineEditViewHandle, InlineEditViewP
   // AI transform state (007-ai-assisted-authoring)
   const [aiTransformOriginalText, setAITransformOriginalText] = useState<string | null>(null);
   const ai = useAIAssist();
+
+  // Undo/redo availability tracking
+  const [historyState, setHistoryState] = useState({ canUndo: false, canRedo: false });
+  const handleHistoryChange = useCallback((canUndo: boolean, canRedo: boolean) => {
+    setHistoryState((prev) => {
+      if (prev.canUndo === canUndo && prev.canRedo === canRedo) return prev;
+      return { canUndo, canRedo };
+    });
+    onHistoryChangeProp?.(canUndo, canRedo);
+  }, [onHistoryChangeProp]);
 
   // Self-contained auto-save - no callbacks to parent, no state sync issues
   const { state: autoSaveState, save: autoSaveFn, saveNow, loadDraft, cancel: cancelAutoSave } = useAutoSave({
@@ -177,13 +194,21 @@ const InlineEditViewComponent = forwardRef<InlineEditViewHandle, InlineEditViewP
     },
     setBody: (body: string) => {
       contentRef.current = { ...contentRef.current, body };
-      initialBody.current = body;
-      setEditorVersion((v) => v + 1);
+      // Use transaction-based replacement to preserve undo history
+      if (milkdownRef.current?.replaceBody) {
+        milkdownRef.current.replaceBody(body);
+      } else {
+        // Fallback: remount editor (loses history)
+        initialBody.current = body;
+        setEditorVersion((v) => v + 1);
+      }
       autoSaveFn(contentRef.current);
     },
     undo: () => milkdownRef.current?.undo(),
     redo: () => milkdownRef.current?.redo(),
-  }), [saveNow, cancelAutoSave, autoSaveFn]);
+    canUndo: historyState.canUndo,
+    canRedo: historyState.canRedo,
+  }), [saveNow, cancelAutoSave, autoSaveFn, historyState]);
 
   // Record activity on editor focus
   const handleEditorFocus = useCallback(() => {
@@ -220,8 +245,13 @@ const InlineEditViewComponent = forwardRef<InlineEditViewHandle, InlineEditViewP
     });
     if (aiTransformOriginalText && replacement) {
       contentRef.current = { ...contentRef.current, body: newBody };
-      initialBody.current = newBody;
-      setEditorVersion((v) => v + 1);
+      // Use transaction-based replacement to preserve undo history
+      if (milkdownRef.current?.replaceBody) {
+        milkdownRef.current.replaceBody(newBody);
+      } else {
+        initialBody.current = newBody;
+        setEditorVersion((v) => v + 1);
+      }
       autoSaveFn(contentRef.current);
     }
     setAITransformOriginalText(null);
@@ -288,6 +318,7 @@ const InlineEditViewComponent = forwardRef<InlineEditViewHandle, InlineEditViewP
             onAITransform={handleAITransform}
             aiPreview={aiPreview}
             editorRef={milkdownRef}
+            onHistoryChange={handleHistoryChange}
           />
         </div>
 

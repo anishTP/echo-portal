@@ -76,6 +76,10 @@ export default function Library() {
   // Ref to access InlineEditView's content
   const inlineEditViewRef = useRef<InlineEditViewHandle>(null);
 
+  // Undo/redo availability for EditModeHeader buttons
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
   // Fetch published content for sidebar (when NOT in branch mode)
   const {
     data: publishedContent,
@@ -672,6 +676,8 @@ export default function Library() {
             aiPanelOpen={aiStore.panelOpen}
             onUndo={() => inlineEditViewRef.current?.undo()}
             onRedo={() => inlineEditViewRef.current?.redo()}
+            canUndo={canUndo}
+            canRedo={canRedo}
           />
         ) : isReviewMode ? (
           <ReviewModeHeader
@@ -727,6 +733,7 @@ export default function Library() {
           onDescriptionChange={handleDescriptionChange}
           onTagsChange={handleTagsChange}
           onExitEditMode={exitEditMode}
+          onHistoryChange={(u, r) => { setCanUndo(u); setCanRedo(r); }}
         />
       ) : (
         <>

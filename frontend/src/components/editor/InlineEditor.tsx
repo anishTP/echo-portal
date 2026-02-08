@@ -1,7 +1,7 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { Milkdown, MilkdownProvider, useEditor, useInstance } from '@milkdown/react';
 import { ProsemirrorAdapterProvider } from '@prosemirror-adapter/react';
-import { Editor, rootCtx, defaultValueCtx, commandsCtx } from '@milkdown/core';
+import { Editor, rootCtx, defaultValueCtx, editorViewCtx, commandsCtx, parserCtx } from '@milkdown/core';
 import { commonmark } from '@milkdown/preset-commonmark';
 import { gfm } from '@milkdown/preset-gfm';
 import { nord } from '@milkdown/theme-nord';
@@ -87,26 +87,86 @@ function MilkdownEditor({
 export interface InlineEditorHandle {
   undo: () => void;
   redo: () => void;
+  /** Replace editor body via ProseMirror transaction (preserves undo history) */
+  replaceBody: (markdown: string) => void;
 }
 
-/** Bridge component that captures the editor instance and exposes undo/redo */
-function EditorBridge({ editorRef }: { editorRef: React.MutableRefObject<InlineEditorHandle | null> }) {
+/** Bridge component that captures the editor instance, exposes undo/redo, and tracks history state */
+function EditorBridge({
+  editorRef,
+  onHistoryChange,
+}: {
+  editorRef: React.MutableRefObject<InlineEditorHandle | null>;
+  onHistoryChange?: (canUndo: boolean, canRedo: boolean) => void;
+}) {
   const [loading, getEditor] = useInstance();
+  const onHistoryChangeRef = useRef(onHistoryChange);
+  onHistoryChangeRef.current = onHistoryChange;
 
-  // Populate ref once editor is ready
   React.useEffect(() => {
     if (loading) return;
+    const editor = getEditor();
+
+    const getView = () => editor.action((ctx) => ctx.get(editorViewCtx));
+
+    // Check history availability by inspecting the ProseMirror history
+    // plugin state directly. We avoid importing undoDepth/redoDepth because
+    // pnpm + Vite can create duplicate module instances of prosemirror-history,
+    // causing the historyKey reference to mismatch.
+    const checkHistory = () => {
+      try {
+        const view = getView();
+        let canUndo = false;
+        let canRedo = false;
+        for (const plugin of view.state.plugins) {
+          const pluginState = plugin.getState(view.state);
+          if (pluginState && typeof pluginState === 'object' && 'done' in pluginState && 'undone' in pluginState) {
+            const hist = pluginState as { done: { eventCount: number }; undone: { eventCount: number } };
+            canUndo = hist.done.eventCount > 0;
+            canRedo = hist.undone.eventCount > 0;
+            break;
+          }
+        }
+        onHistoryChangeRef.current?.(canUndo, canRedo);
+      } catch { /* editor not ready */ }
+    };
+
     editorRef.current = {
       undo: () => {
-        const editor = getEditor();
-        editor.action((ctx) => ctx.get(commandsCtx).call(undoCommand.key));
+        try {
+          editor.action((ctx) => ctx.get(commandsCtx).call(undoCommand.key));
+          checkHistory();
+        } catch { /* editor not ready */ }
       },
       redo: () => {
-        const editor = getEditor();
-        editor.action((ctx) => ctx.get(commandsCtx).call(redoCommand.key));
+        try {
+          editor.action((ctx) => ctx.get(commandsCtx).call(redoCommand.key));
+          checkHistory();
+        } catch { /* editor not ready */ }
+      },
+      replaceBody: (markdown: string) => {
+        try {
+          editor.action((ctx) => {
+            const parser = ctx.get(parserCtx);
+            const view = ctx.get(editorViewCtx);
+            const doc = parser(markdown);
+            if (doc) {
+              const tr = view.state.tr.replaceWith(0, view.state.doc.content.size, doc.content);
+              view.dispatch(tr);
+            }
+          });
+          checkHistory();
+        } catch { /* editor not ready */ }
       },
     };
-    return () => { editorRef.current = null; };
+
+    checkHistory();
+    const interval = setInterval(checkHistory, 300);
+
+    return () => {
+      clearInterval(interval);
+      editorRef.current = null;
+    };
   }, [loading, getEditor, editorRef]);
 
   return null;
@@ -117,8 +177,11 @@ function EditorBridge({ editorRef }: { editorRef: React.MutableRefObject<InlineE
  * Provides Notion/Medium-style editing with live formatting.
  * Supports AI context menu for text transformation (007-ai-assisted-authoring).
  */
-export function InlineEditor(props: InlineEditorProps & { editorRef?: React.MutableRefObject<InlineEditorHandle | null> }) {
-  const { className = '', onAITransform, aiPreview, editorRef } = props;
+export function InlineEditor(props: InlineEditorProps & {
+  editorRef?: React.MutableRefObject<InlineEditorHandle | null>;
+  onHistoryChange?: (canUndo: boolean, canRedo: boolean) => void;
+}) {
+  const { className = '', onAITransform, aiPreview, editorRef, onHistoryChange } = props;
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -191,7 +254,7 @@ export function InlineEditor(props: InlineEditorProps & { editorRef?: React.Muta
     >
       <MilkdownProvider>
         <ProsemirrorAdapterProvider>
-          {editorRef && <EditorBridge editorRef={editorRef} />}
+          {editorRef && <EditorBridge editorRef={editorRef} onHistoryChange={onHistoryChange} />}
           <MilkdownEditor {...props} />
         </ProsemirrorAdapterProvider>
       </MilkdownProvider>
