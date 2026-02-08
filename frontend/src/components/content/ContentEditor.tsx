@@ -5,6 +5,7 @@ import { ContentTypeSelector } from './ContentTypeSelector';
 import { ContentMetadata } from './ContentMetadata';
 import { DeleteContentDialog } from './DeleteContentDialog';
 import { InlineEditor } from '../editor/InlineEditor';
+import { EditorToolbar } from '../editor/EditorToolbar';
 import { EditorStatusBar } from '../editor/EditorStatusBar';
 import { DraftRecoveryBanner } from '../editor/DraftRecoveryBanner';
 import { SaveDraftDialog } from '../editor/SaveDraftDialog';
@@ -16,6 +17,7 @@ import { useDraftSync } from '../../hooks/useDraftSync';
 import { useEditSession } from '../../hooks/useEditSession';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { useAIStore } from '../../stores/aiStore';
+import { useAIAssist } from '../../hooks/useAIAssist';
 import type { ContentTypeValue, ContentDetail } from '@echo-portal/shared';
 import type { Draft } from '../../services/draft-db';
 
@@ -64,6 +66,11 @@ export function ContentEditor({
   const [saveDraftError, setSaveDraftError] = useState<string | null>(null);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const initializedRef = useRef(false);
+
+  // AI state for inline transform (007-ai-assisted-authoring)
+  const [aiTransformOriginalText, setAITransformOriginalText] = useState<string | null>(null);
+  const aiStore = useAIStore();
+  const ai = useAIAssist();
 
   const setIsDirty = useContentStore((s) => s.setIsDirty);
   const createMutation = useCreateContent();
@@ -283,6 +290,63 @@ export function ContentEditor({
     }
   }, [content?.id, deleteMutation, setIsDirty, onDelete]);
 
+  // AI transform handler (T032: context menu → inline preview)
+  const handleAITransform = useCallback(
+    async (selectedText: string, instruction: string) => {
+      if (!content?.id) return;
+      setAITransformOriginalText(selectedText);
+      await ai.transform({
+        branchId,
+        contentId: content.id,
+        selectedText,
+        instruction,
+      });
+    },
+    [branchId, content?.id, ai]
+  );
+
+  // AI inline preview accept/reject handlers
+  const handleAITransformAccept = useCallback(async () => {
+    if (!ai.streamRequestId || !content?.id) return;
+    await ai.accept(ai.streamRequestId, {
+      contentId: content.id,
+      changeDescription: 'AI-transformed content',
+    });
+    // Replace the original text in the body with the AI content
+    if (aiTransformOriginalText && ai.streamContent) {
+      setBody((prev) => prev.replace(aiTransformOriginalText, ai.streamContent));
+    }
+    setAITransformOriginalText(null);
+    ai.resetStream();
+  }, [ai, content?.id, aiTransformOriginalText]);
+
+  const handleAITransformReject = useCallback(async () => {
+    if (ai.streamRequestId) {
+      await ai.reject(ai.streamRequestId);
+    }
+    setAITransformOriginalText(null);
+    ai.resetStream();
+  }, [ai]);
+
+  const handleAITransformCancel = useCallback(async () => {
+    if (ai.streamRequestId) {
+      await ai.cancel(ai.streamRequestId);
+    }
+    setAITransformOriginalText(null);
+  }, [ai]);
+
+  // Build aiPreview prop for InlineEditor when a transform is active
+  const aiPreview = aiTransformOriginalText
+    ? {
+        content: ai.streamContent,
+        isStreaming: ai.streamStatus === 'streaming',
+        originalText: aiTransformOriginalText,
+        onAccept: handleAITransformAccept,
+        onReject: handleAITransformReject,
+        onCancel: handleAITransformCancel,
+      }
+    : null;
+
   return (
     <div className="space-y-6">
       {/* Draft recovery banner */}
@@ -370,14 +434,22 @@ export function ContentEditor({
           <label htmlFor="content-body" className="block text-sm font-medium">
             Content Body <span className="text-red-500">*</span>
           </label>
-          <SegmentedControl.Root
-            value={editorMode}
-            onValueChange={(value) => setEditorMode(value as EditorMode)}
-            size="1"
-          >
-            <SegmentedControl.Item value="wysiwyg">WYSIWYG</SegmentedControl.Item>
-            <SegmentedControl.Item value="markdown">Markdown</SegmentedControl.Item>
-          </SegmentedControl.Root>
+          <div className="flex items-center gap-2">
+            {isEditing && (
+              <EditorToolbar
+                onToggleAI={() => aiStore.togglePanel()}
+                aiPanelOpen={aiStore.panelOpen}
+              />
+            )}
+            <SegmentedControl.Root
+              value={editorMode}
+              onValueChange={(value) => setEditorMode(value as EditorMode)}
+              size="1"
+            >
+              <SegmentedControl.Item value="wysiwyg">WYSIWYG</SegmentedControl.Item>
+              <SegmentedControl.Item value="markdown">Markdown</SegmentedControl.Item>
+            </SegmentedControl.Root>
+          </div>
         </div>
 
         <div className="flex gap-0">
@@ -387,6 +459,8 @@ export function ContentEditor({
                 defaultValue={body}
                 onChange={setBody}
                 placeholder="Start writing..."
+                onAITransform={isEditing ? handleAITransform : undefined}
+                aiPreview={aiPreview}
               />
             ) : (
               <TextArea

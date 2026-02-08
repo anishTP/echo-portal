@@ -54,6 +54,7 @@ export function RevertDialog({
   if (!version) return null;
 
   const formattedDate = new Date(version.versionTimestamp).toLocaleString();
+  const isAIVersion = (version as any).authorType === 'system';
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={handleOpenChange}>
@@ -61,12 +62,28 @@ export function RevertDialog({
         <Dialog.Title>
           <Flex align="center" gap="2">
             <ResetIcon />
-            Revert to Previous Version
+            {isAIVersion ? 'Revert AI-Generated Content' : 'Revert to Previous Version'}
           </Flex>
         </Dialog.Title>
         <Dialog.Description size="2" mb="4">
-          This will create a new version with the content from the selected version.
+          {isAIVersion
+            ? 'This will revert the AI-generated content to the pre-AI state.'
+            : 'This will create a new version with the content from the selected version.'}
         </Dialog.Description>
+
+        {/* AI-specific warning (T046) */}
+        {isAIVersion && (
+          <Callout.Root color="amber" mb="4">
+            <Callout.Text>
+              <Text weight="medium">AI Content Revert</Text>
+              <br />
+              <Text size="2">
+                Human edits made after this AI version will remain in version history but the
+                current content will revert to the pre-AI state.
+              </Text>
+            </Callout.Text>
+          </Callout.Root>
+        )}
 
         <Callout.Root color="blue" mb="4">
           <Callout.Text>

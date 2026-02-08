@@ -112,35 +112,35 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ### Backend Routes
 
-- [ ] T014 [US1] Implement POST /api/v1/ai/generate route with SSE streaming via Hono streamSSE(), branch draft state check, permission check, single-pending enforcement, and audit logging `backend/src/api/routes/ai.ts`
-- [ ] T015 [US1] Implement POST /api/v1/ai/transform route with SSE streaming, selectedText validation, same authorization as generate `backend/src/api/routes/ai.ts`
-- [ ] T016 [US1] Implement POST /api/v1/ai/requests/:requestId/accept route that calls versionService.createVersion() with authorType='system' and logs ai.accepted audit event `backend/src/api/routes/ai.ts`
-- [ ] T017 [US1] Implement POST /api/v1/ai/requests/:requestId/reject and POST /requests/:requestId/cancel routes `backend/src/api/routes/ai.ts`
-- [ ] T018 [US1] Implement GET /api/v1/ai/conversation and DELETE /conversation/:id routes for conversation retrieval and cleanup `backend/src/api/routes/ai.ts`
-- [ ] T019 [US1] Implement GET /api/v1/ai/requests/:requestId route for reload/refresh scenarios `backend/src/api/routes/ai.ts`
-- [ ] T020 [US1] Register AI routes in the main Hono app router `backend/src/api/index.ts`
+- [x] T014 [US1] Implement POST /api/v1/ai/generate route with SSE streaming via Hono streamSSE(), branch draft state check, permission check, single-pending enforcement, and audit logging `backend/src/api/routes/ai.ts`
+- [x] T015 [US1] Implement POST /api/v1/ai/transform route with SSE streaming, selectedText validation, same authorization as generate `backend/src/api/routes/ai.ts`
+- [x] T016 [US1] Implement POST /api/v1/ai/requests/:requestId/accept route that calls versionService.createVersion() with authorType='system' and logs ai.accepted audit event `backend/src/api/routes/ai.ts`
+- [x] T017 [US1] Implement POST /api/v1/ai/requests/:requestId/reject and POST /requests/:requestId/cancel routes `backend/src/api/routes/ai.ts`
+- [x] T018 [US1] Implement GET /api/v1/ai/conversation and DELETE /conversation/:id routes for conversation retrieval and cleanup `backend/src/api/routes/ai.ts`
+- [x] T019 [US1] Implement GET /api/v1/ai/requests/:requestId route for reload/refresh scenarios `backend/src/api/routes/ai.ts`
+- [x] T020 [US1] Register AI routes in the main Hono app router `backend/src/api/index.ts`
 
 ### Frontend Services & State
 
-- [ ] T021 [P] [US1] Create AI API service wrapper with methods for generate, transform, accept, reject, cancel, getConversation, clearConversation, getRequest `frontend/src/services/ai-api.ts`
-- [ ] T022 [P] [US1] Implement useSSEStream hook using fetch() + ReadableStream with AbortController, auth headers, SSE event parsing, and reactive state (content, status, error, abort) `frontend/src/hooks/useSSEStream.ts`
-- [ ] T023 [P] [US1] Create Zustand aiStore with panel visibility, active conversation, pending request, streaming state, and branch-scoped cleanup `frontend/src/stores/aiStore.ts`
-- [ ] T024 [US1] Implement useAIAssist hook that composes useSSEStream + aiStore + ai-api for generate and transform workflows `frontend/src/hooks/useAIAssist.ts`
-- [ ] T025 [US1] Implement useAIConversation hook for multi-turn state management, turn counting, and branch-switch cleanup `frontend/src/hooks/useAIConversation.ts`
+- [x] T021 [P] [US1] Create AI API service wrapper with methods for generate, transform, accept, reject, cancel, getConversation, clearConversation, getRequest `frontend/src/services/ai-api.ts`
+- [x] T022 [P] [US1] Implement useSSEStream hook using fetch() + ReadableStream with AbortController, auth headers, SSE event parsing, and reactive state (content, status, error, abort) `frontend/src/hooks/useSSEStream.ts`
+- [x] T023 [P] [US1] Create Zustand aiStore with panel visibility, active conversation, pending request, streaming state, and branch-scoped cleanup `frontend/src/stores/aiStore.ts`
+- [x] T024 [US1] Implement useAIAssist hook that composes useSSEStream + aiStore + ai-api for generate and transform workflows `frontend/src/hooks/useAIAssist.ts`
+- [x] T025 [US1] Implement useAIConversation hook for multi-turn state management, turn counting, and branch-switch cleanup `frontend/src/hooks/useAIConversation.ts`
 
 ### Frontend Components
 
-- [ ] T026 [P] [US1] Create AIStreamDisplay component that renders streaming markdown text with cursor indicator `frontend/src/components/ai/AIStreamDisplay.tsx`
-- [ ] T027 [P] [US1] Create AIChatMessage component for user prompt bubbles and AI response bubbles with accept/reject/edit actions `frontend/src/components/ai/AIChatMessage.tsx`
-- [ ] T028 [US1] Create AIChatPanel — collapsible side panel with conversation history, prompt input, send button, loading states, turn counter, and new conversation action `frontend/src/components/ai/AIChatPanel.tsx`
-- [ ] T029 [US1] Create AIContextMenu — right-click context menu on selected text with transform actions (rewrite, summarize, expand, change tone, custom) positioned at selection coordinates `frontend/src/components/ai/AIContextMenu.tsx`
-- [ ] T030 [US1] Create AIInlinePreview — inline replacement with visual highlight for pending AI content, floating Accept/Reject toolbar, and original text restoration on reject `frontend/src/components/ai/AIInlinePreview.tsx`
+- [x] T026 [P] [US1] Create AIStreamDisplay component that renders streaming markdown text with cursor indicator `frontend/src/components/ai/AIStreamDisplay.tsx`
+- [x] T027 [P] [US1] Create AIChatMessage component for user prompt bubbles and AI response bubbles with accept/reject/edit actions `frontend/src/components/ai/AIChatMessage.tsx`
+- [x] T028 [US1] Create AIChatPanel — collapsible side panel with conversation history, prompt input, send button, loading states, turn counter, and new conversation action `frontend/src/components/ai/AIChatPanel.tsx`
+- [x] T029 [US1] Create AIContextMenu — right-click context menu on selected text with transform actions (rewrite, summarize, expand, change tone, custom) positioned at selection coordinates `frontend/src/components/ai/AIContextMenu.tsx`
+- [x] T030 [US1] Create AIInlinePreview — inline replacement with visual highlight for pending AI content, floating Accept/Reject toolbar, and original text restoration on reject `frontend/src/components/ai/AIInlinePreview.tsx`
 
 ### Editor Integration
 
-- [ ] T031 [US1] Add AI panel toggle button to EditorToolbar `frontend/src/components/editor/EditorToolbar.tsx`
-- [ ] T032 [US1] Wire AIContextMenu and AIInlinePreview into InlineEditor — handle contextmenu event on selection, ProseMirror decoration for inline preview, and content replacement on accept. EDGE CASE: If the user modifies the document or changes selection while a transform is streaming, abort the active stream (call cancel endpoint), discard the in-progress result, remove the inline preview decoration, and show a brief toast notification ("Transformation cancelled — text was modified"). Listen for ProseMirror `tr.docChanged` or selection change transactions while `aiStore.streamingStatus === 'streaming'` to detect this. `frontend/src/components/editor/InlineEditor.tsx`
-- [ ] T033 [US1] Mount AIChatPanel alongside editor in ContentEditor, wire panel toggle state, ensure useAutoSave skips pending AI content `frontend/src/components/content/ContentEditor.tsx`
+- [x] T031 [US1] Add AI panel toggle button to EditorToolbar `frontend/src/components/editor/EditorToolbar.tsx`
+- [x] T032 [US1] Wire AIContextMenu and AIInlinePreview into InlineEditor — handle contextmenu event on selection, ProseMirror decoration for inline preview, and content replacement on accept. EDGE CASE: If the user modifies the document or changes selection while a transform is streaming, abort the active stream (call cancel endpoint), discard the in-progress result, remove the inline preview decoration, and show a brief toast notification ("Transformation cancelled — text was modified"). Listen for ProseMirror `tr.docChanged` or selection change transactions while `aiStore.streamingStatus === 'streaming'` to detect this. `frontend/src/components/editor/InlineEditor.tsx`
+- [x] T033 [US1] Mount AIChatPanel alongside editor in ContentEditor, wire panel toggle state, ensure useAutoSave skips pending AI content `frontend/src/components/content/ContentEditor.tsx`
 
 **Checkpoint**: Full AI authoring flow works end-to-end: generate via chat, transform via context menu, streaming display, accept creates version with AI attribution, reject discards. Multi-turn conversations work. Rate limits enforced.
 
@@ -153,16 +153,16 @@ Refer to `.specify/memory/constitution.md` for full principles.
 **Acceptance**: Branch with mixed AI/human versions submitted for review → reviewer sees AI badge on AI-generated versions in DiffView, VersionHistory, and ReviewDetail with model/approver/timestamp details
 **Dependencies**: Phase 2 complete (can run parallel with US1 for component work; needs US1 for integration testing)
 
-- [ ] T034 [P] [US2] Create AIAttributionBadge component showing "AI Generated" badge with provider/model tooltip, approver name, and generation timestamp. Uses authorType from ContentVersionDetail `frontend/src/components/ai/AIAttributionBadge.tsx`
-- [ ] T035 [US2] Add AIAttributionBadge to DiffView — show badge on diff entries where the version has authorType='system'. Include provider details from audit metadata on hover `frontend/src/components/review/DiffView.tsx`
-- [ ] T036 [US2] Add AIAttributionBadge to VersionHistory entries — show badge inline for versions with authorType='system' `frontend/src/components/content/VersionHistory.tsx`
-- [ ] T037 [US2] Add AI content summary to ReviewDetail header — count of AI-generated versions in the review, prominent notice when branch contains AI content `frontend/src/components/review/ReviewDetail.tsx`
+- [x] T034 [P] [US2] Create AIAttributionBadge component showing "AI Generated" badge with provider/model tooltip, approver name, and generation timestamp. Uses authorType from ContentVersionDetail `frontend/src/components/ai/AIAttributionBadge.tsx`
+- [x] T035 [US2] Add AIAttributionBadge to DiffView — show badge on diff entries where the version has authorType='system'. Include provider details from audit metadata on hover `frontend/src/components/review/DiffView.tsx`
+- [x] T036 [US2] Add AIAttributionBadge to VersionHistory entries — show badge inline for versions with authorType='system' `frontend/src/components/content/VersionHistory.tsx`
+- [x] T037 [US2] Add AI content summary to ReviewDetail header — count of AI-generated versions in the review, prominent notice when branch contains AI content `frontend/src/components/review/ReviewDetail.tsx`
 
 **Checkpoint**: Reviewer opens review → AI-generated versions show clear attribution badge → hover reveals model/approver details. Version history also shows AI badges.
 
 ---
 
-## Phase 5: User Story 3 — Admin AI Configuration (P3) — ⬜ Pending
+## Phase 5: User Story 3 — Admin AI Configuration (P3) — ✅ Completed
 
 **Beads Phase ID**: `echo-portal-gqrf`
 **Goal**: Administrators can configure AI constraints: global toggle, per-role enable/disable, content type restrictions, usage quotas, approved providers
@@ -171,44 +171,44 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ### Backend
 
-- [ ] T038 [P] [US3] Create ai_configurations Drizzle schema per data-model.md `backend/src/db/schema/ai-configurations.ts`
-- [ ] T039 [P] [US3] Create SQL migration for ai_configurations table `backend/src/db/migrations/0006_add_ai_config.sql`
-- [ ] T040 [US3] Implement AIConfigService with get, update, getForRole, isEnabled, getEffectiveLimits methods `backend/src/services/ai/ai-config-service.ts`
-- [ ] T041 [US3] Implement GET /api/v1/ai/config and PUT /api/v1/ai/config routes (admin only) with audit logging `backend/src/api/routes/ai-config.ts`
-- [ ] T042 [US3] Update AIService and AIRateLimiter to check AIConfigService for effective limits instead of hardcoded values `backend/src/services/ai/ai-service.ts`, `backend/src/services/ai/rate-limiter.ts`
+- [x] T038 [P] [US3] Create ai_configurations Drizzle schema per data-model.md `backend/src/db/schema/ai-configurations.ts`
+- [x] T039 [P] [US3] Create SQL migration for ai_configurations table `backend/src/db/migrations/0006_add_ai_config.sql`
+- [x] T040 [US3] Implement AIConfigService with get, update, getForRole, isEnabled, getEffectiveLimits methods `backend/src/services/ai/ai-config-service.ts`
+- [x] T041 [US3] Implement GET /api/v1/ai/config and PUT /api/v1/ai/config routes (admin only) with audit logging `backend/src/api/routes/ai-config.ts`
+- [x] T042 [US3] Update AIService and AIRateLimiter to check AIConfigService for effective limits instead of hardcoded values `backend/src/services/ai/ai-service.ts`, `backend/src/services/ai/rate-limiter.ts`
 
 ### Frontend
 
-- [ ] T043 [US3] Create AIConfigPanel admin component with toggles, role config, quota inputs, and provider list `frontend/src/components/ai/AIConfigPanel.tsx`
-- [ ] T044 [US3] Update AIChatPanel to check AI enabled state from config and show disabled message when AI is off for user's role `frontend/src/components/ai/AIChatPanel.tsx`
+- [x] T043 [US3] Create AIConfigPanel admin component with toggles, role config, quota inputs, and provider list `frontend/src/components/ai/AIConfigPanel.tsx`
+- [x] T044 [US3] Update AIChatPanel to check AI enabled state from config and show disabled message when AI is off for user's role `frontend/src/components/ai/AIChatPanel.tsx`
 
 **Checkpoint**: Admin toggles AI off → authors see disabled state. Admin changes limits → new limits apply.
 
 ---
 
-## Phase 6: User Story 4 — AI Content Revert (P4) — ⬜ Pending
+## Phase 6: User Story 4 — AI Content Revert (P4) — ✅ Completed
 
 **Beads Phase ID**: `echo-portal-x9p6`
 **Goal**: Authors can independently revert AI-generated content without affecting human-authored changes
 **Acceptance**: Author accepts AI content → later selects "Revert AI Content" → AI version reverted, human versions preserved
 **Dependencies**: Phase 3 (US1) complete
 
-- [ ] T045 [US4] Implement AI-specific version revert: add POST /api/v1/contents/:contentId/versions/:versionId/revert endpoint (or extend existing revert). Revert restores the content body from the version immediately preceding the target AI version. If human edits exist after the AI version, warn the user that reverting will create a new version with the pre-AI content (human edits on top of AI content are NOT automatically rebased). Log `ai.reverted` audit event with original versionId and new versionId. `backend/src/services/content/version-service.ts`, `backend/src/api/routes/contents.ts`
-- [ ] T046 [US4] Update VersionHistory to show "Revert AI Content" action on AI-generated versions (authorType='system'). RevertDialog shows AI-specific messaging: if human edits exist after the AI version, display a warning "Human edits made after this AI version will remain in version history but the current content will revert to the pre-AI state." On confirm, call revert endpoint from T045. On success, refresh version history. `frontend/src/components/content/VersionHistory.tsx`, `frontend/src/components/content/RevertDialog.tsx`
+- [x] T045 [US4] Implement AI-specific version revert: add POST /api/v1/contents/:contentId/versions/:versionId/revert endpoint (or extend existing revert). Revert restores the content body from the version immediately preceding the target AI version. If human edits exist after the AI version, warn the user that reverting will create a new version with the pre-AI content (human edits on top of AI content are NOT automatically rebased). Log `ai.reverted` audit event with original versionId and new versionId. `backend/src/services/content/version-service.ts`, `backend/src/api/routes/contents.ts`
+- [x] T046 [US4] Update VersionHistory to show "Revert AI Content" action on AI-generated versions (authorType='system'). RevertDialog shows AI-specific messaging: if human edits exist after the AI version, display a warning "Human edits made after this AI version will remain in version history but the current content will revert to the pre-AI state." On confirm, call revert endpoint from T045. On success, refresh version history. `frontend/src/components/content/VersionHistory.tsx`, `frontend/src/components/content/RevertDialog.tsx`
 
 **Checkpoint**: Author reverts AI version → content restored to pre-AI state → audit log shows reversion with attribution.
 
 ---
 
-## Phase 7: User Story 5 — AI Audit Reporting (P5) — ⬜ Pending
+## Phase 7: User Story 5 — AI Audit Reporting (P5) — ✅ Completed
 
 **Beads Phase ID**: `echo-portal-im0w`
 **Goal**: Auditors can query and filter all AI activity across the system
 **Acceptance**: Auditor opens AI audit view → filters by time range, user, provider → sees complete AI activity log
 **Dependencies**: Phase 3 (US1) complete
 
-- [ ] T047 [US5] Implement GET /api/v1/ai/audit route with filtering by userId, providerId, action, dateRange, and pagination `backend/src/api/routes/ai-config.ts`
-- [ ] T048 [US5] Create AIAuditDashboard component with filters (date range, user, provider, action type) and paginated event list `frontend/src/components/ai/AIAuditDashboard.tsx`
+- [x] T047 [US5] Implement GET /api/v1/ai/audit route with filtering by userId, providerId, action, dateRange, and pagination `backend/src/api/routes/ai-config.ts`
+- [x] T048 [US5] Create AIAuditDashboard component with filters (date range, user, provider, action type) and paginated event list `frontend/src/components/ai/AIAuditDashboard.tsx`
 
 **Checkpoint**: Auditor queries AI activity → sees complete record of all AI invocations, acceptances, rejections with full attribution.
 

@@ -1,7 +1,5 @@
 import { api } from './api.js';
 import type {
-  AIGenerateParams,
-  AITransformParams,
   AIAcceptParams,
   AIRejectParams,
   AIConversationDetail,

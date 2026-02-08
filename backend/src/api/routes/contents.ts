@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
+import { eq } from 'drizzle-orm';
+import { db, schema } from '../../db/index.js';
 import { contentService } from '../../services/content/content-service.js';
 import { versionService } from '../../services/content/version-service.js';
 import { diffService } from '../../services/content/diff-service.js';
@@ -592,6 +594,122 @@ contentRoutes.post(
     );
 
     return success(c, result);
+  }
+);
+
+/**
+ * POST /api/v1/contents/:contentId/versions/:versionId/revert-ai - Revert AI-generated version
+ * T045: Reverts to the version immediately before an AI-generated version
+ */
+contentRoutes.post(
+  '/:contentId/versions/:versionId/revert-ai',
+  requireAuth,
+  zValidator('param', versionIdParamSchema),
+  async (c) => {
+    const user = c.get('user')!;
+    const { contentId, versionId } = c.req.valid('param');
+
+    // Get content to check permissions
+    const existingContent = await contentService.getById(contentId);
+    if (!existingContent) {
+      return c.json({ error: { code: 'NOT_FOUND', message: 'Content not found' } }, 404);
+    }
+    await assertCanEditBranchContent(existingContent.branchId, user);
+
+    try {
+      // Get the specified version
+      const aiVersion = await versionService.getVersion(contentId, versionId);
+      if (!aiVersion) {
+        return c.json({ error: { code: 'NOT_FOUND', message: 'Version not found' } }, 404);
+      }
+
+      // Check that this is an AI-generated version
+      if (aiVersion.authorType !== 'system') {
+        return c.json(
+          { error: { code: 'INVALID_VERSION', message: 'Version is not AI-generated' } },
+          400
+        );
+      }
+
+      // Get all versions to find the one immediately before this AI version
+      const versionsResult = await versionService.getVersions(contentId, { limit: 100 });
+      const versions = versionsResult.items;
+
+      // Find the AI version index
+      const aiVersionIndex = versions.findIndex(v => v.id === versionId);
+      if (aiVersionIndex === -1) {
+        return c.json({ error: { code: 'NOT_FOUND', message: 'Version not found in history' } }, 404);
+      }
+
+      // Get the version immediately before (next in the list, since they're sorted desc by timestamp)
+      const previousVersion = versions[aiVersionIndex + 1];
+      if (!previousVersion) {
+        return c.json(
+          { error: { code: 'NO_PREVIOUS_VERSION', message: 'No version exists before AI version' } },
+          400
+        );
+      }
+
+      // Get the full previous version data
+      const previousVersionDetail = await versionService.getVersion(contentId, previousVersion.id);
+      if (!previousVersionDetail) {
+        return c.json({ error: { code: 'NOT_FOUND', message: 'Previous version not found' } }, 404);
+      }
+
+      // Create a new version with the pre-AI content
+      const newVersion = await versionService.createVersion(
+        contentId,
+        {
+          body: previousVersionDetail.body,
+          bodyFormat: previousVersionDetail.bodyFormat,
+          metadataSnapshot: previousVersionDetail.metadataSnapshot,
+          changeDescription: `Reverted AI-generated changes from ${aiVersion.versionTimestamp}`,
+          parentVersionId: existingContent.currentVersion?.id,
+          isRevert: true,
+          revertedFromId: previousVersion.id,
+        },
+        { userId: user.id, authorType: 'user' }
+      );
+
+      // Update content's current version
+      await db
+        .update(schema.contents)
+        .set({
+          currentVersionId: newVersion.id,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.contents.id, contentId));
+
+      // Log ai.reverted audit event
+      await auditLogger.log({
+        action: 'ai.reverted',
+        actorId: user.id,
+        actorType: 'user',
+        resourceType: 'content',
+        resourceId: contentId,
+        outcome: 'success',
+        initiatingUserId: user.id,
+        metadata: {
+          branchId: existingContent.branchId,
+          aiVersionId: versionId,
+          aiVersionTimestamp: aiVersion.versionTimestamp,
+          revertedToVersionId: previousVersion.id,
+          revertedToVersionTimestamp: previousVersion.versionTimestamp,
+          newVersionId: newVersion.id,
+        },
+      });
+
+      return success(c, newVersion);
+    } catch (error: unknown) {
+      const err = error as Error;
+      if (err.message.includes('not found')) {
+        return c.json({ error: { code: 'NOT_FOUND', message: err.message } }, 404);
+      }
+      if (err.message.includes('draft')) {
+        return c.json({ error: { code: 'INVALID_STATE', message: err.message } }, 403);
+      }
+      throw error;
+    }
   }
 );
 

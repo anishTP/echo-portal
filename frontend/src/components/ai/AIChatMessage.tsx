@@ -1,4 +1,3 @@
-import React from 'react';
 import { AIStreamDisplay } from './AIStreamDisplay.js';
 
 interface AIChatMessageProps {

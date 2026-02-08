@@ -3,7 +3,6 @@ import type { BranchComparison, FileDiff } from '@echo-portal/shared';
 import type { ReviewComment } from '../../services/reviewService';
 import { DiffFileHeader } from './DiffFileHeader';
 import { DiffHunk } from './DiffHunk';
-import { AIAttributionBadge } from '../ai/AIAttributionBadge';
 
 /** Threshold for lazy-loading large files */
 const LARGE_FILE_LINE_THRESHOLD = 500;
@@ -23,8 +22,6 @@ interface DiffViewProps {
     content: string
   ) => Promise<void>;
   displayMode: 'unified' | 'split';
-  /** Whether this review contains AI-generated versions (007-ai-assisted-authoring) */
-  hasAIContent?: boolean;
 }
 
 /**

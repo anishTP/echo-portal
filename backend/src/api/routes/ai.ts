@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { zValidator } from '@hono/zod-validator';
+import { eq } from 'drizzle-orm';
 import { requireAuth, type AuthEnv } from '../middleware/auth.js';
 import { aiRateLimitMiddleware } from '../middleware/ai-rate-limit.js';
 import { aiService, AIServiceError } from '../../services/ai/ai-service.js';
@@ -8,6 +9,8 @@ import { conversationService } from '../../services/ai/conversation-service.js';
 import { versionService } from '../../services/content/version-service.js';
 import { branchService } from '../../services/branch/branch-service.js';
 import { providerRegistry } from '../../services/ai/provider-registry.js';
+import { db, schema } from '../../db/index.js';
+import { createMetadataSnapshot } from '../../models/content.js';
 import {
   aiGenerateBodySchema,
   aiTransformBodySchema,
@@ -222,15 +225,44 @@ aiRoutes.post(
         changeDescription: body.changeDescription,
       });
 
-      // Create content version with AI attribution (FR-002, FR-003)
-      const content = request.editedContent ?? request.generatedContent ?? '';
-      const version = await versionService.createVersion({
-        contentId: body.contentId,
-        body: body.editedContent ?? request.generatedContent ?? '',
-        changeDescription: body.changeDescription ?? 'AI-generated content',
-        authorId: user.id,
-        authorType: 'system',
+      // Fetch content to build metadataSnapshot for the new version
+      const contentRecord = await db.query.contents.findFirst({
+        where: eq(schema.contents.id, body.contentId),
       });
+      if (!contentRecord) {
+        throw new AIServiceError('NOT_FOUND', 'Content not found', 404);
+      }
+
+      const metadataSnapshot = createMetadataSnapshot({
+        title: contentRecord.title,
+        category: contentRecord.category,
+        tags: contentRecord.tags ?? [],
+      });
+
+      // Create content version with AI attribution (FR-002, FR-003)
+      const versionBody = body.editedContent ?? request.generatedContent ?? '';
+      const version = await versionService.createVersion(
+        body.contentId,
+        {
+          body: versionBody,
+          metadataSnapshot,
+          changeDescription: body.changeDescription ?? 'AI-generated content',
+          parentVersionId: contentRecord.currentVersionId,
+        },
+        {
+          userId: user.id,
+          authorType: 'system',
+        }
+      );
+
+      // Update content's current version pointer
+      await db
+        .update(schema.contents)
+        .set({
+          currentVersionId: version.id,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.contents.id, body.contentId));
 
       return c.json({
         success: true,

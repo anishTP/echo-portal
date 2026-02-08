@@ -18,6 +18,7 @@ import { rebaseRoutes } from './routes/rebase.js';
 import { uploadRoutes } from './routes/uploads.js';
 import { comparisonRoutes } from './routes/comparison.js';
 import { aiRoutes } from './routes/ai.js';
+import { aiConfigRoutes } from './routes/ai-config.js';
 import { EchoProvider } from '../services/ai/providers/echo-provider.js';
 import { providerRegistry } from '../services/ai/provider-registry.js';
 
@@ -95,6 +96,8 @@ api.route('/uploads', uploadRoutes);
 api.route('/', comparisonRoutes);
 // AI-assisted authoring routes (007-ai-assisted-authoring)
 api.route('/ai', aiRoutes);
+// AI admin configuration routes (007-ai-assisted-authoring Phase 2)
+api.route('/ai/config', aiConfigRoutes);
 
 app.route('/api/v1', api);
 

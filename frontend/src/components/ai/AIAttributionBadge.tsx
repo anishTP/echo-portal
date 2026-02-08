@@ -1,4 +1,3 @@
-import React from 'react';
 import { Badge, Tooltip } from '@radix-ui/themes';
 
 interface AIAttributionBadgeProps {

@@ -7,6 +7,7 @@ import type { AIStreamChunk, ConversationTurn } from './provider-interface.js';
 import { providerRegistry } from './provider-registry.js';
 import { conversationService } from './conversation-service.js';
 import { aiRateLimiter } from './rate-limiter.js';
+import { aiConfigService } from './ai-config-service.js';
 import { AuditLogger } from '../audit/logger.js';
 
 const auditLogger = new AuditLogger();
@@ -43,13 +44,19 @@ export class AIService {
    * Start an AI generation request. Returns async iterable of stream chunks
    * and the created request record.
    */
-  async generate(input: GenerateInput): Promise<{
+  async generate(input: GenerateInput & { userRole?: string }): Promise<{
     request: AIRequest;
     stream: AsyncIterable<AIStreamChunk>;
     conversationId: string;
   }> {
+    // Check if AI is enabled (FR-010)
+    const enabled = await aiConfigService.isEnabled(input.userRole);
+    if (!enabled) {
+      throw new AIServiceError('AI_DISABLED', 'AI assistance is currently disabled', 403);
+    }
+
     // Check rate limit (FR-021)
-    const rateCheck = await aiRateLimiter.checkLimit(input.userId);
+    const rateCheck = await aiRateLimiter.checkLimit(input.userId, input.userRole);
     if (!rateCheck.allowed) {
       throw new AIServiceError('RATE_LIMIT_EXCEEDED', 'AI request limit exceeded', 429);
     }
@@ -108,12 +115,15 @@ export class AIService {
     // Build conversation history for context
     const history = await this.buildConversationHistory(conversation.id);
 
+    // Get effective token limit from config
+    const limits = await aiConfigService.getEffectiveLimits(input.userRole);
+
     // Create the provider stream
     const providerStream = provider.generate({
       prompt: input.prompt,
       context: input.contentId ? undefined : undefined, // TODO: fetch content context
       conversationHistory: history,
-      maxTokens: AI_DEFAULTS.MAX_TOKENS_PER_REQUEST,
+      maxTokens: limits.maxTokens,
     });
 
     // Wrap stream to capture completion and update DB
@@ -129,13 +139,19 @@ export class AIService {
   /**
    * Start an AI transformation request.
    */
-  async transform(input: TransformInput): Promise<{
+  async transform(input: TransformInput & { userRole?: string }): Promise<{
     request: AIRequest;
     stream: AsyncIterable<AIStreamChunk>;
     conversationId: string;
   }> {
+    // Check if AI is enabled (FR-010)
+    const enabled = await aiConfigService.isEnabled(input.userRole);
+    if (!enabled) {
+      throw new AIServiceError('AI_DISABLED', 'AI assistance is currently disabled', 403);
+    }
+
     // Check rate limit (FR-021)
-    const rateCheck = await aiRateLimiter.checkLimit(input.userId);
+    const rateCheck = await aiRateLimiter.checkLimit(input.userId, input.userRole);
     if (!rateCheck.allowed) {
       throw new AIServiceError('RATE_LIMIT_EXCEEDED', 'AI request limit exceeded', 429);
     }
@@ -189,10 +205,13 @@ export class AIService {
       },
     });
 
+    // Get effective token limit from config
+    const limits = await aiConfigService.getEffectiveLimits(input.userRole);
+
     const providerStream = provider.transform({
       selectedText: input.selectedText,
       instruction: input.instruction,
-      maxTokens: AI_DEFAULTS.MAX_TOKENS_PER_REQUEST,
+      maxTokens: limits.maxTokens,
     });
 
     const wrappedStream = this.wrapStream(providerStream, request.id, conversation.id, input.userId);

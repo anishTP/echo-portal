@@ -2,24 +2,33 @@ import { db } from '../../db/index.js';
 import { aiRequests } from '../../db/schema/ai-requests.js';
 import { sql, gt, eq, and } from 'drizzle-orm';
 import { AI_DEFAULTS } from '@echo-portal/shared';
+import { aiConfigService } from './ai-config-service.js';
 
 /**
  * AIRateLimiter — per-user rate limiting for AI requests (FR-021)
  *
- * Phase 1: hardcoded 50 requests/user/hour using sliding window.
- * Phase 2: limit becomes configurable via AIConfigService.
+ * Uses AIConfigService for configurable limits with hardcoded fallback.
  */
 export class AIRateLimiter {
-  private limit = AI_DEFAULTS.RATE_LIMIT_PER_HOUR;
+  private defaultLimit: number = AI_DEFAULTS.RATE_LIMIT_PER_HOUR;
 
   /**
-   * Check if user has remaining quota. Returns { allowed, remaining, resetAt }.
+   * Check if user has remaining quota. Uses configurable limit from AIConfigService.
    */
-  async checkLimit(userId: string): Promise<{
+  async checkLimit(userId: string, role?: string): Promise<{
     allowed: boolean;
     remaining: number;
     resetAt: Date;
   }> {
+    // Get effective limit from config (falls back to default)
+    let limit = this.defaultLimit;
+    try {
+      const limits = await aiConfigService.getEffectiveLimits(role);
+      limit = limits.rateLimit;
+    } catch {
+      // Use default if config service fails
+    }
+
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
 
     const [result] = await db
@@ -33,13 +42,13 @@ export class AIRateLimiter {
       );
 
     const count = result?.count ?? 0;
-    const remaining = Math.max(0, this.limit - count);
+    const remaining = Math.max(0, limit - count);
 
     // resetAt: when the oldest request in the window expires
     const resetAt = new Date(Date.now() + 60 * 60 * 1000);
 
     return {
-      allowed: count < this.limit,
+      allowed: count < limit,
       remaining,
       resetAt,
     };
@@ -48,14 +57,9 @@ export class AIRateLimiter {
   /**
    * Get remaining quota without checking (for display).
    */
-  async getRemainingQuota(userId: string): Promise<number> {
-    const { remaining } = await this.checkLimit(userId);
+  async getRemainingQuota(userId: string, role?: string): Promise<number> {
+    const { remaining } = await this.checkLimit(userId, role);
     return remaining;
-  }
-
-  /** Update the limit (Phase 2: called by AIConfigService) */
-  setLimit(newLimit: number): void {
-    this.limit = newLimit;
   }
 }
 

@@ -1,7 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { useAIStore } from '../stores/aiStore.js';
 import { aiApi } from '../services/ai-api.js';
-import type { AIConversationDetail } from '@echo-portal/shared';
 
 /**
  * useAIConversation — multi-turn conversation state management (FR-015, FR-016)

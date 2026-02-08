@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useSSEStream } from './useSSEStream.js';
 import { useAIStore } from '../stores/aiStore.js';
 import { aiApi } from '../services/ai-api.js';
@@ -8,16 +8,36 @@ import type { AIGenerateParams, AITransformParams, AIAcceptParams } from '@echo-
  * useAIAssist — composes useSSEStream + aiStore + ai-api for AI workflows
  *
  * Provides generate, transform, accept, reject, cancel operations.
+ * Uses useEffect to sync stream metadata to the store (avoids stale closures).
  */
 export function useAIAssist() {
   const stream = useSSEStream();
   const store = useAIStore();
 
+  // Sync stream metadata to store reactively (avoids stale closure issue)
+  useEffect(() => {
+    if (stream.requestId) {
+      store.setActiveRequestId(stream.requestId);
+    }
+  }, [stream.requestId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (stream.conversationId) {
+      store.setActiveConversationId(stream.conversationId);
+    }
+  }, [stream.conversationId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sync streaming status and content to store
+  useEffect(() => {
+    store.setStreamingStatus(stream.status);
+  }, [stream.status]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    store.setStreamingContent(stream.content);
+  }, [stream.content]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const generate = useCallback(
     async (params: AIGenerateParams) => {
-      store.setStreamingStatus('streaming');
-      store.setStreamingContent('');
-
       const url = aiApi.getGenerateUrl();
       await stream.startStream(url, {
         body: {
@@ -25,23 +45,13 @@ export function useAIAssist() {
           conversationId: store.activeConversationId ?? params.conversationId,
         },
       });
-
-      // After stream completes, update store with request info
-      if (stream.requestId) {
-        store.setActiveRequestId(stream.requestId);
-      }
-      if (stream.conversationId) {
-        store.setActiveConversationId(stream.conversationId);
-      }
+      // Metadata sync is handled by useEffect above
     },
     [stream, store]
   );
 
   const transform = useCallback(
     async (params: AITransformParams) => {
-      store.setStreamingStatus('streaming');
-      store.setStreamingContent('');
-
       const url = aiApi.getTransformUrl();
       await stream.startStream(url, {
         body: {
@@ -49,13 +59,7 @@ export function useAIAssist() {
           conversationId: store.activeConversationId ?? params.conversationId,
         },
       });
-
-      if (stream.requestId) {
-        store.setActiveRequestId(stream.requestId);
-      }
-      if (stream.conversationId) {
-        store.setActiveConversationId(stream.conversationId);
-      }
+      // Metadata sync is handled by useEffect above
     },
     [stream, store]
   );
@@ -83,8 +87,6 @@ export function useAIAssist() {
     async (requestId: string) => {
       stream.abort();
       await aiApi.cancel(requestId);
-      store.setStreamingStatus('idle');
-      store.setStreamingContent('');
       store.setActiveRequestId(null);
     },
     [stream, store]

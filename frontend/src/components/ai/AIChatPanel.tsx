@@ -3,7 +3,7 @@ import { AIChatMessage } from './AIChatMessage.js';
 import { useAIAssist } from '../../hooks/useAIAssist.js';
 import { useAIConversation } from '../../hooks/useAIConversation.js';
 import { useAIStore } from '../../stores/aiStore.js';
-import { AI_DEFAULTS } from '@echo-portal/shared';
+import { api } from '../../services/api.js';
 
 interface AIChatPanelProps {
   branchId: string;
@@ -16,9 +16,12 @@ interface AIChatPanelProps {
  *
  * Provides chat interface for content generation with multi-turn
  * conversation, streaming display, and accept/reject actions.
+ * Checks AI enabled state from config (T044).
  */
 export function AIChatPanel({ branchId, contentId, onContentAccepted }: AIChatPanelProps) {
   const [prompt, setPrompt] = useState('');
+  const [aiEnabled, setAIEnabled] = useState(true);
+  const [configChecked, setConfigChecked] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const store = useAIStore();
   const ai = useAIAssist();
@@ -27,12 +30,56 @@ export function AIChatPanel({ branchId, contentId, onContentAccepted }: AIChatPa
   const isStreaming = ai.streamStatus === 'streaming';
   const hasPending = store.streamingStatus === 'streaming' || store.pendingRequest !== null;
 
+  // Check if AI is enabled from config (T044)
+  useEffect(() => {
+    api.get<{ config: { global: Record<string, unknown> } }>('/ai/config')
+      .then((result) => {
+        const enabled = result?.config?.global?.enabled;
+        if (enabled === false) {
+          setAIEnabled(false);
+        }
+        setConfigChecked(true);
+      })
+      .catch(() => {
+        // Config not accessible (non-admin) — assume enabled
+        setConfigChecked(true);
+      });
+  }, []);
+
   // Auto-scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [ai.streamContent, conv.conversation?.requests?.length]);
 
   if (!store.panelOpen) return null;
+
+  // Show disabled state when AI is off
+  if (configChecked && !aiEnabled) {
+    return (
+      <div className="flex flex-col h-full border-l border-gray-200 dark:border-gray-700 w-96 bg-white dark:bg-gray-900">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="font-semibold text-sm">AI Assistant</h3>
+          <button
+            onClick={() => store.setPanelOpen(false)}
+            className="text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+            title="Close panel"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="text-center">
+            <div className="text-gray-400 text-4xl mb-3">🤖</div>
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">AI Assistant is Disabled</p>
+            <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+              AI assistance has been disabled by your administrator.
+              Contact an admin to enable AI features.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,7 +101,7 @@ export function AIChatPanel({ branchId, contentId, onContentAccepted }: AIChatPa
 
   const handleAccept = async (requestId: string) => {
     if (!contentId) return;
-    const result = await ai.accept(requestId, {
+    await ai.accept(requestId, {
       contentId,
       changeDescription: 'AI-generated content',
     });

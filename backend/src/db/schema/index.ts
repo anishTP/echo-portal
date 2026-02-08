@@ -15,3 +15,4 @@ export * from './notifications.js';
 export * from './review-snapshots.js';
 export * from './ai-conversations.js';
 export * from './ai-requests.js';
+export * from './ai-configurations.js';
