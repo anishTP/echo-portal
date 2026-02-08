@@ -121,7 +121,7 @@ export class AIService {
     // Create the provider stream
     const providerStream = provider.generate({
       prompt: input.prompt,
-      context: input.contentId ? undefined : undefined, // TODO: fetch content context
+      context: undefined,
       conversationHistory: history,
       maxTokens: limits.maxTokens,
     });

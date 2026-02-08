@@ -214,18 +214,18 @@ Refer to `.specify/memory/constitution.md` for full principles.
 
 ---
 
-## Phase 8: Polish & Cross-Cutting — ⬜ Pending
+## Phase 8: Polish & Cross-Cutting — ✅ Completed
 
 **Beads Phase ID**: `echo-portal-2adl`
 **Purpose**: Quality improvements, edge case coverage, E2E testing, documentation
 **Dependencies**: Phase 3 (US1) and Phase 4 (US2) complete minimum
 
-- [ ] T049 [P] Add unit tests for AIProvider interface, EchoProvider, AIService, ConversationService, AIRateLimiter `backend/tests/unit/`
-- [ ] T050 [P] Add integration tests for generate→accept flow, transform→reject flow, rate limiting, session cleanup, attribution chain `backend/tests/integration/`
-- [ ] T051 [P] Add component tests for AIChatPanel, AIAttributionBadge, AIContextMenu, AIInlinePreview `frontend/tests/unit/`
-- [ ] T052 Add E2E test: full authoring flow (generate → accept → review shows attribution) `frontend/tests/e2e/ai-authoring.spec.ts`
-- [ ] T053 Run quickstart.md verification checklist end-to-end and document results
-- [ ] T054 Code cleanup — remove console.logs, ensure consistent error handling, verify audit event coverage
+- [x] T049 [P] Add unit tests for AIProvider interface, EchoProvider, AIService, ConversationService, AIRateLimiter `backend/tests/unit/`
+- [x] T050 [P] Add integration tests for generate→accept flow, transform→reject flow, rate limiting, session cleanup, attribution chain `backend/tests/integration/`
+- [x] T051 [P] Add component tests for AIChatPanel, AIAttributionBadge, AIContextMenu, AIInlinePreview `frontend/tests/unit/`
+- [x] T052 Add E2E test: full authoring flow (generate → accept → review shows attribution) `frontend/tests/e2e/ai-authoring.spec.ts`
+- [x] T053 Run quickstart.md verification checklist end-to-end and document results
+- [x] T054 Code cleanup — remove console.logs, ensure consistent error handling, verify audit event coverage
 
 **Checkpoint**: All tests pass. Full verification checklist green. Feature production-ready.
 
