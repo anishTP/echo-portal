@@ -1,10 +1,13 @@
 import { Badge } from '@radix-ui/themes';
 import { useBranchReviewStats } from '../../hooks/useReview';
+import { AIAttributionBadge } from '../ai/AIAttributionBadge';
 import type { ReviewResponse } from '../../services/reviewService';
 
 interface ReviewDetailProps {
   review: ReviewResponse;
   requiredApprovals?: number;
+  /** Count of AI-generated versions in this branch (007-ai-assisted-authoring) */
+  aiVersionCount?: number;
 }
 
 interface ApprovalStatusProps {
@@ -63,7 +66,7 @@ function ApprovalStatus({
   );
 }
 
-export function ReviewDetail({ review, requiredApprovals = 1 }: ReviewDetailProps) {
+export function ReviewDetail({ review, requiredApprovals = 1, aiVersionCount = 0 }: ReviewDetailProps) {
   const { data: stats } = useBranchReviewStats(review.branchId);
 
   // Calculate approval counts
@@ -129,6 +132,17 @@ export function ReviewDetail({ review, requiredApprovals = 1 }: ReviewDetailProp
           </div>
         </div>
       </div>
+
+      {/* AI Content Notice (007-ai-assisted-authoring) */}
+      {aiVersionCount > 0 && (
+        <div className="rounded-lg border border-purple-200 bg-purple-50 p-3 flex items-center gap-2">
+          <AIAttributionBadge compact />
+          <span className="text-sm text-purple-800">
+            This branch contains {aiVersionCount} AI-generated version{aiVersionCount !== 1 ? 's' : ''}.
+            Review AI content with appropriate scrutiny.
+          </span>
+        </div>
+      )}
 
       {/* Approval Status Indicator */}
       {review.status !== 'cancelled' && (

@@ -8,12 +8,14 @@ import { InlineEditor } from '../editor/InlineEditor';
 import { EditorStatusBar } from '../editor/EditorStatusBar';
 import { DraftRecoveryBanner } from '../editor/DraftRecoveryBanner';
 import { SaveDraftDialog } from '../editor/SaveDraftDialog';
+import { AIChatPanel } from '../ai/AIChatPanel';
 import { useContentStore } from '../../stores/contentStore';
 import { useCreateContent, useUpdateContent, useDeleteContent } from '../../hooks/useContent';
 import { useAutoSave, type DraftContent } from '../../hooks/useAutoSave';
 import { useDraftSync } from '../../hooks/useDraftSync';
 import { useEditSession } from '../../hooks/useEditSession';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
+import { useAIStore } from '../../stores/aiStore';
 import type { ContentTypeValue, ContentDetail } from '@echo-portal/shared';
 import type { Draft } from '../../services/draft-db';
 
@@ -378,22 +380,34 @@ export function ContentEditor({
           </SegmentedControl.Root>
         </div>
 
-        {editorMode === 'wysiwyg' ? (
-          <InlineEditor
-            defaultValue={body}
-            onChange={setBody}
-            placeholder="Start writing..."
+        <div className="flex gap-0">
+          <div className="flex-1 min-w-0">
+            {editorMode === 'wysiwyg' ? (
+              <InlineEditor
+                defaultValue={body}
+                onChange={setBody}
+                placeholder="Start writing..."
+              />
+            ) : (
+              <TextArea
+                id="content-body"
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                rows={20}
+                placeholder="Write your content in Markdown..."
+                style={{ fontFamily: 'monospace' }}
+              />
+            )}
+          </div>
+          {/* AI Chat Panel (007-ai-assisted-authoring) */}
+          <AIChatPanel
+            branchId={branchId}
+            contentId={content?.id}
+            onContentAccepted={(aiContent) => {
+              setBody(aiContent);
+            }}
           />
-        ) : (
-          <TextArea
-            id="content-body"
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            rows={20}
-            placeholder="Write your content in Markdown..."
-            style={{ fontFamily: 'monospace' }}
-          />
-        )}
+        </div>
       </div>
 
       <div>

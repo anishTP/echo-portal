@@ -21,6 +21,9 @@ export interface EditorToolbarProps {
   onHeading?: (level: 1 | 2 | 3) => void;
   disabled?: boolean;
   className?: string;
+  /** AI panel toggle (007-ai-assisted-authoring) */
+  onToggleAI?: () => void;
+  aiPanelOpen?: boolean;
 }
 
 /**
@@ -38,6 +41,8 @@ export function EditorToolbar({
   onHeading,
   disabled = false,
   className = '',
+  onToggleAI,
+  aiPanelOpen = false,
 }: EditorToolbarProps) {
   return (
     <div className={`editor-toolbar ${className}`} role="toolbar" aria-label="Text formatting">
@@ -153,6 +158,24 @@ export function EditorToolbar({
           <Link2Icon />
         </Button>
       </div>
+
+      {onToggleAI && (
+        <>
+          <Separator orientation="vertical" size="1" />
+          <div className="editor-toolbar-group">
+            <Button
+              variant={aiPanelOpen ? 'solid' : 'ghost'}
+              size="1"
+              onClick={onToggleAI}
+              disabled={disabled}
+              title="AI Assistant"
+              aria-label="Toggle AI Assistant"
+            >
+              AI
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

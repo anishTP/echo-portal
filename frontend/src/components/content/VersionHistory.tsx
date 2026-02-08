@@ -2,6 +2,7 @@ import { useState, memo, useCallback } from 'react';
 import { Button, Badge } from '@radix-ui/themes';
 import { useVersionHistory, useRevertContent } from '../../hooks/useVersionHistory';
 import { RevertDialog } from './RevertDialog';
+import { AIAttributionBadge } from '../ai/AIAttributionBadge';
 import type { ContentVersionSummary } from '@echo-portal/shared';
 
 interface VersionHistoryProps {
@@ -154,6 +155,9 @@ const VersionEntry = memo(function VersionEntry({
                 <Badge color="yellow" variant="soft" size="1" radius="full">
                   Revert
                 </Badge>
+              )}
+              {(version as any).authorType === 'system' && (
+                <AIAttributionBadge compact />
               )}
             </div>
             <p className="mt-0.5 text-sm text-gray-600">{version.changeDescription}</p>

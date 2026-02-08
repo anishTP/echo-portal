@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react';
 import { ProsemirrorAdapterProvider } from '@prosemirror-adapter/react';
 import { Editor, rootCtx, defaultValueCtx } from '@milkdown/core';
@@ -13,6 +13,8 @@ import { defaultImageUploader } from './milkdown-config';
 import { useVideoEmbedView } from './video-embed-plugin';
 import '@milkdown/theme-nord/style.css';
 import './editor.css';
+import { AIContextMenu } from '../ai/AIContextMenu';
+import { AIInlinePreview } from '../ai/AIInlinePreview';
 
 export interface InlineEditorProps {
   defaultValue?: string;
@@ -22,6 +24,17 @@ export interface InlineEditorProps {
   readonly?: boolean;
   placeholder?: string;
   className?: string;
+  /** AI transform callback (007-ai-assisted-authoring) */
+  onAITransform?: (selectedText: string, instruction: string) => void;
+  /** AI inline preview state */
+  aiPreview?: {
+    content: string;
+    isStreaming: boolean;
+    originalText: string;
+    onAccept: () => void;
+    onReject: () => void;
+    onCancel?: () => void;
+  } | null;
 }
 
 function MilkdownEditor({
@@ -74,15 +87,46 @@ function MilkdownEditor({
 /**
  * WYSIWYG inline markdown editor using Milkdown.
  * Provides Notion/Medium-style editing with live formatting.
+ * Supports AI context menu for text transformation (007-ai-assisted-authoring).
  */
 export function InlineEditor(props: InlineEditorProps) {
-  const { className = '' } = props;
+  const { className = '', onAITransform, aiPreview } = props;
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    text: string;
+  } | null>(null);
 
   // Stop keyboard event propagation to prevent Vimium and other browser extensions
   // from capturing keystrokes meant for the editor
   const stopKeyPropagation = useCallback((e: React.KeyboardEvent) => {
     e.stopPropagation();
   }, []);
+
+  // Handle right-click context menu for AI transform (FR-014)
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      if (!onAITransform) return;
+
+      const selection = window.getSelection();
+      const selectedText = selection?.toString()?.trim();
+      if (!selectedText) return;
+
+      e.preventDefault();
+      setContextMenu({ x: e.clientX, y: e.clientY, text: selectedText });
+    },
+    [onAITransform]
+  );
+
+  const handleTransform = useCallback(
+    (instruction: string) => {
+      if (contextMenu?.text && onAITransform) {
+        onAITransform(contextMenu.text, instruction);
+      }
+      setContextMenu(null);
+    },
+    [contextMenu, onAITransform]
+  );
 
   return (
     <div
@@ -91,12 +135,35 @@ export function InlineEditor(props: InlineEditorProps) {
       onKeyDown={stopKeyPropagation}
       onKeyUp={stopKeyPropagation}
       onKeyPress={stopKeyPropagation}
+      onContextMenu={handleContextMenu}
     >
       <MilkdownProvider>
         <ProsemirrorAdapterProvider>
           <MilkdownEditor {...props} />
         </ProsemirrorAdapterProvider>
       </MilkdownProvider>
+
+      {/* AI inline preview for transform results */}
+      {aiPreview && (
+        <AIInlinePreview
+          content={aiPreview.content}
+          isStreaming={aiPreview.isStreaming}
+          originalText={aiPreview.originalText}
+          onAccept={aiPreview.onAccept}
+          onReject={aiPreview.onReject}
+          onCancel={aiPreview.onCancel}
+        />
+      )}
+
+      {/* AI context menu */}
+      {contextMenu && (
+        <AIContextMenu
+          position={{ x: contextMenu.x, y: contextMenu.y }}
+          selectedText={contextMenu.text}
+          onTransform={handleTransform}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
     </div>
   );
 }

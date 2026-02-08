@@ -1,0 +1,199 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { AIChatMessage } from './AIChatMessage.js';
+import { useAIAssist } from '../../hooks/useAIAssist.js';
+import { useAIConversation } from '../../hooks/useAIConversation.js';
+import { useAIStore } from '../../stores/aiStore.js';
+import { AI_DEFAULTS } from '@echo-portal/shared';
+
+interface AIChatPanelProps {
+  branchId: string;
+  contentId?: string;
+  onContentAccepted?: (content: string) => void;
+}
+
+/**
+ * AIChatPanel — collapsible side panel with conversation UI (FR-014)
+ *
+ * Provides chat interface for content generation with multi-turn
+ * conversation, streaming display, and accept/reject actions.
+ */
+export function AIChatPanel({ branchId, contentId, onContentAccepted }: AIChatPanelProps) {
+  const [prompt, setPrompt] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const store = useAIStore();
+  const ai = useAIAssist();
+  const conv = useAIConversation(branchId);
+
+  const isStreaming = ai.streamStatus === 'streaming';
+  const hasPending = store.streamingStatus === 'streaming' || store.pendingRequest !== null;
+
+  // Auto-scroll to bottom on new messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [ai.streamContent, conv.conversation?.requests?.length]);
+
+  if (!store.panelOpen) return null;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!prompt.trim() || isStreaming || hasPending) return;
+
+    const currentPrompt = prompt;
+    setPrompt('');
+
+    await ai.generate({
+      branchId,
+      contentId,
+      prompt: currentPrompt,
+      conversationId: conv.conversationId ?? undefined,
+    });
+
+    // Refresh conversation to get updated state
+    await conv.refreshConversation();
+  };
+
+  const handleAccept = async (requestId: string) => {
+    if (!contentId) return;
+    const result = await ai.accept(requestId, {
+      contentId,
+      changeDescription: 'AI-generated content',
+    });
+    onContentAccepted?.(ai.streamContent);
+    await conv.refreshConversation();
+  };
+
+  const handleReject = async (requestId: string) => {
+    await ai.reject(requestId);
+    await conv.refreshConversation();
+  };
+
+  const handleCancel = async () => {
+    if (ai.streamRequestId) {
+      await ai.cancel(ai.streamRequestId);
+    }
+  };
+
+  const handleNewConversation = async () => {
+    await conv.clearConversation();
+    ai.resetStream();
+  };
+
+  return (
+    <div className="flex flex-col h-full border-l border-gray-200 dark:border-gray-700 w-96 bg-white dark:bg-gray-900">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-2">
+          <h3 className="font-semibold text-sm">AI Assistant</h3>
+          <span className="text-xs text-muted-foreground">
+            {conv.turnCount}/{conv.maxTurns} turns
+          </span>
+        </div>
+        <div className="flex gap-1">
+          <button
+            onClick={handleNewConversation}
+            className="text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+            title="Start new conversation"
+          >
+            New
+          </button>
+          <button
+            onClick={() => store.setPanelOpen(false)}
+            className="text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+            title="Close panel"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-2">
+        {/* Conversation history */}
+        {conv.conversation?.requests?.map((req) => (
+          <React.Fragment key={req.id}>
+            <AIChatMessage role="user" content={req.prompt} />
+            {req.generatedContent && (
+              <AIChatMessage
+                role="assistant"
+                content={req.generatedContent}
+                status={req.status}
+                onAccept={req.status === 'pending' ? () => handleAccept(req.id) : undefined}
+                onReject={req.status === 'pending' ? () => handleReject(req.id) : undefined}
+              />
+            )}
+          </React.Fragment>
+        ))}
+
+        {/* Current streaming response */}
+        {isStreaming && (
+          <AIChatMessage role="assistant" content={ai.streamContent} isStreaming />
+        )}
+
+        {/* Completed stream waiting for accept/reject */}
+        {ai.streamStatus === 'complete' && ai.streamRequestId && (
+          <AIChatMessage
+            role="assistant"
+            content={ai.streamContent}
+            status="pending"
+            onAccept={() => handleAccept(ai.streamRequestId!)}
+            onReject={() => handleReject(ai.streamRequestId!)}
+          />
+        )}
+
+        {/* Error display */}
+        {ai.streamStatus === 'error' && ai.streamError && (
+          <div className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 rounded p-2">
+            {ai.streamError.message}
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input area */}
+      <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200 dark:border-gray-700">
+        {/* Turn limit warning */}
+        {!conv.hasRemainingTurns && (
+          <div className="text-xs text-amber-600 mb-2">
+            Turn limit reached. Start a new conversation to continue.
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit(e);
+              }
+            }}
+            placeholder={hasPending ? 'Resolve pending content first...' : 'Ask AI to generate content...'}
+            disabled={hasPending || !conv.hasRemainingTurns}
+            className="flex-1 resize-none rounded border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            rows={2}
+          />
+          <div className="flex flex-col gap-1">
+            <button
+              type="submit"
+              disabled={!prompt.trim() || hasPending || !conv.hasRemainingTurns}
+              className="px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Send
+            </button>
+            {isStreaming && (
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
+              >
+                Stop
+              </button>
+            )}
+          </div>
+        </div>
+      </form>
+    </div>
+  );
+}

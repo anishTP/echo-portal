@@ -17,6 +17,12 @@ import { notificationRoutes } from './routes/notifications.js';
 import { rebaseRoutes } from './routes/rebase.js';
 import { uploadRoutes } from './routes/uploads.js';
 import { comparisonRoutes } from './routes/comparison.js';
+import { aiRoutes } from './routes/ai.js';
+import { EchoProvider } from '../services/ai/providers/echo-provider.js';
+import { providerRegistry } from '../services/ai/provider-registry.js';
+
+// Register default AI provider
+providerRegistry.register(new EchoProvider());
 
 // Create Hono app
 const app = new Hono();
@@ -87,6 +93,8 @@ api.route('/branches', rebaseRoutes);
 api.route('/uploads', uploadRoutes);
 // Comparison routes for in-context review (006-review-approval)
 api.route('/', comparisonRoutes);
+// AI-assisted authoring routes (007-ai-assisted-authoring)
+api.route('/ai', aiRoutes);
 
 app.route('/api/v1', api);
 
