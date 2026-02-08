@@ -36,6 +36,9 @@
 /* Content Header (e.g., edit mode banner) */
 .contentHeader {
   flex-shrink: 0;
+  position: sticky;
+  top: 64px; /* Below app header */
+  z-index: 10;
 }
 
 .mainContent {

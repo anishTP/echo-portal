@@ -2,9 +2,6 @@
 /* Header banner for Library edit mode */
 
 .header {
-  position: sticky;
-  top: 0;
-  z-index: 10;
   background: var(--accent-2);
   border-bottom: 1px solid var(--accent-6);
   padding: var(--space-3) var(--space-4);

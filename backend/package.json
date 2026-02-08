@@ -17,6 +17,7 @@
     "lint": "eslint src/"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.74.0",
     "@echo-portal/shared": "workspace:*",
     "@hono/node-server": "^1.14.1",
     "@hono/zod-openapi": "^0.19.3",
@@ -26,6 +27,7 @@
     "drizzle-orm": "^0.44.0",
     "hono": "^4.8.2",
     "isomorphic-git": "^1.28.2",
+    "openai": "^6.18.0",
     "postgres": "^3.4.5",
     "uuid": "^11.0.5",
     "xstate": "^5.19.2",

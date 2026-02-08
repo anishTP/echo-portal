@@ -22,6 +22,8 @@ import { useContentComparison, useContentComparisonStats } from '../hooks/useCon
 import { useBranchReviews, useApproveReview, useRequestChanges } from '../hooks/useReview';
 import { useBranchComments } from '../hooks/useBranchComments';
 import { useBranchStore } from '../stores/branchStore';
+import { useAIStore } from '../stores/aiStore';
+import { AIChatPanel } from '../components/ai/AIChatPanel';
 import { useAuth } from '../context/AuthContext';
 import type { ContentSummary } from '@echo-portal/shared';
 import type { TextSelection } from '../hooks/useTextSelection';
@@ -38,6 +40,9 @@ export default function Library() {
   // Get current branch from store (set by BranchSelector)
   const currentBranch = useBranchStore((s) => s.currentBranch);
   const isInBranchMode = currentBranch !== null;
+
+  // AI store for chat panel toggle
+  const aiStore = useAIStore();
 
   // State for selected content in branch mode (uses content ID, not slug)
   const [selectedBranchContentId, setSelectedBranchContentId] = useState<string | null>(null);
@@ -590,6 +595,7 @@ export default function Library() {
   const contentForView = selectedContent;
 
   return (
+  <>
     <DocumentationLayout
       fullWidth={isReviewMode && reviewDisplayMode === 'split'}
       sidebar={
@@ -662,6 +668,10 @@ export default function Library() {
             isSaving={autoSave.state.status === 'saving'}
             isDeleting={deleteMutation.isPending}
             deleteError={deleteError}
+            onToggleAI={() => aiStore.togglePanel()}
+            aiPanelOpen={aiStore.panelOpen}
+            onUndo={() => inlineEditViewRef.current?.undo()}
+            onRedo={() => inlineEditViewRef.current?.redo()}
           />
         ) : isReviewMode ? (
           <ReviewModeHeader
@@ -745,5 +755,22 @@ export default function Library() {
         </>
       )}
     </DocumentationLayout>
+
+    {/* AI Chat Panel — fixed sidebar, rendered outside layout flow */}
+    {isEditMode && branchId && aiStore.panelOpen && (
+      <div className="fixed right-0 bottom-0 z-30" style={{ top: 64, boxShadow: 'var(--shadow-4)' }}>
+        <AIChatPanel
+          branchId={branchId}
+          contentId={contentIdParam}
+          onContentAccepted={(aiContent) => {
+            if (inlineEditViewRef.current) {
+              const existing = inlineEditViewRef.current.getContent().body;
+              inlineEditViewRef.current.setBody(existing + '\n\n' + aiContent);
+            }
+          }}
+        />
+      </div>
+    )}
+  </>
   );
 }

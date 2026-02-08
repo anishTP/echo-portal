@@ -31,11 +31,12 @@ export function AIChatMessage({
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-3`}>
       <div
-        className={`max-w-[80%] rounded-lg px-4 py-2 ${
+        className="max-w-[80%] rounded-lg px-4 py-2"
+        style={
           isUser
-            ? 'bg-blue-600 text-white'
-            : 'bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
-        }`}
+            ? { background: 'var(--accent-9)', color: 'var(--accent-contrast)' }
+            : { background: 'var(--gray-3)', border: '1px solid var(--gray-6)', color: 'var(--gray-12)' }
+        }
       >
         {isUser ? (
           <p className="text-sm whitespace-pre-wrap">{content}</p>
@@ -45,7 +46,7 @@ export function AIChatMessage({
 
         {/* Action buttons for pending AI content */}
         {!isUser && isPending && !isStreaming && (
-          <div className="flex gap-2 mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+          <div className="flex gap-2 mt-2 pt-2" style={{ borderTop: '1px solid var(--gray-6)' }}>
             {onAccept && (
               <button
                 onClick={onAccept}
@@ -75,7 +76,7 @@ export function AIChatMessage({
 
         {/* Status indicator */}
         {!isUser && status && status !== 'pending' && !isStreaming && (
-          <div className="mt-1 text-xs text-muted-foreground capitalize">{status}</div>
+          <div className="mt-1 text-xs capitalize" style={{ color: 'var(--gray-9)' }}>{status}</div>
         )}
       </div>
     </div>

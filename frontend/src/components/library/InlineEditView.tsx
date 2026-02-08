@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
-import { InlineEditor } from '../editor/InlineEditor';
+import React, { useCallback, useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
+import { InlineEditor, type InlineEditorHandle } from '../editor/InlineEditor';
 import { EditorStatusBar } from '../editor/EditorStatusBar';
 import { InlineMetadataHeader } from './InlineMetadataHeader';
 import { InlineTagsEditor } from './InlineTagsEditor';
@@ -7,6 +7,7 @@ import { useAutoSave, type DraftContent } from '../../hooks/useAutoSave';
 import { useEditSession } from '../../hooks/useEditSession';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { useAuth } from '../../hooks/useAuth';
+import { useAIAssist } from '../../hooks/useAIAssist';
 import type { ContentDetail } from '@echo-portal/shared';
 import styles from './InlineEditView.module.css';
 
@@ -17,6 +18,12 @@ export interface InlineEditViewHandle {
   saveNow: () => Promise<void>;
   /** Cancel any pending debounced saves */
   cancelPendingSave: () => void;
+  /** Replace the editor body content (forces editor remount) */
+  setBody: (body: string) => void;
+  /** Undo last editor action */
+  undo: () => void;
+  /** Redo last undone action */
+  redo: () => void;
 }
 
 export interface InlineEditViewProps {
@@ -70,6 +77,7 @@ const InlineEditViewComponent = forwardRef<InlineEditViewHandle, InlineEditViewP
   const { user } = useAuth();
   const { isOnline } = useOnlineStatus();
   const editorRef = useRef<HTMLDivElement>(null);
+  const milkdownRef = useRef<InlineEditorHandle | null>(null);
 
   // Use ref to track content without triggering re-renders
   // This prevents any state updates from causing focus loss
@@ -91,6 +99,13 @@ const InlineEditViewComponent = forwardRef<InlineEditViewHandle, InlineEditViewP
 
   // Initial value for the editor (only used on mount)
   const initialBody = useRef(content.currentVersion?.body || '');
+
+  // Version counter — incrementing forces InlineEditor to remount with new content
+  const [editorVersion, setEditorVersion] = useState(0);
+
+  // AI transform state (007-ai-assisted-authoring)
+  const [aiTransformOriginalText, setAITransformOriginalText] = useState<string | null>(null);
+  const ai = useAIAssist();
 
   // Self-contained auto-save - no callbacks to parent, no state sync issues
   const { state: autoSaveState, save: autoSaveFn, saveNow, loadDraft, cancel: cancelAutoSave } = useAutoSave({
@@ -160,12 +175,84 @@ const InlineEditViewComponent = forwardRef<InlineEditViewHandle, InlineEditViewP
     cancelPendingSave: () => {
       cancelAutoSave();
     },
-  }), [saveNow, cancelAutoSave]);
+    setBody: (body: string) => {
+      contentRef.current = { ...contentRef.current, body };
+      initialBody.current = body;
+      setEditorVersion((v) => v + 1);
+      autoSaveFn(contentRef.current);
+    },
+    undo: () => milkdownRef.current?.undo(),
+    redo: () => milkdownRef.current?.redo(),
+  }), [saveNow, cancelAutoSave, autoSaveFn]);
 
   // Record activity on editor focus
   const handleEditorFocus = useCallback(() => {
     editSession.recordActivity();
   }, [editSession]);
+
+  // AI transform handler (007-ai-assisted-authoring)
+  const handleAITransform = useCallback(
+    async (selectedText: string, instruction: string) => {
+      setAITransformOriginalText(selectedText);
+      await ai.transform({
+        branchId,
+        contentId: content.id,
+        selectedText,
+        instruction,
+      });
+    },
+    [branchId, content.id, ai]
+  );
+
+  const handleAITransformAccept = useCallback(async () => {
+    if (!ai.streamRequestId) return;
+    // Capture content before resetting stream
+    const replacement = ai.streamContent;
+    // Compute full body with the replacement integrated BEFORE calling accept,
+    // so the backend saves the complete article — not just the snippet
+    const newBody = (aiTransformOriginalText && replacement)
+      ? contentRef.current.body.replace(aiTransformOriginalText, replacement)
+      : contentRef.current.body;
+    await ai.accept(ai.streamRequestId, {
+      contentId: content.id,
+      editedContent: newBody,
+      changeDescription: 'AI-transformed content',
+    });
+    if (aiTransformOriginalText && replacement) {
+      contentRef.current = { ...contentRef.current, body: newBody };
+      initialBody.current = newBody;
+      setEditorVersion((v) => v + 1);
+      autoSaveFn(contentRef.current);
+    }
+    setAITransformOriginalText(null);
+    ai.resetStream();
+  }, [ai, content.id, aiTransformOriginalText, autoSaveFn]);
+
+  const handleAITransformReject = useCallback(async () => {
+    if (ai.streamRequestId) {
+      await ai.reject(ai.streamRequestId);
+    }
+    setAITransformOriginalText(null);
+    ai.resetStream();
+  }, [ai]);
+
+  const handleAITransformCancel = useCallback(async () => {
+    if (ai.streamRequestId) {
+      await ai.cancel(ai.streamRequestId);
+    }
+    setAITransformOriginalText(null);
+  }, [ai]);
+
+  const aiPreview = aiTransformOriginalText
+    ? {
+        content: ai.streamContent,
+        isStreaming: ai.streamStatus === 'streaming',
+        originalText: aiTransformOriginalText,
+        onAccept: handleAITransformAccept,
+        onReject: handleAITransformReject,
+        onCancel: handleAITransformCancel,
+      }
+    : null;
 
   // Stop keyboard event propagation to prevent Vimium and other extensions from capturing keystrokes
   const stopKeyPropagation = useCallback((e: React.KeyboardEvent) => {
@@ -194,9 +281,13 @@ const InlineEditViewComponent = forwardRef<InlineEditViewHandle, InlineEditViewP
         {/* Editor for body content */}
         <div className={styles.editorWrapper}>
           <InlineEditor
+            key={editorVersion}
             defaultValue={initialBody.current}
             onChange={handleBodyChange}
             onFocus={handleEditorFocus}
+            onAITransform={handleAITransform}
+            aiPreview={aiPreview}
+            editorRef={milkdownRef}
           />
         </div>
 

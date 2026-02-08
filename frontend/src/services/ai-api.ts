@@ -56,4 +56,11 @@ export const aiApi = {
     api.get<{ request: AIRequestDetail }>(
       `${AI_BASE}/requests/${requestId}`
     ),
+
+  /** Force-discard all pending requests for user+branch (reset stuck state) */
+  discardPending: (branchId: string) =>
+    api.post<{ success: boolean; discarded: number }>(
+      `${AI_BASE}/discard-pending`,
+      { branchId }
+    ),
 };

@@ -12,6 +12,7 @@ const PublishConfirm = lazy(() => import('../pages/PublishConfirm'));
 const AuthCallback = lazy(() => import('../pages/AuthCallback'));
 const AuditLog = lazy(() => import('../pages/AuditLog'));
 const UserManagement = lazy(() => import('../pages/UserManagement'));
+const AIAdmin = lazy(() => import('../pages/AIAdmin'));
 
 // Loading fallback
 function LoadingFallback() {
@@ -91,6 +92,11 @@ const router = createBrowserRouter([
       {
         path: 'users',
         element: <UserManagement />,
+      },
+      // AI administration routes (007-ai-assisted-authoring)
+      {
+        path: 'admin/ai',
+        element: <AIAdmin />,
       },
     ],
   },

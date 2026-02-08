@@ -20,10 +20,27 @@ import { comparisonRoutes } from './routes/comparison.js';
 import { aiRoutes } from './routes/ai.js';
 import { aiConfigRoutes } from './routes/ai-config.js';
 import { EchoProvider } from '../services/ai/providers/echo-provider.js';
+import { AnthropicProvider } from '../services/ai/providers/anthropic-provider.js';
+import { OpenAIProvider } from '../services/ai/providers/openai-provider.js';
 import { providerRegistry } from '../services/ai/provider-registry.js';
 
-// Register default AI provider
-providerRegistry.register(new EchoProvider());
+// Register AI providers — first configured provider wins as default
+if (process.env.OPENAI_API_KEY) {
+  providerRegistry.register(new OpenAIProvider({
+    apiKey: process.env.OPENAI_API_KEY,
+    model: process.env.OPENAI_MODEL || undefined,
+  }));
+  console.log('[AI] OpenAI provider registered (model: %s)', process.env.OPENAI_MODEL || 'gpt-4o');
+} else if (process.env.ANTHROPIC_API_KEY) {
+  providerRegistry.register(new AnthropicProvider({
+    apiKey: process.env.ANTHROPIC_API_KEY,
+    model: process.env.ANTHROPIC_MODEL || undefined,
+  }));
+  console.log('[AI] Anthropic provider registered (model: %s)', process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514');
+} else {
+  providerRegistry.register(new EchoProvider());
+  console.log('[AI] Echo (dev) provider registered — set OPENAI_API_KEY or ANTHROPIC_API_KEY for real AI');
+}
 
 // Create Hono app
 const app = new Hono();

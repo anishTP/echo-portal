@@ -58,10 +58,19 @@ export function AIContextMenu({ position, selectedText, onTransform, onClose }: 
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-48"
-      style={{ left: position.x, top: position.y }}
+      className="fixed z-50 rounded-lg py-1 min-w-48"
+      style={{
+        left: position.x,
+        top: position.y,
+        background: 'var(--color-background)',
+        border: '1px solid var(--gray-6)',
+        boxShadow: 'var(--shadow-4)',
+      }}
     >
-      <div className="px-3 py-1.5 text-xs text-muted-foreground border-b border-gray-200 dark:border-gray-700">
+      <div
+        className="px-3 py-1.5 text-xs"
+        style={{ color: 'var(--gray-9)', borderBottom: '1px solid var(--gray-6)' }}
+      >
         AI Transform ({selectedText.length} chars selected)
       </div>
 
@@ -69,18 +78,24 @@ export function AIContextMenu({ position, selectedText, onTransform, onClose }: 
         <button
           key={action.instruction}
           onClick={() => onTransform(action.instruction)}
-          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex justify-between items-center"
+          className="w-full text-left px-3 py-2 text-sm transition-colors flex justify-between items-center"
+          style={{ color: 'var(--gray-12)' }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--gray-3)')}
+          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
         >
           <span>{action.label}</span>
-          <span className="text-xs text-muted-foreground">{action.description}</span>
+          <span className="text-xs" style={{ color: 'var(--gray-9)' }}>{action.description}</span>
         </button>
       ))}
 
-      <div className="border-t border-gray-200 dark:border-gray-700">
+      <div style={{ borderTop: '1px solid var(--gray-6)' }}>
         {!showCustom ? (
           <button
             onClick={() => setShowCustom(true)}
-            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-blue-600"
+            className="w-full text-left px-3 py-2 text-sm transition-colors"
+            style={{ color: 'var(--accent-11)' }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--gray-3)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
           >
             Custom instruction...
           </button>
@@ -91,7 +106,12 @@ export function AIContextMenu({ position, selectedText, onTransform, onClose }: 
               value={customInstruction}
               onChange={(e) => setCustomInstruction(e.target.value)}
               placeholder="e.g., make it more formal"
-              className="flex-1 text-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="flex-1 text-sm px-2 py-1 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+              style={{
+                background: 'var(--color-surface)',
+                border: '1px solid var(--gray-6)',
+                color: 'var(--gray-12)',
+              }}
             />
             <button
               type="submit"

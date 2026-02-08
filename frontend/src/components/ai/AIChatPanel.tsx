@@ -4,6 +4,7 @@ import { useAIAssist } from '../../hooks/useAIAssist.js';
 import { useAIConversation } from '../../hooks/useAIConversation.js';
 import { useAIStore } from '../../stores/aiStore.js';
 import { api } from '../../services/api.js';
+import { aiApi } from '../../services/ai-api.js';
 
 interface AIChatPanelProps {
   branchId: string;
@@ -56,12 +57,19 @@ export function AIChatPanel({ branchId, contentId, onContentAccepted }: AIChatPa
   // Show disabled state when AI is off
   if (configChecked && !aiEnabled) {
     return (
-      <div className="flex flex-col h-full border-l border-gray-200 dark:border-gray-700 w-96 bg-white dark:bg-gray-900">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="font-semibold text-sm">AI Assistant</h3>
+      <div
+        className="flex flex-col h-full w-96"
+        style={{ background: 'var(--color-background)', borderLeft: '1px solid var(--gray-6)' }}
+      >
+        <div
+          className="flex items-center justify-between px-4 py-3"
+          style={{ borderBottom: '1px solid var(--gray-6)' }}
+        >
+          <h3 className="font-semibold text-sm" style={{ color: 'var(--gray-12)' }}>AI Assistant</h3>
           <button
             onClick={() => store.setPanelOpen(false)}
-            className="text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="text-xs px-2 py-1 rounded"
+            style={{ color: 'var(--gray-11)' }}
             title="Close panel"
           >
             ✕
@@ -69,9 +77,9 @@ export function AIChatPanel({ branchId, contentId, onContentAccepted }: AIChatPa
         </div>
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="text-center">
-            <div className="text-gray-400 text-4xl mb-3">🤖</div>
-            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">AI Assistant is Disabled</p>
-            <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+            <p className="text-4xl mb-3">🤖</p>
+            <p className="text-sm font-medium" style={{ color: 'var(--gray-11)' }}>AI Assistant is Disabled</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--gray-9)' }}>
               AI assistance has been disabled by your administrator.
               Contact an admin to enable AI features.
             </p>
@@ -101,16 +109,24 @@ export function AIChatPanel({ branchId, contentId, onContentAccepted }: AIChatPa
 
   const handleAccept = async (requestId: string) => {
     if (!contentId) return;
+    // Strip code fences and conversational preamble/postamble from AI output
+    let acceptedContent = ai.streamContent;
+    const fenceMatch = acceptedContent.match(/```(?:markdown|md)?\n([\s\S]*?)```/);
+    if (fenceMatch) {
+      acceptedContent = fenceMatch[1].trim();
+    }
     await ai.accept(requestId, {
       contentId,
       changeDescription: 'AI-generated content',
     });
-    onContentAccepted?.(ai.streamContent);
+    onContentAccepted?.(acceptedContent);
+    ai.resetStream();
     await conv.refreshConversation();
   };
 
   const handleReject = async (requestId: string) => {
     await ai.reject(requestId);
+    ai.resetStream();
     await conv.refreshConversation();
   };
 
@@ -121,31 +137,44 @@ export function AIChatPanel({ branchId, contentId, onContentAccepted }: AIChatPa
   };
 
   const handleNewConversation = async () => {
+    // Discard any stale pending requests (handles server restart / stale state)
+    await aiApi.discardPending(branchId).catch(() => {});
     await conv.clearConversation();
     ai.resetStream();
   };
 
   return (
-    <div className="flex flex-col h-full border-l border-gray-200 dark:border-gray-700 w-96 bg-white dark:bg-gray-900">
+    <div
+      className="flex flex-col h-full w-96"
+      style={{
+        background: 'var(--color-background)',
+        borderLeft: '1px solid var(--gray-6)',
+      }}
+    >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+      <div
+        className="flex items-center justify-between px-4 py-3"
+        style={{ borderBottom: '1px solid var(--gray-6)' }}
+      >
         <div className="flex items-center gap-2">
-          <h3 className="font-semibold text-sm">AI Assistant</h3>
-          <span className="text-xs text-muted-foreground">
+          <h3 className="font-semibold text-sm" style={{ color: 'var(--gray-12)' }}>AI Assistant</h3>
+          <span className="text-xs" style={{ color: 'var(--gray-9)' }}>
             {conv.turnCount}/{conv.maxTurns} turns
           </span>
         </div>
         <div className="flex gap-1">
           <button
             onClick={handleNewConversation}
-            className="text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="text-xs px-2 py-1 rounded"
+            style={{ color: 'var(--gray-11)' }}
             title="Start new conversation"
           >
             New
           </button>
           <button
             onClick={() => store.setPanelOpen(false)}
-            className="text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="text-xs px-2 py-1 rounded"
+            style={{ color: 'var(--gray-11)' }}
             title="Close panel"
           >
             ✕
@@ -189,7 +218,7 @@ export function AIChatPanel({ branchId, contentId, onContentAccepted }: AIChatPa
 
         {/* Error display */}
         {ai.streamStatus === 'error' && ai.streamError && (
-          <div className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 rounded p-2">
+          <div className="text-sm rounded p-2" style={{ color: 'var(--red-11)', background: 'var(--red-3)' }}>
             {ai.streamError.message}
           </div>
         )}
@@ -198,7 +227,7 @@ export function AIChatPanel({ branchId, contentId, onContentAccepted }: AIChatPa
       </div>
 
       {/* Input area */}
-      <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200 dark:border-gray-700">
+      <form onSubmit={handleSubmit} className="p-4" style={{ borderTop: '1px solid var(--gray-6)' }}>
         {/* Turn limit warning */}
         {!conv.hasRemainingTurns && (
           <div className="text-xs text-amber-600 mb-2">
@@ -218,7 +247,12 @@ export function AIChatPanel({ branchId, contentId, onContentAccepted }: AIChatPa
             }}
             placeholder={hasPending ? 'Resolve pending content first...' : 'Ask AI to generate content...'}
             disabled={hasPending || !conv.hasRemainingTurns}
-            className="flex-1 resize-none rounded border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            className="flex-1 resize-none rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            style={{
+              background: 'var(--color-surface)',
+              border: '1px solid var(--gray-6)',
+              color: 'var(--gray-12)',
+            }}
             rows={2}
           />
           <div className="flex flex-col gap-1">

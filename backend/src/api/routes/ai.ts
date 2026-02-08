@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { zValidator } from '@hono/zod-validator';
-import { eq } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { requireAuth, type AuthEnv } from '../middleware/auth.js';
 import { aiRateLimitMiddleware } from '../middleware/ai-rate-limit.js';
 import { aiService, AIServiceError } from '../../services/ai/ai-service.js';
@@ -306,6 +306,30 @@ aiRoutes.post('/requests/:requestId/cancel', requireAuth, async (c) => {
   } catch (error) {
     return handleAIError(c, error);
   }
+});
+
+// Force-discard all pending/generating requests for user+branch (reset stuck state)
+aiRoutes.post('/discard-pending', requireAuth, async (c) => {
+  const user = c.get('user')!;
+  const { branchId } = await c.req.json<{ branchId: string }>();
+
+  if (!branchId) {
+    return c.json({ error: { code: 'VALIDATION_ERROR', message: 'branchId required' } }, 400);
+  }
+
+  const now = new Date();
+  const result = await db
+    .update(schema.aiRequests)
+    .set({ status: 'discarded', resolvedAt: now, resolvedBy: 'system' })
+    .where(
+      and(
+        eq(schema.aiRequests.userId, user.id),
+        eq(schema.aiRequests.branchId, branchId),
+        inArray(schema.aiRequests.status, ['pending', 'generating'])
+      )
+    );
+
+  return c.json({ success: true });
 });
 
 // ==========================================

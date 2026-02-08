@@ -1,6 +1,6 @@
 import { db } from '../../db/index.js';
 import { aiRequests } from '../../db/schema/ai-requests.js';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, lt } from 'drizzle-orm';
 import { AI_DEFAULTS } from '@echo-portal/shared';
 import type { AIRequest } from '../../db/schema/ai-requests.js';
 import type { AIStreamChunk, ConversationTurn } from './provider-interface.js';
@@ -356,6 +356,21 @@ export class AIService {
   // --- Private helpers ---
 
   private async ensureNoPending(userId: string, branchId: string): Promise<void> {
+    // Auto-discard stale pending/generating requests (older than 30 min or expired)
+    const now = new Date();
+    const staleThreshold = new Date(now.getTime() - 30 * 60 * 1000);
+    await db
+      .update(aiRequests)
+      .set({ status: 'discarded', resolvedAt: now, resolvedBy: 'system' })
+      .where(
+        and(
+          eq(aiRequests.userId, userId),
+          eq(aiRequests.branchId, branchId),
+          inArray(aiRequests.status, ['pending', 'generating']),
+          lt(aiRequests.createdAt, staleThreshold)
+        )
+      );
+
     const pending = await db
       .select({ id: aiRequests.id })
       .from(aiRequests)

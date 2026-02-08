@@ -6,9 +6,10 @@ import { ThemeToggle } from './ThemeToggle';
 import { BranchSelector } from './BranchSelector';
 
 export function AppHeader() {
-  const { user, isAuthenticated, isLoading, loginDev } = useAuth();
+  const { user, isAuthenticated, isLoading, loginDev, hasRole } = useAuth();
   const isDev = import.meta.env.DEV;
   const location = useLocation();
+  const isAdmin = hasRole?.('administrator') ?? false;
 
   const isActive = (path: string) => {
     if (path === '/') {
@@ -46,6 +47,15 @@ export function AppHeader() {
                   style={{ color: isActive('/dashboard') ? 'var(--accent-11)' : 'var(--gray-11)' }}
                 >
                   Dashboard
+                </Link>
+              )}
+              {isAuthenticated && isAdmin && (
+                <Link
+                  to="/admin/ai"
+                  className="text-sm font-medium transition-colors"
+                  style={{ color: isActive('/admin/ai') ? 'var(--accent-11)' : 'var(--gray-11)' }}
+                >
+                  AI Admin
                 </Link>
               )}
             </nav>

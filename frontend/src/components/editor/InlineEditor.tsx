@@ -1,11 +1,11 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react';
+import { Milkdown, MilkdownProvider, useEditor, useInstance } from '@milkdown/react';
 import { ProsemirrorAdapterProvider } from '@prosemirror-adapter/react';
-import { Editor, rootCtx, defaultValueCtx } from '@milkdown/core';
+import { Editor, rootCtx, defaultValueCtx, commandsCtx } from '@milkdown/core';
 import { commonmark } from '@milkdown/preset-commonmark';
 import { gfm } from '@milkdown/preset-gfm';
 import { nord } from '@milkdown/theme-nord';
-import { history } from '@milkdown/plugin-history';
+import { history, undoCommand, redoCommand } from '@milkdown/plugin-history';
 import { clipboard } from '@milkdown/plugin-clipboard';
 import { listener, listenerCtx } from '@milkdown/plugin-listener';
 import { upload, uploadConfig } from '@milkdown/plugin-upload';
@@ -84,24 +84,57 @@ function MilkdownEditor({
   return <Milkdown />;
 }
 
+export interface InlineEditorHandle {
+  undo: () => void;
+  redo: () => void;
+}
+
+/** Bridge component that captures the editor instance and exposes undo/redo */
+function EditorBridge({ editorRef }: { editorRef: React.MutableRefObject<InlineEditorHandle | null> }) {
+  const [loading, getEditor] = useInstance();
+
+  // Populate ref once editor is ready
+  React.useEffect(() => {
+    if (loading) return;
+    editorRef.current = {
+      undo: () => {
+        const editor = getEditor();
+        editor.action((ctx) => ctx.get(commandsCtx).call(undoCommand.key));
+      },
+      redo: () => {
+        const editor = getEditor();
+        editor.action((ctx) => ctx.get(commandsCtx).call(redoCommand.key));
+      },
+    };
+    return () => { editorRef.current = null; };
+  }, [loading, getEditor, editorRef]);
+
+  return null;
+}
+
 /**
  * WYSIWYG inline markdown editor using Milkdown.
  * Provides Notion/Medium-style editing with live formatting.
  * Supports AI context menu for text transformation (007-ai-assisted-authoring).
  */
-export function InlineEditor(props: InlineEditorProps) {
-  const { className = '', onAITransform, aiPreview } = props;
+export function InlineEditor(props: InlineEditorProps & { editorRef?: React.MutableRefObject<InlineEditorHandle | null> }) {
+  const { className = '', onAITransform, aiPreview, editorRef } = props;
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
     text: string;
   } | null>(null);
+  // Store selection position for the AI preview popover
+  const [transformPosition, setTransformPosition] = useState<{ top: number; left: number } | null>(null);
 
   // Stop keyboard event propagation to prevent Vimium and other browser extensions
   // from capturing keystrokes meant for the editor
   const stopKeyPropagation = useCallback((e: React.KeyboardEvent) => {
     e.stopPropagation();
   }, []);
+
+  // Store the selection rect when the context menu opens
+  const selectionRectRef = useRef<DOMRect | null>(null);
 
   // Handle right-click context menu for AI transform (FR-014)
   const handleContextMenu = useCallback(
@@ -112,6 +145,10 @@ export function InlineEditor(props: InlineEditorProps) {
       const selectedText = selection?.toString()?.trim();
       if (!selectedText) return;
 
+      // Capture the selection bounding rect for later positioning
+      const range = selection?.getRangeAt(0);
+      selectionRectRef.current = range?.getBoundingClientRect() ?? null;
+
       e.preventDefault();
       setContextMenu({ x: e.clientX, y: e.clientY, text: selectedText });
     },
@@ -121,12 +158,27 @@ export function InlineEditor(props: InlineEditorProps) {
   const handleTransform = useCallback(
     (instruction: string) => {
       if (contextMenu?.text && onAITransform) {
+        // Save position from the selection rect captured on right-click
+        if (selectionRectRef.current) {
+          const rect = selectionRectRef.current;
+          setTransformPosition({
+            top: Math.min(rect.bottom + 8, window.innerHeight - 250),
+            left: Math.max(16, Math.min(rect.left, window.innerWidth - 450)),
+          });
+        }
         onAITransform(contextMenu.text, instruction);
       }
       setContextMenu(null);
     },
     [contextMenu, onAITransform]
   );
+
+  // Clear transform position when AI preview is dismissed
+  React.useEffect(() => {
+    if (!aiPreview) {
+      setTransformPosition(null);
+    }
+  }, [aiPreview]);
 
   return (
     <div
@@ -139,6 +191,7 @@ export function InlineEditor(props: InlineEditorProps) {
     >
       <MilkdownProvider>
         <ProsemirrorAdapterProvider>
+          {editorRef && <EditorBridge editorRef={editorRef} />}
           <MilkdownEditor {...props} />
         </ProsemirrorAdapterProvider>
       </MilkdownProvider>
@@ -152,6 +205,7 @@ export function InlineEditor(props: InlineEditorProps) {
           onAccept={aiPreview.onAccept}
           onReject={aiPreview.onReject}
           onCancel={aiPreview.onCancel}
+          position={transformPosition}
         />
       )}
 

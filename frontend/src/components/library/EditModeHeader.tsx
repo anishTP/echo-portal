@@ -7,6 +7,8 @@ import {
   ExclamationTriangleIcon,
   TrashIcon,
   DownloadIcon,
+  MagicWandIcon,
+  ResetIcon,
 } from '@radix-ui/react-icons';
 import { DeleteContentDialog } from '../content/DeleteContentDialog';
 import type { SaveStatus } from '../../hooks/useAutoSave';
@@ -35,6 +37,14 @@ export interface EditModeHeaderProps {
   isDeleting?: boolean;
   /** Delete error message */
   deleteError?: string | null;
+  /** AI panel toggle callback */
+  onToggleAI?: () => void;
+  /** Whether AI panel is currently open */
+  aiPanelOpen?: boolean;
+  /** Undo callback */
+  onUndo?: () => void;
+  /** Redo callback */
+  onRedo?: () => void;
 }
 
 /**
@@ -53,6 +63,10 @@ export function EditModeHeader({
   isSaving = false,
   isDeleting = false,
   deleteError = null,
+  onToggleAI,
+  aiPanelOpen = false,
+  onUndo,
+  onRedo,
 }: EditModeHeaderProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -91,6 +105,48 @@ export function EditModeHeader({
         </div>
 
         <div className={styles.actions}>
+          {onUndo && (
+            <Button
+              variant="soft"
+              size="2"
+              onClick={onUndo}
+              disabled={isSaving}
+              title="Undo (Ctrl+Z)"
+              aria-label="Undo"
+            >
+              <ResetIcon />
+              Undo
+            </Button>
+          )}
+
+          {onRedo && (
+            <Button
+              variant="soft"
+              size="2"
+              onClick={onRedo}
+              disabled={isSaving}
+              title="Redo (Ctrl+Shift+Z)"
+              aria-label="Redo"
+            >
+              <ResetIcon style={{ transform: 'scaleX(-1)' }} />
+              Redo
+            </Button>
+          )}
+
+          {onToggleAI && (
+            <Button
+              variant={aiPanelOpen ? 'solid' : 'soft'}
+              size="2"
+              onClick={onToggleAI}
+              disabled={isSaving}
+              title="AI Assistant"
+              aria-label="Toggle AI Assistant"
+            >
+              <MagicWandIcon />
+              AI
+            </Button>
+          )}
+
           {onDelete && (
             <Button
               variant="soft"

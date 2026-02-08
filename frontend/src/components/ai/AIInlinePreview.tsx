@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { AIStreamDisplay } from './AIStreamDisplay.js';
 
 interface AIInlinePreviewProps {
@@ -13,13 +14,15 @@ interface AIInlinePreviewProps {
   onReject: () => void;
   /** Cancel in-progress streaming */
   onCancel?: () => void;
+  /** Fixed position for the popover (from selection rect) */
+  position?: { top: number; left: number } | null;
 }
 
 /**
- * AIInlinePreview — inline replacement with Accept/Reject toolbar (FR-014)
+ * AIInlinePreview — floating popover with Accept/Reject toolbar (FR-014)
  *
- * Shows transformed text with a visual highlight indicating pending AI content.
- * Floating toolbar offers Accept/Reject. Rejecting restores original text.
+ * Shows transformed text near the selected text with a visual highlight.
+ * Positioned like the review CommentPopover using fixed positioning.
  */
 export function AIInlinePreview({
   content,
@@ -28,21 +31,71 @@ export function AIInlinePreview({
   onAccept,
   onReject,
   onCancel,
+  position,
 }: AIInlinePreviewProps) {
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  // Adjust position if popover overflows viewport
+  useEffect(() => {
+    const el = popoverRef.current;
+    if (!el || !position) return;
+
+    const rect = el.getBoundingClientRect();
+    const padding = 16;
+
+    // Vertical: keep within viewport
+    let top = position.top;
+    if (top + rect.height > window.innerHeight - padding) {
+      top = Math.max(padding, position.top - rect.height - 16);
+    }
+    el.style.top = `${top}px`;
+
+    // Horizontal: keep within viewport
+    let left = position.left;
+    if (left + rect.width > window.innerWidth - padding) {
+      left = Math.max(padding, window.innerWidth - rect.width - padding);
+    }
+    el.style.left = `${left}px`;
+  }, [position, content]);
+
+  const style: React.CSSProperties = position
+    ? {
+        position: 'fixed',
+        top: position.top,
+        left: position.left,
+        zIndex: 50,
+        maxWidth: 440,
+        minWidth: 300,
+      }
+    : {};
+
   return (
-    <div className="ai-inline-preview relative border-2 border-blue-400 rounded bg-blue-50 dark:bg-blue-900/20 p-2 my-1">
+    <div
+      ref={popoverRef}
+      className="ai-inline-preview rounded-lg p-3"
+      style={{
+        ...style,
+        background: 'var(--color-background)',
+        border: '1px solid var(--accent-8)',
+        boxShadow: 'var(--shadow-4)',
+        color: 'var(--gray-12)',
+      }}
+    >
       {/* AI content indicator */}
-      <div className="absolute -top-3 left-2 bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">
+      <div
+        className="inline-block text-white text-xs px-2 py-0.5 rounded-full mb-2"
+        style={{ background: 'var(--accent-9)' }}
+      >
         AI Suggestion
       </div>
 
       {/* Content display */}
-      <div className="mt-2">
+      <div className="text-sm max-h-48 overflow-y-auto">
         <AIStreamDisplay content={content} isStreaming={isStreaming} />
       </div>
 
-      {/* Floating toolbar */}
-      <div className="flex items-center gap-2 mt-2 pt-2 border-t border-blue-300 dark:border-blue-700">
+      {/* Action toolbar */}
+      <div className="flex items-center gap-2 mt-2 pt-2" style={{ borderTop: '1px solid var(--gray-6)' }}>
         {isStreaming ? (
           <button
             onClick={onCancel}
@@ -64,8 +117,8 @@ export function AIInlinePreview({
             >
               Reject
             </button>
-            <span className="text-xs text-muted-foreground ml-auto">
-              Original: {originalText.length} → AI: {content.length} chars
+            <span className="text-xs ml-auto" style={{ color: 'var(--gray-9)' }}>
+              {originalText.length} → {content.length} chars
             </span>
           </>
         )}
