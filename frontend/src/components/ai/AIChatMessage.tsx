@@ -24,6 +24,7 @@ interface AIChatMessageProps {
   content: string;
   isStreaming?: boolean;
   status?: string;
+  selectionContext?: string;
   onAccept?: () => void;
   onReject?: () => void;
   onEdit?: () => void;
@@ -40,6 +41,7 @@ export function AIChatMessage({
   content,
   isStreaming = false,
   status,
+  selectionContext,
   onAccept,
   onReject,
   onEdit,
@@ -57,6 +59,14 @@ export function AIChatMessage({
             : { background: 'var(--gray-3)', border: '1px solid var(--gray-6)', color: 'var(--gray-12)' }
         }
       >
+        {isUser && selectionContext && (
+          <div
+            className="text-xs mb-1.5 pb-1.5 truncate"
+            style={{ borderBottom: '1px solid rgba(255,255,255,0.15)', opacity: 0.8 }}
+          >
+            Selection: {selectionContext}
+          </div>
+        )}
         {isUser ? (
           <UserMessageContent content={content} />
         ) : (

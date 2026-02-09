@@ -39,6 +39,7 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
   const [configChecked, setConfigChecked] = useState(false);
   const [selectionPreview, setSelectionPreview] = useState<string | null>(null);
   const [capturedSelectedText, setCapturedSelectedText] = useState<string | null>(null);
+  const [promptSelectionLabel, setPromptSelectionLabel] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const store = useAIStore();
   const ai = useAIAssist();
@@ -123,7 +124,6 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
     const submittedPrompt = prompt;
     setPrompt('');
     setCurrentPrompt(submittedPrompt);
-    setSelectionPreview(null);
 
     const { mode, prompt: cleanPrompt } = parseSlashCommand(submittedPrompt);
     setCurrentMode(mode);
@@ -131,6 +131,15 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
     // Capture editor selection context at submit time
     const selCtx = getSelectionContext?.() ?? { selectedText: null, cursorContext: null };
     setCapturedSelectedText(selCtx.selectedText);
+
+    // Store truncated selection label for display on the user message
+    if (selCtx.selectedText) {
+      const label = selCtx.selectedText.slice(0, 80) + (selCtx.selectedText.length > 80 ? '...' : '');
+      setPromptSelectionLabel(label);
+    } else {
+      setPromptSelectionLabel(null);
+    }
+    setSelectionPreview(null);
 
     await ai.generate({
       branchId,
@@ -164,6 +173,7 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
     await conv.refreshConversation();
     setCurrentPrompt(null);
     setCapturedSelectedText(null);
+    setPromptSelectionLabel(null);
   };
 
   const handleReject = async (requestId: string) => {
@@ -172,6 +182,7 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
     await conv.refreshConversation();
     setCurrentPrompt(null);
     setCapturedSelectedText(null);
+    setPromptSelectionLabel(null);
   };
 
   const handleCancel = async () => {
@@ -249,7 +260,7 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
 
         {/* User prompt for current streaming/pending response */}
         {currentPrompt && (
-          <AIChatMessage role="user" content={currentPrompt} />
+          <AIChatMessage role="user" content={currentPrompt} selectionContext={promptSelectionLabel ?? undefined} />
         )}
 
         {/* Current streaming response */}
