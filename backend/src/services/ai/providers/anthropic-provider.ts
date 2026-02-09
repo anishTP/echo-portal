@@ -68,8 +68,8 @@ export class AnthropicProvider implements AIProvider {
     }
 
     // Add current user prompt — include selected text reference so the LLM
-    // knows exactly which passage the user is referring to (e.g. "this line").
-    if (params.selectedText && params.mode === 'replace') {
+    // knows exactly which passage the user is referring to.
+    if (params.selectedText) {
       messages.push({
         role: 'user',
         content: `[Selected text: ${params.selectedText}]\n\n${params.prompt}`,
