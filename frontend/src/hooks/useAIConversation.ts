@@ -32,8 +32,7 @@ export function useAIConversation(branchId: string | null) {
     aiApi
       .getConversation(branchId)
       .then((result) => {
-        // The API wraps in data envelope; handle both shapes
-        const conv = (result as any)?.conversation ?? result;
+        const conv = (result as any)?.conversation;
         if (conv) {
           store.setConversation(conv);
           store.setActiveConversationId(conv.id);
@@ -57,7 +56,7 @@ export function useAIConversation(branchId: string | null) {
     if (!branchId) return;
     try {
       const result = await aiApi.getConversation(branchId);
-      const conv = (result as any)?.conversation ?? result;
+      const conv = (result as any)?.conversation;
       if (conv) {
         store.setConversation(conv);
         store.setActiveConversationId(conv.id);

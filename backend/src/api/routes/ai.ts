@@ -3,6 +3,7 @@ import { streamSSE } from 'hono/streaming';
 import { zValidator } from '@hono/zod-validator';
 import { eq, and, inArray } from 'drizzle-orm';
 import { requireAuth, type AuthEnv } from '../middleware/auth.js';
+import { success } from '../utils/responses.js';
 import { aiRateLimitMiddleware } from '../middleware/ai-rate-limit.js';
 import { aiService, AIServiceError } from '../../services/ai/ai-service.js';
 import { conversationService } from '../../services/ai/conversation-service.js';
@@ -346,10 +347,10 @@ aiRoutes.get('/conversation', requireAuth, async (c) => {
   try {
     const conversation = await conversationService.getActive(user.id, branchId);
     if (!conversation) {
-      return c.json({ conversation: null });
+      return success(c, { conversation: null });
     }
 
-    return c.json({
+    return success(c, {
       conversation: {
         id: conversation.id,
         branchId: conversation.branchId,

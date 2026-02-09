@@ -21,6 +21,7 @@ interface AIChatPanelProps {
  */
 export function AIChatPanel({ branchId, contentId, onContentAccepted }: AIChatPanelProps) {
   const [prompt, setPrompt] = useState('');
+  const [currentPrompt, setCurrentPrompt] = useState<string | null>(null);
   const [aiEnabled, setAIEnabled] = useState(true);
   const [configChecked, setConfigChecked] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -93,13 +94,14 @@ export function AIChatPanel({ branchId, contentId, onContentAccepted }: AIChatPa
     e.preventDefault();
     if (!prompt.trim() || isStreaming || hasPending) return;
 
-    const currentPrompt = prompt;
+    const submittedPrompt = prompt;
     setPrompt('');
+    setCurrentPrompt(submittedPrompt);
 
     await ai.generate({
       branchId,
       contentId,
-      prompt: currentPrompt,
+      prompt: submittedPrompt,
       conversationId: conv.conversationId ?? undefined,
     });
 
@@ -122,12 +124,14 @@ export function AIChatPanel({ branchId, contentId, onContentAccepted }: AIChatPa
     onContentAccepted?.(acceptedContent);
     ai.resetStream();
     await conv.refreshConversation();
+    setCurrentPrompt(null);
   };
 
   const handleReject = async (requestId: string) => {
     await ai.reject(requestId);
     ai.resetStream();
     await conv.refreshConversation();
+    setCurrentPrompt(null);
   };
 
   const handleCancel = async () => {
@@ -141,6 +145,7 @@ export function AIChatPanel({ branchId, contentId, onContentAccepted }: AIChatPa
     await aiApi.discardPending(branchId).catch(() => {});
     await conv.clearConversation();
     ai.resetStream();
+    setCurrentPrompt(null);
   };
 
   return (
@@ -199,6 +204,11 @@ export function AIChatPanel({ branchId, contentId, onContentAccepted }: AIChatPa
             )}
           </React.Fragment>
         ))}
+
+        {/* User prompt for current streaming/pending response */}
+        {currentPrompt && (
+          <AIChatMessage role="user" content={currentPrompt} />
+        )}
 
         {/* Current streaming response */}
         {isStreaming && (

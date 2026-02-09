@@ -31,7 +31,7 @@ export function AIChatMessage({
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-3`}>
       <div
-        className="max-w-[80%] rounded-lg px-4 py-2"
+        className={`${isUser ? 'max-w-[80%]' : 'w-full'} rounded-lg px-4 py-2`}
         style={
           isUser
             ? { background: 'var(--accent-9)', color: 'var(--accent-contrast)' }
