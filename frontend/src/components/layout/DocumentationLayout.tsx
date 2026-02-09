@@ -13,6 +13,8 @@ export interface DocumentationLayoutProps {
   header?: ReactNode;
   /** Whether main content should expand to full width (no max-width constraint) */
   fullWidth?: boolean;
+  /** Optional right margin offset to make room for fixed panels (e.g., AI chat) */
+  contentRightOffset?: number;
 }
 
 /**
@@ -20,7 +22,7 @@ export interface DocumentationLayoutProps {
  *
  * - Left sidebar (280px): Navigation, search, filters
  * - Main content (flexible): Primary content area
- * - Right sidebar (240px, optional): TOC, metadata
+ * - Right sidebar (320px, optional): TOC, metadata
  * - Header (optional): Banner above main content (e.g., edit mode indicator)
  *
  * Mobile: Left sidebar collapses with hamburger menu
@@ -32,6 +34,7 @@ export function DocumentationLayout({
   rightSidebar,
   header,
   fullWidth = false,
+  contentRightOffset,
 }: DocumentationLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -63,7 +66,10 @@ export function DocumentationLayout({
       </aside>
 
       {/* Main Content */}
-      <main className={styles.main}>
+      <main
+        className={styles.main}
+        style={contentRightOffset ? { marginRight: contentRightOffset } : undefined}
+      >
         {header && <div className={styles.contentHeader}>{header}</div>}
         <div className={fullWidth ? styles.mainContentFullWidth : styles.mainContent}>{children}</div>
       </main>
