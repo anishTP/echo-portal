@@ -366,6 +366,8 @@ aiRoutes.get('/conversation', requireAuth, async (c) => {
           id: r.id,
           requestType: r.requestType,
           prompt: r.prompt,
+          selectedText: r.selectedText,
+          responseMode: r.responseMode,
           generatedContent: r.generatedContent,
           status: r.status,
           createdAt: r.createdAt.toISOString(),

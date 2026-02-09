@@ -94,6 +94,8 @@ export class AIService {
         contentId: input.contentId ?? null,
         requestType: 'generation',
         prompt: input.prompt,
+        selectedText: input.selectedText ?? null,
+        responseMode: input.mode ?? 'add',
         status: 'generating',
         providerId: provider.id,
         modelId: null, // Set on completion from provider metadata
@@ -191,6 +193,7 @@ export class AIService {
         requestType: 'transformation',
         prompt: input.instruction,
         selectedText: input.selectedText,
+        responseMode: 'replace',
         status: 'generating',
         providerId: provider.id,
         modelId: null,
@@ -437,7 +440,12 @@ export class AIService {
 
     const history: ConversationTurn[] = [];
     for (const req of requests) {
-      history.push({ role: 'user', content: req.prompt });
+      // Include selected text context in history so the LLM knows what each
+      // turn was referring to (avoids confusion in multi-turn conversations).
+      const userContent = req.selectedText
+        ? `[Selected text: ${req.selectedText}]\n\n${req.prompt}`
+        : req.prompt;
+      history.push({ role: 'user', content: userContent });
       if (req.generatedContent) {
         history.push({ role: 'assistant', content: req.generatedContent });
       }

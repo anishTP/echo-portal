@@ -105,6 +105,7 @@ export interface AIRequestDetail {
   requestType: AIRequestType;
   prompt: string;
   selectedText: string | null;
+  responseMode: AIResponseMode | null;
   generatedContent: string | null;
   status: AIRequestStatus;
   providerId: string | null;

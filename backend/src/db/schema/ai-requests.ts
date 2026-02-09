@@ -37,6 +37,7 @@ export const aiRequests = pgTable(
     tokensUsed: integer('tokens_used'),
     errorMessage: text('error_message'),
     resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    responseMode: text('response_mode'), // 'add' | 'replace' | 'analyse'
     resolvedBy: text('resolved_by'), // 'user' | 'system'
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),

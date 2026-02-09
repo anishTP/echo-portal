@@ -50,6 +50,17 @@ vi.mock('../../../src/components/ai/AIChatMessage', () => ({
   ),
 }));
 
+vi.mock('../../../src/components/ai/SlashCommandInput', () => ({
+  SlashCommandInput: ({ placeholder, disabled, onFocus }: any) => (
+    <div
+      role="textbox"
+      data-placeholder={placeholder}
+      data-disabled={disabled}
+      onFocus={onFocus}
+    />
+  ),
+}));
+
 import { AIChatPanel } from '../../../src/components/ai/AIChatPanel';
 import { useAIStore } from '../../../src/stores/aiStore';
 
@@ -103,6 +114,6 @@ describe('AIChatPanel', () => {
     });
 
     render(<AIChatPanel branchId="branch-1" />);
-    expect(screen.getByPlaceholderText(/Ask AI/i)).toBeInTheDocument();
+    expect(screen.getByRole('textbox')).toBeInTheDocument();
   });
 });

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { AIChatMessage } from './AIChatMessage.js';
+import { SlashCommandInput } from './SlashCommandInput.js';
 import { useAIAssist } from '../../hooks/useAIAssist.js';
 import { useAIConversation } from '../../hooks/useAIConversation.js';
 import { useAIStore } from '../../stores/aiStore.js';
@@ -245,7 +246,15 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
           ?.filter((req) => req.id !== ai.streamRequestId)
           .map((req) => (
           <React.Fragment key={req.id}>
-            <AIChatMessage role="user" content={req.prompt} />
+            <AIChatMessage
+              role="user"
+              content={req.responseMode && req.responseMode !== 'add'
+                ? `/${req.responseMode} ${req.prompt}`
+                : req.prompt}
+              selectionContext={req.selectedText
+                ? req.selectedText.slice(0, 80) + (req.selectedText.length > 80 ? '...' : '')
+                : undefined}
+            />
             {req.generatedContent && (
               <AIChatMessage
                 role="assistant"
@@ -320,9 +329,14 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
         )}
 
         <div className="flex gap-2">
-          <textarea
+          <SlashCommandInput
             value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
+            onChange={setPrompt}
+            onSubmit={() => {
+              if (prompt.trim() && !isStreaming && !hasPending && conv.hasRemainingTurns) {
+                handleSubmit({ preventDefault: () => {} } as React.FormEvent);
+              }
+            }}
             onFocus={() => {
               const selCtx = getSelectionContext?.();
               if (selCtx?.selectedText) {
@@ -331,21 +345,8 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
                 setSelectionPreview(null);
               }
             }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit(e);
-              }
-            }}
             placeholder={hasPending ? 'Resolve pending content first...' : 'Ask AI... (try /replace or /analyse)'}
             disabled={hasPending || !conv.hasRemainingTurns}
-            className="flex-1 resize-none rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-            style={{
-              background: 'var(--color-surface)',
-              border: '1px solid var(--gray-6)',
-              color: 'var(--gray-12)',
-            }}
-            rows={2}
           />
           <div className="flex flex-col gap-1">
             <button

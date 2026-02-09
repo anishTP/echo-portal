@@ -67,8 +67,16 @@ export class AnthropicProvider implements AIProvider {
       }
     }
 
-    // Add current user prompt
-    messages.push({ role: 'user', content: params.prompt });
+    // Add current user prompt — include selected text reference so the LLM
+    // knows exactly which passage the user is referring to (e.g. "this line").
+    if (params.selectedText && params.mode === 'replace') {
+      messages.push({
+        role: 'user',
+        content: `[Selected text: ${params.selectedText}]\n\n${params.prompt}`,
+      });
+    } else {
+      messages.push({ role: 'user', content: params.prompt });
+    }
 
     const systemPrompt = getGenerateSystemPrompt(params.mode, params.context, params.selectedText, params.cursorContext);
 
