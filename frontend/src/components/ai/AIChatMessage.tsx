@@ -1,5 +1,24 @@
 import { AIStreamDisplay } from './AIStreamDisplay.js';
 
+function UserMessageContent({ content }: { content: string }) {
+  const match = content.match(/^(\/(?:replace|analyse|analyze|add))\s+([\s\S]*)$/);
+  if (!match) {
+    return <p className="text-sm whitespace-pre-wrap">{content}</p>;
+  }
+  const [, command, rest] = match;
+  return (
+    <p className="text-sm whitespace-pre-wrap">
+      <span
+        className="inline-block text-xs font-mono font-semibold px-1.5 py-0.5 rounded mr-1"
+        style={{ background: 'rgba(255,255,255,0.2)' }}
+      >
+        {command}
+      </span>
+      {rest}
+    </p>
+  );
+}
+
 interface AIChatMessageProps {
   role: 'user' | 'assistant';
   content: string;
@@ -39,7 +58,7 @@ export function AIChatMessage({
         }
       >
         {isUser ? (
-          <p className="text-sm whitespace-pre-wrap">{content}</p>
+          <UserMessageContent content={content} />
         ) : (
           <AIStreamDisplay content={content} isStreaming={isStreaming} />
         )}

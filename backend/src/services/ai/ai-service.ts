@@ -20,6 +20,8 @@ export interface GenerateInput {
   conversationId?: string;
   context?: string;
   mode?: string;
+  selectedText?: string;
+  cursorContext?: string;
   sessionId: string;
   sessionExpiresAt: Date;
 }
@@ -127,6 +129,8 @@ export class AIService {
       mode: input.mode,
       conversationHistory: history,
       maxTokens: limits.maxTokens,
+      selectedText: input.selectedText,
+      cursorContext: input.cursorContext,
     });
 
     // Wrap stream to capture completion and update DB

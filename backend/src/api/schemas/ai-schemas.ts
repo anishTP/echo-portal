@@ -16,6 +16,8 @@ export const aiGenerateBodySchema = z.object({
   conversationId: uuidSchema.optional(),
   context: z.string().max(200_000).optional(),
   mode: z.enum(['add', 'replace', 'analyse']).optional(),
+  selectedText: z.string().max(50_000).optional(),
+  cursorContext: z.string().max(5000).optional(),
 });
 
 export type AIGenerateBody = z.infer<typeof aiGenerateBodySchema>;

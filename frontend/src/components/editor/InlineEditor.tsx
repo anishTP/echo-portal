@@ -91,6 +91,8 @@ export interface InlineEditorHandle {
   replaceBody: (markdown: string) => void;
   /** Insert markdown at the current cursor position */
   insertAtCursor: (markdown: string) => void;
+  /** Get the current selection context (highlighted text or paragraph at cursor) */
+  getSelectionContext: () => { selectedText: string | null; cursorContext: string | null };
 }
 
 /** Bridge component that captures the editor instance, exposes undo/redo, and tracks history state */
@@ -174,6 +176,21 @@ function EditorBridge({
           });
           checkHistory();
         } catch { /* editor not ready */ }
+      },
+      getSelectionContext: () => {
+        try {
+          return editor.action((ctx) => {
+            const view = ctx.get(editorViewCtx);
+            const { from, to } = view.state.selection;
+            if (from !== to) {
+              return { selectedText: view.state.doc.textBetween(from, to, '\n'), cursorContext: null };
+            }
+            const cursorContext = view.state.doc.resolve(from).parent.textContent || null;
+            return { selectedText: null, cursorContext };
+          });
+        } catch {
+          return { selectedText: null, cursorContext: null };
+        }
       },
     };
 

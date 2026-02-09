@@ -22,6 +22,8 @@ export interface AIProviderGenerateParams {
   mode?: string;
   conversationHistory?: ConversationTurn[];
   maxTokens?: number;
+  selectedText?: string;
+  cursorContext?: string;
 }
 
 export interface AIProviderTransformParams {

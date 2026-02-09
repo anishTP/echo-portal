@@ -20,6 +20,7 @@ interface AIChatPanelProps {
   branchId: string;
   contentId?: string;
   getDocumentBody?: () => string | undefined;
+  getSelectionContext?: () => { selectedText: string | null; cursorContext: string | null };
   onContentAccepted?: (content: string, mode: 'add' | 'replace') => void;
 }
 
@@ -30,12 +31,13 @@ interface AIChatPanelProps {
  * conversation, streaming display, and accept/reject actions.
  * Checks AI enabled state from config (T044).
  */
-export function AIChatPanel({ branchId, contentId, getDocumentBody, onContentAccepted }: AIChatPanelProps) {
+export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelectionContext, onContentAccepted }: AIChatPanelProps) {
   const [prompt, setPrompt] = useState('');
   const [currentPrompt, setCurrentPrompt] = useState<string | null>(null);
   const [currentMode, setCurrentMode] = useState<AIResponseMode>('add');
   const [aiEnabled, setAIEnabled] = useState(true);
   const [configChecked, setConfigChecked] = useState(false);
+  const [selectionPreview, setSelectionPreview] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const store = useAIStore();
   const ai = useAIAssist();
@@ -120,9 +122,13 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, onContentAcc
     const submittedPrompt = prompt;
     setPrompt('');
     setCurrentPrompt(submittedPrompt);
+    setSelectionPreview(null);
 
     const { mode, prompt: cleanPrompt } = parseSlashCommand(submittedPrompt);
     setCurrentMode(mode);
+
+    // Capture editor selection context at submit time
+    const selCtx = getSelectionContext?.() ?? { selectedText: null, cursorContext: null };
 
     await ai.generate({
       branchId,
@@ -131,6 +137,8 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, onContentAcc
       conversationId: conv.conversationId ?? undefined,
       context: getDocumentBody?.(),
       mode,
+      selectedText: selCtx.selectedText ?? undefined,
+      cursorContext: selCtx.cursorContext ?? undefined,
     });
 
     // Refresh conversation to get updated state
@@ -273,10 +281,39 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, onContentAcc
           </div>
         )}
 
+        {/* Selection indicator */}
+        {selectionPreview && (
+          <div
+            className="flex items-center gap-2 text-xs mb-2 px-2 py-1.5 rounded"
+            style={{ background: 'var(--accent-3)', color: 'var(--accent-11)', border: '1px solid var(--accent-6)' }}
+          >
+            <span className="font-medium shrink-0">Selection referenced</span>
+            <span className="truncate" style={{ color: 'var(--accent-9)' }}>
+              {selectionPreview}
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectionPreview(null)}
+              className="shrink-0 ml-auto"
+              style={{ color: 'var(--accent-9)' }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         <div className="flex gap-2">
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
+            onFocus={() => {
+              const selCtx = getSelectionContext?.();
+              if (selCtx?.selectedText) {
+                setSelectionPreview(selCtx.selectedText.slice(0, 120) + (selCtx.selectedText.length > 120 ? '...' : ''));
+              } else {
+                setSelectionPreview(null);
+              }
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();

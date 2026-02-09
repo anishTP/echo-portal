@@ -30,6 +30,8 @@ export interface InlineEditViewHandle {
   canUndo: boolean;
   /** Whether redo is available */
   canRedo: boolean;
+  /** Get the current editor selection context (highlighted text or paragraph at cursor) */
+  getSelectionContext: () => { selectedText: string | null; cursorContext: string | null };
 }
 
 export interface InlineEditViewProps {
@@ -217,6 +219,8 @@ const InlineEditViewComponent = forwardRef<InlineEditViewHandle, InlineEditViewP
     redo: () => milkdownRef.current?.redo(),
     canUndo: historyState.canUndo,
     canRedo: historyState.canRedo,
+    getSelectionContext: () =>
+      milkdownRef.current?.getSelectionContext() ?? { selectedText: null, cursorContext: null },
   }), [saveNow, cancelAutoSave, autoSaveFn, historyState]);
 
   // Record activity on editor focus

@@ -82,6 +82,8 @@ aiRoutes.post(
         conversationId: body.conversationId,
         context: body.context,
         mode: body.mode,
+        selectedText: body.selectedText,
+        cursorContext: body.cursorContext,
         sessionId,
         sessionExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       });

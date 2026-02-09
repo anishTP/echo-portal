@@ -6,16 +6,26 @@ import type {
   AIProviderTransformParams,
 } from '../provider-interface.js';
 
-function getGenerateSystemPrompt(mode: string | undefined, context: string | undefined): string {
+function getGenerateSystemPrompt(
+  mode: string | undefined,
+  context: string | undefined,
+  selectedText?: string,
+  cursorContext?: string,
+): string {
   const contextBlock = context ? `\n\nCurrent document:\n${context}` : '';
+  const selectionBlock = selectedText
+    ? `\n\nUser's selected text:\n${selectedText}`
+    : cursorContext
+      ? `\n\nText near user's cursor:\n${cursorContext}`
+      : '';
 
   switch (mode) {
     case 'replace':
-      return `You are a content editor for a documentation portal. The user wants to modify existing content. Apply the requested changes and return the COMPLETE updated document body in raw markdown. Include ALL content that should remain — not just the changed parts. Do NOT wrap output in code fences. Do NOT include conversational text.${contextBlock}`;
+      return `You are a content editor for a documentation portal. The user wants to modify existing content. Apply the requested changes and return the COMPLETE updated document body in raw markdown. Include ALL content that should remain — not just the changed parts. Do NOT wrap output in code fences. Do NOT include conversational text.${selectedText ? ' If selected text is provided, focus your changes on that section while preserving the rest of the document.' : ''}${contextBlock}${selectionBlock}`;
     case 'analyse':
-      return `You are a content reviewer for a documentation portal. Analyze the document and provide constructive feedback. You may use conversational language. Do NOT output replacement content — just your analysis.${contextBlock}`;
+      return `You are a content reviewer for a documentation portal. Analyze the document and provide constructive feedback. You may use conversational language. Do NOT output replacement content — just your analysis.${selectedText ? ' If selected text is provided, focus your analysis on that section.' : ''}${contextBlock}${selectionBlock}`;
     default: // 'add'
-      return `You are a content assistant for a documentation portal. Generate NEW content based on the user's request. Output ONLY raw markdown. Do NOT wrap output in code fences. Do NOT include conversational text, explanations, or preamble — just the content itself.${contextBlock}`;
+      return `You are a content assistant for a documentation portal. Generate NEW content based on the user's request. Output ONLY raw markdown. Do NOT wrap output in code fences. Do NOT include conversational text, explanations, or preamble — just the content itself.${contextBlock}${selectionBlock}`;
   }
 }
 
@@ -57,7 +67,7 @@ export class AnthropicProvider implements AIProvider {
     // Add current user prompt
     messages.push({ role: 'user', content: params.prompt });
 
-    const systemPrompt = getGenerateSystemPrompt(params.mode, params.context);
+    const systemPrompt = getGenerateSystemPrompt(params.mode, params.context, params.selectedText, params.cursorContext);
 
     yield* this.streamCompletion(systemPrompt, messages, params.maxTokens);
   }

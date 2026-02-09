@@ -75,6 +75,8 @@ export interface AIGenerateParams {
   conversationId?: string;
   context?: string;
   mode?: AIResponseMode;
+  selectedText?: string;
+  cursorContext?: string;
 }
 
 export interface AITransformParams {

@@ -16,7 +16,7 @@ export class EchoProvider implements AIProvider {
   readonly displayName = 'Echo (Development)';
 
   async *generate(params: AIProviderGenerateParams): AsyncIterable<AIStreamChunk> {
-    const response = this.buildGenerateResponse(params.prompt, params.context, params.mode);
+    const response = this.buildGenerateResponse(params.prompt, params.context, params.mode, params.selectedText, params.cursorContext);
     yield* this.streamResponse(response);
   }
 
@@ -32,7 +32,7 @@ export class EchoProvider implements AIProvider {
     return true;
   }
 
-  private buildGenerateResponse(prompt: string, context?: string, mode?: string): string {
+  private buildGenerateResponse(prompt: string, context?: string, mode?: string, selectedText?: string, cursorContext?: string): string {
     if (mode === 'analyse') {
       const lines = [
         `**Analysis Feedback**\n`,
@@ -70,6 +70,12 @@ export class EchoProvider implements AIProvider {
 
     if (context) {
       lines.push(`*Using document context (${context.length} chars)*\n`);
+    }
+
+    if (selectedText) {
+      lines.push(`*User selected text (${selectedText.length} chars): "${selectedText.slice(0, 100)}${selectedText.length > 100 ? '...' : ''}"*\n`);
+    } else if (cursorContext) {
+      lines.push(`*Cursor near: "${cursorContext.slice(0, 100)}${cursorContext.length > 100 ? '...' : ''}"*\n`);
     }
 
     lines.push(

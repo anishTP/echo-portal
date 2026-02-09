@@ -771,6 +771,7 @@ export default function Library() {
           branchId={branchId}
           contentId={contentIdParam}
           getDocumentBody={() => inlineEditViewRef.current?.getContent().body}
+          getSelectionContext={() => inlineEditViewRef.current?.getSelectionContext() ?? { selectedText: null, cursorContext: null }}
           onContentAccepted={(aiContent, mode) => {
             if (inlineEditViewRef.current) {
               if (mode === 'replace') {
