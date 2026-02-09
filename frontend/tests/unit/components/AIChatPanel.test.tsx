@@ -102,7 +102,7 @@ describe('AIChatPanel', () => {
     });
 
     render(<AIChatPanel branchId="branch-1" />);
-    expect(screen.getByText('0/20 turns')).toBeInTheDocument();
+    expect(screen.getByText('0/20')).toBeInTheDocument();
   });
 
   it('shows prompt input', () => {

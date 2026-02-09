@@ -1,4 +1,5 @@
 import { AIStreamDisplay } from './AIStreamDisplay.js';
+import { CheckIcon, Cross2Icon } from '@radix-ui/react-icons';
 
 function UserMessageContent({ content }: { content: string }) {
   const match = content.match(/^(\/(?:replace|analyse|analyze|add))\s+([\s\S]*)$/);
@@ -50,13 +51,18 @@ export function AIChatMessage({
   const isPending = status === 'pending';
 
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-3`}>
+    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
-        className={`${isUser ? 'max-w-[80%]' : 'w-full'} rounded-lg px-4 py-2`}
+        className={`${isUser ? 'max-w-[80%] rounded-2xl' : 'w-full rounded-xl'} px-4 py-2`}
         style={
           isUser
             ? { background: 'var(--accent-9)', color: 'var(--accent-contrast)' }
-            : { background: 'var(--gray-3)', border: '1px solid var(--gray-6)', color: 'var(--gray-12)' }
+            : {
+                background: 'var(--color-surface)',
+                border: '1px solid var(--gray-4)',
+                boxShadow: '0 1px 2px 0 rgba(0,0,0,0.03)',
+                color: 'var(--gray-12)',
+              }
         }
       >
         {isUser && selectionContext && (
@@ -75,19 +81,21 @@ export function AIChatMessage({
 
         {/* Action buttons for pending AI content */}
         {!isUser && isPending && !isStreaming && (
-          <div className="flex gap-2 mt-2 pt-2" style={{ borderTop: '1px solid var(--gray-6)' }}>
+          <div className="flex gap-2 mt-2 pt-2" style={{ borderTop: '1px solid var(--gray-4)' }}>
             {onAccept && (
               <button
                 onClick={onAccept}
-                className="text-xs px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                className="flex items-center gap-1 text-xs px-3 py-1.5 text-white rounded-lg hover:opacity-90 transition-colors"
+                style={{ background: 'var(--green-9)' }}
               >
+                <CheckIcon />
                 Accept
               </button>
             )}
             {onEdit && (
               <button
                 onClick={onEdit}
-                className="text-xs px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
+                className="text-xs px-3 py-1.5 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
               >
                 Edit
               </button>
@@ -95,8 +103,10 @@ export function AIChatMessage({
             {onReject && (
               <button
                 onClick={onReject}
-                className="text-xs px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                className="flex items-center gap-1 text-xs px-3 py-1.5 text-white rounded-lg hover:opacity-90 transition-colors"
+                style={{ background: 'var(--red-9)' }}
               >
+                <Cross2Icon />
                 Reject
               </button>
             )}
@@ -105,7 +115,7 @@ export function AIChatMessage({
 
         {/* Analysis mode label — no accept/reject buttons */}
         {!isUser && status === 'analysis' && !isStreaming && (
-          <div className="mt-2 pt-2 text-xs italic" style={{ borderTop: '1px solid var(--gray-6)', color: 'var(--gray-9)' }}>
+          <div className="mt-2 pt-2 text-xs italic" style={{ borderTop: '1px solid var(--gray-4)', color: 'var(--gray-9)' }}>
             Analysis only — no changes to apply
           </div>
         )}

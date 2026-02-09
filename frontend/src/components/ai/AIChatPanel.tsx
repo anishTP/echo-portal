@@ -6,6 +6,7 @@ import { useAIConversation } from '../../hooks/useAIConversation.js';
 import { useAIStore } from '../../stores/aiStore.js';
 import { api } from '../../services/api.js';
 import { aiApi } from '../../services/ai-api.js';
+import { PlusIcon, Cross2Icon, PaperPlaneIcon, StopIcon, ImageIcon } from '@radix-ui/react-icons';
 import type { AIResponseMode } from '@echo-portal/shared';
 
 function parseSlashCommand(input: string): { mode: AIResponseMode; prompt: string } {
@@ -87,23 +88,24 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
   if (configChecked && !aiEnabled) {
     return (
       <div
-        className="flex flex-col h-full w-96"
-        style={{ background: 'var(--color-background)', borderLeft: '1px solid var(--gray-6)' }}
+        className="flex flex-col h-full"
+        style={{ width: '340px', background: 'var(--color-background)', borderLeft: '1px solid var(--gray-6)' }}
       >
         <div
           className="flex items-center justify-between px-4 py-3"
-          style={{ borderBottom: '1px solid var(--gray-6)' }}
+          style={{ borderBottom: 'none' }}
         >
           <h3 className="font-semibold text-sm" style={{ color: 'var(--gray-12)' }}>AI Assistant</h3>
           <button
             onClick={() => store.setPanelOpen(false)}
-            className="text-xs px-2 py-1 rounded"
+            className="p-1.5 rounded-md transition-colors"
             style={{ color: 'var(--gray-11)' }}
             title="Close panel"
           >
-            ✕
+            <Cross2Icon />
           </button>
         </div>
+        <div style={{ height: '2px', background: 'linear-gradient(90deg, var(--accent-9), var(--accent-7), transparent)' }} />
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="text-center">
             <p className="text-4xl mb-3">🤖</p>
@@ -202,45 +204,46 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
 
   return (
     <div
-      className="flex flex-col h-full w-96"
+      className="flex flex-col h-full"
       style={{
+        width: '340px',
         background: 'var(--color-background)',
         borderLeft: '1px solid var(--gray-6)',
       }}
     >
       {/* Header */}
-      <div
-        className="flex items-center justify-between px-4 py-3"
-        style={{ borderBottom: '1px solid var(--gray-6)' }}
-      >
+      <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-2">
           <h3 className="font-semibold text-sm" style={{ color: 'var(--gray-12)' }}>AI Assistant</h3>
           <span className="text-xs" style={{ color: 'var(--gray-9)' }}>
-            {conv.turnCount}/{conv.maxTurns} turns
+            {conv.turnCount}/{conv.maxTurns}
           </span>
         </div>
         <div className="flex gap-1">
           <button
             onClick={handleNewConversation}
-            className="text-xs px-2 py-1 rounded"
+            className="p-1.5 rounded-md transition-colors hover:bg-[var(--gray-4)]"
             style={{ color: 'var(--gray-11)' }}
             title="Start new conversation"
           >
-            New
+            <PlusIcon />
           </button>
           <button
             onClick={() => store.setPanelOpen(false)}
-            className="text-xs px-2 py-1 rounded"
+            className="p-1.5 rounded-md transition-colors hover:bg-[var(--gray-4)]"
             style={{ color: 'var(--gray-11)' }}
             title="Close panel"
           >
-            ✕
+            <Cross2Icon />
           </button>
         </div>
       </div>
 
+      {/* Gradient accent separator */}
+      <div style={{ height: '2px', background: 'linear-gradient(90deg, var(--accent-9), var(--accent-7), transparent)' }} />
+
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
+      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-3">
         {/* Conversation history (exclude the request currently handled by local streaming state) */}
         {conv.conversation?.requests
           ?.filter((req) => req.id !== ai.streamRequestId)
@@ -299,7 +302,7 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
       </div>
 
       {/* Input area */}
-      <form onSubmit={handleSubmit} className="p-4" style={{ borderTop: '1px solid var(--gray-6)' }}>
+      <form onSubmit={handleSubmit} className="px-3 pb-3 pt-2">
         {/* Turn limit warning */}
         {!conv.hasRemainingTurns && (
           <div className="text-xs text-amber-600 mb-2">
@@ -323,12 +326,24 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
               className="shrink-0 ml-auto"
               style={{ color: 'var(--accent-9)' }}
             >
-              ✕
+              <Cross2Icon width={12} height={12} />
             </button>
           </div>
         )}
 
-        <div className="flex gap-2">
+        <div
+          className="ai-input-container flex items-end gap-2 rounded-2xl px-3 py-2"
+          style={{ background: 'var(--gray-2)', border: '1px solid var(--gray-5)' }}
+        >
+          <button
+            type="button"
+            disabled
+            className="p-1.5 shrink-0 self-center opacity-40 cursor-default"
+            style={{ color: 'var(--gray-11)' }}
+            title="Attach image (coming soon)"
+          >
+            <ImageIcon width={18} height={18} />
+          </button>
           <SlashCommandInput
             value={prompt}
             onChange={setPrompt}
@@ -338,6 +353,13 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
               }
             }}
             onFocus={() => {
+              // Only show selection indicator if there's a visible browser selection
+              // (avoids stale ProseMirror internal selections from previous operations)
+              const browserSel = window.getSelection();
+              if (!browserSel || browserSel.isCollapsed) {
+                setSelectionPreview(null);
+                return;
+              }
               const selCtx = getSelectionContext?.();
               if (selCtx?.selectedText) {
                 setSelectionPreview(selCtx.selectedText.slice(0, 120) + (selCtx.selectedText.length > 120 ? '...' : ''));
@@ -345,27 +367,33 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
                 setSelectionPreview(null);
               }
             }}
-            placeholder={hasPending ? 'Resolve pending content first...' : 'Ask AI... (try /replace or /analyse)'}
+            placeholder={hasPending ? 'Resolve pending first...' : 'Ask AI...'}
             disabled={hasPending || !conv.hasRemainingTurns}
           />
-          <div className="flex flex-col gap-1">
+          {isStreaming ? (
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="p-2 rounded-full shrink-0 transition-colors"
+              style={{ background: 'var(--red-9)', color: 'white' }}
+              title="Stop generating"
+            >
+              <StopIcon />
+            </button>
+          ) : (
             <button
               type="submit"
               disabled={!prompt.trim() || hasPending || !conv.hasRemainingTurns}
-              className="px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="p-2 rounded-full shrink-0 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{
+                background: (!prompt.trim() || hasPending || !conv.hasRemainingTurns) ? 'var(--gray-5)' : 'var(--accent-9)',
+                color: (!prompt.trim() || hasPending || !conv.hasRemainingTurns) ? 'var(--gray-9)' : 'var(--accent-contrast)',
+              }}
+              title="Send message"
             >
-              Send
+              <PaperPlaneIcon />
             </button>
-            {isStreaming && (
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
-              >
-                Stop
-              </button>
-            )}
-          </div>
+          )}
         </div>
       </form>
     </div>

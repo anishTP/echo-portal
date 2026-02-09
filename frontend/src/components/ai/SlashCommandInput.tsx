@@ -202,13 +202,13 @@ export function SlashCommandInput({
       onFocus={onFocus}
       onCompositionStart={handleCompositionStart}
       onCompositionEnd={handleCompositionEnd}
-      className={`flex-1 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 slash-command-input${disabled ? ' opacity-50 pointer-events-none' : ''}`}
+      className={`flex-1 px-2 py-1.5 text-sm focus:outline-none slash-command-input${disabled ? ' opacity-50 pointer-events-none' : ''}`}
       style={{
-        background: 'var(--color-surface)',
-        border: '1px solid var(--gray-6)',
+        background: 'transparent',
+        border: 'none',
         color: 'var(--gray-12)',
-        minHeight: '2.5rem',
-        maxHeight: '6rem',
+        minHeight: '2rem',
+        maxHeight: '5rem',
         overflowY: 'auto',
         whiteSpace: 'pre-wrap',
         wordBreak: 'break-word',
