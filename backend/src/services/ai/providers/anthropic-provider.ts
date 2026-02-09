@@ -21,7 +21,10 @@ function getGenerateSystemPrompt(
 
   switch (mode) {
     case 'replace':
-      return `You are a content editor for a documentation portal. The user wants to modify existing content. Apply the requested changes and return the COMPLETE updated document body in raw markdown. Include ALL content that should remain — not just the changed parts. Do NOT wrap output in code fences. Do NOT include conversational text.${selectedText ? ' If selected text is provided, focus your changes on that section while preserving the rest of the document.' : ''}${contextBlock}${selectionBlock}`;
+      if (selectedText) {
+        return `You are a content editor for a documentation portal. The user has selected a specific passage and wants it rewritten. Return ONLY the replacement text for the selected passage — do NOT return the entire document. Do NOT wrap output in code fences. Do NOT include conversational text.${contextBlock}${selectionBlock}`;
+      }
+      return `You are a content editor for a documentation portal. The user wants to modify existing content. Apply the requested changes and return the COMPLETE updated document body in raw markdown. Include ALL content that should remain — not just the changed parts. Do NOT wrap output in code fences. Do NOT include conversational text.${contextBlock}${selectionBlock}`;
     case 'analyse':
       return `You are a content reviewer for a documentation portal. Analyze the document and provide constructive feedback. You may use conversational language. Do NOT output replacement content — just your analysis.${selectedText ? ' If selected text is provided, focus your analysis on that section.' : ''}${contextBlock}${selectionBlock}`;
     default: // 'add'

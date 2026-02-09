@@ -21,7 +21,7 @@ interface AIChatPanelProps {
   contentId?: string;
   getDocumentBody?: () => string | undefined;
   getSelectionContext?: () => { selectedText: string | null; cursorContext: string | null };
-  onContentAccepted?: (content: string, mode: 'add' | 'replace') => void;
+  onContentAccepted?: (content: string, mode: 'add' | 'replace', selectedText?: string) => void;
 }
 
 /**
@@ -38,6 +38,7 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
   const [aiEnabled, setAIEnabled] = useState(true);
   const [configChecked, setConfigChecked] = useState(false);
   const [selectionPreview, setSelectionPreview] = useState<string | null>(null);
+  const [capturedSelectedText, setCapturedSelectedText] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const store = useAIStore();
   const ai = useAIAssist();
@@ -129,6 +130,7 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
 
     // Capture editor selection context at submit time
     const selCtx = getSelectionContext?.() ?? { selectedText: null, cursorContext: null };
+    setCapturedSelectedText(selCtx.selectedText);
 
     await ai.generate({
       branchId,
@@ -157,10 +159,11 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
       contentId,
       changeDescription: currentMode === 'replace' ? 'AI-modified content' : 'AI-generated content',
     });
-    onContentAccepted?.(acceptedContent, currentMode as 'add' | 'replace');
+    onContentAccepted?.(acceptedContent, currentMode as 'add' | 'replace', capturedSelectedText ?? undefined);
     ai.resetStream();
     await conv.refreshConversation();
     setCurrentPrompt(null);
+    setCapturedSelectedText(null);
   };
 
   const handleReject = async (requestId: string) => {
@@ -168,6 +171,7 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
     ai.resetStream();
     await conv.refreshConversation();
     setCurrentPrompt(null);
+    setCapturedSelectedText(null);
   };
 
   const handleCancel = async () => {

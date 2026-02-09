@@ -772,9 +772,14 @@ export default function Library() {
           contentId={contentIdParam}
           getDocumentBody={() => inlineEditViewRef.current?.getContent().body}
           getSelectionContext={() => inlineEditViewRef.current?.getSelectionContext() ?? { selectedText: null, cursorContext: null }}
-          onContentAccepted={(aiContent, mode) => {
+          onContentAccepted={(aiContent, mode, selectedText) => {
             if (inlineEditViewRef.current) {
-              if (mode === 'replace') {
+              if (mode === 'replace' && selectedText) {
+                // Targeted replacement: swap the selected passage within the full body
+                const currentBody = inlineEditViewRef.current.getContent().body;
+                const newBody = currentBody.replace(selectedText, aiContent);
+                inlineEditViewRef.current.setBody(newBody);
+              } else if (mode === 'replace') {
                 inlineEditViewRef.current.setBody(aiContent);
               } else {
                 inlineEditViewRef.current.insertAtCursor(aiContent);

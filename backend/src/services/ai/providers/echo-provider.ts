@@ -53,6 +53,16 @@ export class EchoProvider implements AIProvider {
       return lines.join('\n');
     }
 
+    if (mode === 'replace' && selectedText) {
+      // When selection is present, return only the replacement for that section
+      const lines = [
+        `${selectedText}`,
+        '',
+        `<!-- Rewritten per: ${prompt.slice(0, 100)} -->`,
+      ];
+      return lines.join('\n');
+    }
+
     if (mode === 'replace' && context) {
       const lines = [
         context,
