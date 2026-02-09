@@ -16,3 +16,4 @@ export * from './review-snapshots.js';
 export * from './ai-conversations.js';
 export * from './ai-requests.js';
 export * from './ai-configurations.js';
+export * from './ai-context-documents.js';

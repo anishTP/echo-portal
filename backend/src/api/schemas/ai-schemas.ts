@@ -18,6 +18,15 @@ export const aiGenerateBodySchema = z.object({
   mode: z.enum(['add', 'replace', 'analyse']).optional(),
   selectedText: z.string().max(50_000).optional(),
   cursorContext: z.string().max(5000).optional(),
+  images: z
+    .array(
+      z.object({
+        mediaType: z.enum(['image/jpeg', 'image/png', 'image/gif', 'image/webp']),
+        data: z.string().max(7_000_000), // ~5MB base64 encoded
+      })
+    )
+    .max(AI_DEFAULTS.MAX_IMAGES_PER_REQUEST)
+    .optional(),
 });
 
 export type AIGenerateBody = z.infer<typeof aiGenerateBodySchema>;

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { AIConfigPanel } from '../components/ai/AIConfigPanel';
+import { AIContextDocuments } from '../components/ai/AIContextDocuments';
 import { AIAuditDashboard } from '../components/ai/AIAuditDashboard';
 
 /**
@@ -65,6 +66,7 @@ export default function AIAdmin() {
       <main className="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
         <div className="px-4 space-y-8 sm:px-0">
           <AIConfigPanel />
+          <AIContextDocuments />
           <AIAuditDashboard />
         </div>
       </main>

@@ -16,7 +16,7 @@ export class EchoProvider implements AIProvider {
   readonly displayName = 'Echo (Development)';
 
   async *generate(params: AIProviderGenerateParams): AsyncIterable<AIStreamChunk> {
-    const response = this.buildGenerateResponse(params.prompt, params.context, params.mode, params.selectedText, params.cursorContext);
+    const response = this.buildGenerateResponse(params.prompt, params.context, params.mode, params.selectedText, params.cursorContext, params.contextDocuments, params.images);
     yield* this.streamResponse(response);
   }
 
@@ -32,7 +32,7 @@ export class EchoProvider implements AIProvider {
     return true;
   }
 
-  private buildGenerateResponse(prompt: string, context?: string, mode?: string, selectedText?: string, cursorContext?: string): string {
+  private buildGenerateResponse(prompt: string, context?: string, mode?: string, selectedText?: string, cursorContext?: string, contextDocuments?: Array<{ title: string; content: string }>, images?: Array<{ mediaType: string; data: string }>): string {
     if (mode === 'analyse') {
       const lines = [
         `**Analysis Feedback**\n`,
@@ -86,6 +86,14 @@ export class EchoProvider implements AIProvider {
       lines.push(`*User selected text (${selectedText.length} chars): "${selectedText.slice(0, 100)}${selectedText.length > 100 ? '...' : ''}"*\n`);
     } else if (cursorContext) {
       lines.push(`*Cursor near: "${cursorContext.slice(0, 100)}${cursorContext.length > 100 ? '...' : ''}"*\n`);
+    }
+
+    if (contextDocuments?.length) {
+      lines.push(`*Reference materials loaded: ${contextDocuments.map((d) => d.title).join(', ')}*\n`);
+    }
+
+    if (images?.length) {
+      lines.push(`*${images.length} image(s) attached (${images.map((i) => i.mediaType).join(', ')})*\n`);
     }
 
     lines.push(

@@ -1,9 +1,10 @@
-import { api } from './api.js';
+import { api, apiFetch } from './api.js';
 import type {
   AIAcceptParams,
   AIRejectParams,
   AIConversationDetail,
   AIRequestDetail,
+  AIContextDocument,
 } from '@echo-portal/shared';
 
 const AI_BASE = '/ai';
@@ -63,4 +64,25 @@ export const aiApi = {
       `${AI_BASE}/discard-pending`,
       { branchId }
     ),
+
+  // --- Context Documents (admin) ---
+
+  /** List all context documents */
+  getContextDocuments: () =>
+    api.get<AIContextDocument[]>(`${AI_BASE}/context-documents`),
+
+  /** Create a new context document */
+  createContextDocument: (data: { title: string; content: string; sortOrder?: number }) =>
+    api.post<AIContextDocument>(`${AI_BASE}/context-documents`, data),
+
+  /** Update a context document */
+  updateContextDocument: (id: string, data: { title?: string; content?: string; enabled?: boolean; sortOrder?: number }) =>
+    apiFetch<AIContextDocument>(`${AI_BASE}/context-documents/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  /** Delete a context document */
+  deleteContextDocument: (id: string) =>
+    api.delete<{ success: boolean }>(`${AI_BASE}/context-documents/${id}`),
 };

@@ -30,6 +30,8 @@ export const AI_DEFAULTS = {
   MAX_PROMPT_LENGTH: 10000,
   MAX_SELECTED_TEXT_LENGTH: 50000,
   MAX_INSTRUCTION_LENGTH: 5000,
+  MAX_IMAGES_PER_REQUEST: 4,
+  MAX_IMAGE_SIZE_BYTES: 5 * 1024 * 1024, // 5MB
 } as const;
 
 // --- SSE Stream Events ---
@@ -77,6 +79,7 @@ export interface AIGenerateParams {
   mode?: AIResponseMode;
   selectedText?: string;
   cursorContext?: string;
+  images?: Array<{ mediaType: string; data: string }>;
 }
 
 export interface AITransformParams {
@@ -122,6 +125,18 @@ export interface AIConversationDetail {
   maxTurns: number;
   createdAt: string;
   requests: AIRequestDetail[];
+}
+
+// --- Context Document Types ---
+
+export interface AIContextDocument {
+  id: string;
+  title: string;
+  content: string;
+  enabled: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // --- Provider Types (shared for frontend display) ---

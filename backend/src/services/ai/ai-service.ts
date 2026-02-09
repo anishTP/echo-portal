@@ -8,6 +8,7 @@ import { providerRegistry } from './provider-registry.js';
 import { conversationService } from './conversation-service.js';
 import { aiRateLimiter } from './rate-limiter.js';
 import { aiConfigService } from './ai-config-service.js';
+import { aiContextDocumentService } from './ai-context-service.js';
 import { AuditLogger } from '../audit/logger.js';
 
 const auditLogger = new AuditLogger();
@@ -22,6 +23,7 @@ export interface GenerateInput {
   mode?: string;
   selectedText?: string;
   cursorContext?: string;
+  images?: Array<{ mediaType: string; data: string }>;
   sessionId: string;
   sessionExpiresAt: Date;
 }
@@ -124,6 +126,16 @@ export class AIService {
     // Get effective token limit from config
     const limits = await aiConfigService.getEffectiveLimits(input.userRole);
 
+    // Fetch enabled context documents for system prompt injection
+    const enabledDocs = await aiContextDocumentService.getEnabled();
+    const contextDocuments = enabledDocs.map((d) => ({ title: d.title, content: d.content }));
+
+    // Warn if context docs are very large (>50k chars total)
+    const totalChars = contextDocuments.reduce((sum, d) => sum + d.content.length, 0);
+    if (totalChars > 50_000) {
+      console.warn(`[AI] Context documents total ${totalChars} chars (~${Math.round(totalChars / 4)}tokens). Consider reducing.`);
+    }
+
     // Create the provider stream
     const providerStream = provider.generate({
       prompt: input.prompt,
@@ -133,6 +145,8 @@ export class AIService {
       maxTokens: limits.maxTokens,
       selectedText: input.selectedText,
       cursorContext: input.cursorContext,
+      contextDocuments: contextDocuments.length > 0 ? contextDocuments : undefined,
+      images: input.images,
     });
 
     // Wrap stream to capture completion and update DB

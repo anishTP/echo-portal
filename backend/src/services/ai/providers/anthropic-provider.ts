@@ -6,12 +6,20 @@ import type {
   AIProviderTransformParams,
 } from '../provider-interface.js';
 
+function buildReferenceBlock(contextDocuments?: Array<{ title: string; content: string }>): string {
+  if (!contextDocuments?.length) return '';
+  const sections = contextDocuments.map((doc) => `## ${doc.title}\n${doc.content}`).join('\n\n');
+  return `\n\n--- Reference Materials ---\n${sections}\n--- End Reference Materials ---`;
+}
+
 function getGenerateSystemPrompt(
   mode: string | undefined,
   context: string | undefined,
   selectedText?: string,
   cursorContext?: string,
+  contextDocuments?: Array<{ title: string; content: string }>,
 ): string {
+  const refBlock = buildReferenceBlock(contextDocuments);
   const contextBlock = context ? `\n\nCurrent document:\n${context}` : '';
   const selectionBlock = selectedText
     ? `\n\nUser's selected text:\n${selectedText}`
@@ -22,13 +30,13 @@ function getGenerateSystemPrompt(
   switch (mode) {
     case 'replace':
       if (selectedText) {
-        return `You are a content editor for a documentation portal. The user has selected a specific passage and wants it rewritten. Return ONLY the replacement text for the selected passage — do NOT return the entire document. Do NOT wrap output in code fences. Do NOT include conversational text.${contextBlock}${selectionBlock}`;
+        return `You are a content editor for a documentation portal. The user has selected a specific passage and wants it rewritten. Return ONLY the replacement text for the selected passage — do NOT return the entire document. Do NOT wrap output in code fences. Do NOT include conversational text.${refBlock}${contextBlock}${selectionBlock}`;
       }
-      return `You are a content editor for a documentation portal. The user wants to modify existing content. Apply the requested changes and return the COMPLETE updated document body in raw markdown. Include ALL content that should remain — not just the changed parts. Do NOT wrap output in code fences. Do NOT include conversational text.${contextBlock}${selectionBlock}`;
+      return `You are a content editor for a documentation portal. The user wants to modify existing content. Apply the requested changes and return the COMPLETE updated document body in raw markdown. Include ALL content that should remain — not just the changed parts. Do NOT wrap output in code fences. Do NOT include conversational text.${refBlock}${contextBlock}${selectionBlock}`;
     case 'analyse':
-      return `You are a content reviewer for a documentation portal. Analyze the document and provide constructive feedback. You may use conversational language. Do NOT output replacement content — just your analysis.${selectedText ? ' If selected text is provided, focus your analysis on that section.' : ''}${contextBlock}${selectionBlock}`;
+      return `You are a content reviewer for a documentation portal. Analyze the document and provide constructive feedback. You may use conversational language. Do NOT output replacement content — just your analysis.${selectedText ? ' If selected text is provided, focus your analysis on that section.' : ''}${refBlock}${contextBlock}${selectionBlock}`;
     default: // 'add'
-      return `You are a content assistant for a documentation portal. Generate NEW content based on the user's request. Output ONLY raw markdown. Do NOT wrap output in code fences. Do NOT include conversational text, explanations, or preamble — just the content itself.${contextBlock}${selectionBlock}`;
+      return `You are a content assistant for a documentation portal. Generate NEW content based on the user's request. Output ONLY raw markdown. Do NOT wrap output in code fences. Do NOT include conversational text, explanations, or preamble — just the content itself.${refBlock}${contextBlock}${selectionBlock}`;
   }
 }
 
@@ -67,18 +75,32 @@ export class AnthropicProvider implements AIProvider {
       }
     }
 
-    // Add current user prompt — include selected text reference so the LLM
-    // knows exactly which passage the user is referring to.
-    if (params.selectedText) {
-      messages.push({
-        role: 'user',
-        content: `[Selected text: ${params.selectedText}]\n\n${params.prompt}`,
-      });
+    // Build the user message — may include images (multimodal)
+    const promptText = params.selectedText
+      ? `[Selected text: ${params.selectedText}]\n\n${params.prompt}`
+      : params.prompt;
+
+    if (params.images?.length) {
+      // Multimodal message: images + text as content array
+      const contentParts: Anthropic.ContentBlockParam[] = [
+        ...params.images.map((img) => ({
+          type: 'image' as const,
+          source: {
+            type: 'base64' as const,
+            media_type: img.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+            data: img.data,
+          },
+        })),
+        { type: 'text' as const, text: promptText },
+      ];
+      messages.push({ role: 'user', content: contentParts });
     } else {
-      messages.push({ role: 'user', content: params.prompt });
+      messages.push({ role: 'user', content: promptText });
     }
 
-    const systemPrompt = getGenerateSystemPrompt(params.mode, params.context, params.selectedText, params.cursorContext);
+    const systemPrompt = getGenerateSystemPrompt(
+      params.mode, params.context, params.selectedText, params.cursorContext, params.contextDocuments
+    );
 
     yield* this.streamCompletion(systemPrompt, messages, params.maxTokens);
   }

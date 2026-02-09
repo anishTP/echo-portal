@@ -26,6 +26,7 @@ interface AIChatMessageProps {
   isStreaming?: boolean;
   status?: string;
   selectionContext?: string;
+  imageCount?: number;
   onAccept?: () => void;
   onReject?: () => void;
   onEdit?: () => void;
@@ -43,6 +44,7 @@ export function AIChatMessage({
   isStreaming = false,
   status,
   selectionContext,
+  imageCount,
   onAccept,
   onReject,
   onEdit,
@@ -65,12 +67,14 @@ export function AIChatMessage({
               }
         }
       >
-        {isUser && selectionContext && (
+        {isUser && (selectionContext || (imageCount && imageCount > 0)) && (
           <div
             className="text-xs mb-1.5 pb-1.5 truncate"
             style={{ borderBottom: '1px solid rgba(255,255,255,0.15)', opacity: 0.8 }}
           >
-            Selection: {selectionContext}
+            {imageCount && imageCount > 0 && <span>{imageCount} image{imageCount > 1 ? 's' : ''} attached</span>}
+            {imageCount && imageCount > 0 && selectionContext && <span> · </span>}
+            {selectionContext && <span>Selection: {selectionContext}</span>}
           </div>
         )}
         {isUser ? (

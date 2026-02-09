@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { AIChatMessage } from './AIChatMessage.js';
 import { SlashCommandInput } from './SlashCommandInput.js';
 import { useAIAssist } from '../../hooks/useAIAssist.js';
@@ -8,6 +8,7 @@ import { api } from '../../services/api.js';
 import { aiApi } from '../../services/ai-api.js';
 import { PlusIcon, Cross2Icon, PaperPlaneIcon, StopIcon, ImageIcon } from '@radix-ui/react-icons';
 import type { AIResponseMode } from '@echo-portal/shared';
+import { AI_DEFAULTS } from '@echo-portal/shared';
 
 function parseSlashCommand(input: string): { mode: AIResponseMode; prompt: string } {
   const trimmed = input.trimStart();
@@ -42,6 +43,10 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
   const [selectionPreview, setSelectionPreview] = useState<string | null>(null);
   const [capturedSelectedText, setCapturedSelectedText] = useState<string | null>(null);
   const [promptSelectionLabel, setPromptSelectionLabel] = useState<string | null>(null);
+  const [promptImageCount, setPromptImageCount] = useState(0);
+  const [attachedImages, setAttachedImages] = useState<Array<{ file: File; preview: string; mediaType: string; data: string }>>([]);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const store = useAIStore();
   const ai = useAIAssist();
@@ -81,6 +86,75 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
       });
     }
   }, [ai.streamStatus, currentMode, ai.streamRequestId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const SUPPORTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+  const processImageFile = useCallback(async (file: File): Promise<{ file: File; preview: string; mediaType: string; data: string } | null> => {
+    if (!SUPPORTED_TYPES.includes(file.type)) return null;
+    if (file.size > AI_DEFAULTS.MAX_IMAGE_SIZE_BYTES) return null;
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        // dataUrl format: data:<mediaType>;base64,<data>
+        const commaIdx = dataUrl.indexOf(',');
+        const data = dataUrl.slice(commaIdx + 1);
+        resolve({ file, preview: dataUrl, mediaType: file.type, data });
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
+  }, []);
+
+  const addImages = useCallback(async (files: FileList | File[]) => {
+    const remaining = AI_DEFAULTS.MAX_IMAGES_PER_REQUEST - attachedImages.length;
+    if (remaining <= 0) return;
+    const filesToProcess = Array.from(files).slice(0, remaining);
+    const results = await Promise.all(filesToProcess.map(processImageFile));
+    const valid = results.filter((r): r is NonNullable<typeof r> => r !== null);
+    if (valid.length > 0) {
+      setAttachedImages((prev) => [...prev, ...valid].slice(0, AI_DEFAULTS.MAX_IMAGES_PER_REQUEST));
+    }
+  }, [attachedImages.length, processImageFile]);
+
+  const removeImage = useCallback((index: number) => {
+    setAttachedImages((prev) => {
+      const next = [...prev];
+      // Revoke object URL if needed
+      URL.revokeObjectURL(next[index]?.preview ?? '');
+      next.splice(index, 1);
+      return next;
+    });
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+    if (e.dataTransfer.files?.length) {
+      await addImages(e.dataTransfer.files);
+    }
+  }, [addImages]);
+
+  const handleFileInputChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.length) {
+      await addImages(e.target.files);
+    }
+    // Reset input so same file can be selected again
+    e.target.value = '';
+  }, [addImages]);
 
   if (!store.panelOpen) return null;
 
@@ -144,6 +218,13 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
     }
     setSelectionPreview(null);
 
+    // Prepare images for the request
+    const images = attachedImages.length > 0
+      ? attachedImages.map((img) => ({ mediaType: img.mediaType, data: img.data }))
+      : undefined;
+    setPromptImageCount(attachedImages.length);
+    setAttachedImages([]);
+
     await ai.generate({
       branchId,
       contentId,
@@ -153,6 +234,7 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
       mode,
       selectedText: selCtx.selectedText ?? undefined,
       cursorContext: selCtx.cursorContext ?? undefined,
+      images,
     });
 
     // Refresh conversation to get updated state
@@ -177,6 +259,7 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
     setCurrentPrompt(null);
     setCapturedSelectedText(null);
     setPromptSelectionLabel(null);
+    setPromptImageCount(0);
   };
 
   const handleReject = async (requestId: string) => {
@@ -186,6 +269,7 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
     setCurrentPrompt(null);
     setCapturedSelectedText(null);
     setPromptSelectionLabel(null);
+    setPromptImageCount(0);
   };
 
   const handleCancel = async () => {
@@ -272,7 +356,7 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
 
         {/* User prompt for current streaming/pending response */}
         {currentPrompt && (
-          <AIChatMessage role="user" content={currentPrompt} selectionContext={promptSelectionLabel ?? undefined} />
+          <AIChatMessage role="user" content={currentPrompt} selectionContext={promptSelectionLabel ?? undefined} imageCount={promptImageCount || undefined} />
         )}
 
         {/* Current streaming response */}
@@ -310,6 +394,29 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
           </div>
         )}
 
+        {/* Image thumbnails */}
+        {attachedImages.length > 0 && (
+          <div className="flex gap-2 mb-2 flex-wrap">
+            {attachedImages.map((img, i) => (
+              <div key={i} className="relative group">
+                <img
+                  src={img.preview}
+                  alt={`Attachment ${i + 1}`}
+                  className="w-14 h-14 object-cover rounded-lg border border-gray-300"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeImage(i)}
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                  style={{ background: 'var(--red-9)', fontSize: '10px' }}
+                >
+                  <Cross2Icon width={10} height={10} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Selection indicator */}
         {selectionPreview && (
           <div
@@ -331,16 +438,32 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
           </div>
         )}
 
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/gif,image/webp"
+          multiple
+          className="hidden"
+          onChange={handleFileInputChange}
+        />
         <div
           className="ai-input-container flex items-end gap-2 rounded-2xl px-3 py-2"
-          style={{ background: 'var(--gray-2)', border: '1px solid var(--gray-5)' }}
+          style={{
+            background: dragOver ? 'var(--accent-3)' : 'var(--gray-2)',
+            border: dragOver ? '1px solid var(--accent-7)' : '1px solid var(--gray-5)',
+            transition: 'background 150ms, border-color 150ms',
+          }}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
         >
           <button
             type="button"
-            disabled
-            className="p-1.5 shrink-0 self-center opacity-40 cursor-default"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={attachedImages.length >= AI_DEFAULTS.MAX_IMAGES_PER_REQUEST}
+            className="p-1.5 shrink-0 self-center transition-colors hover:bg-[var(--gray-4)] rounded disabled:opacity-40 disabled:cursor-not-allowed"
             style={{ color: 'var(--gray-11)' }}
-            title="Attach image (coming soon)"
+            title={attachedImages.length >= AI_DEFAULTS.MAX_IMAGES_PER_REQUEST ? `Max ${AI_DEFAULTS.MAX_IMAGES_PER_REQUEST} images` : 'Attach image'}
           >
             <ImageIcon width={18} height={18} />
           </button>

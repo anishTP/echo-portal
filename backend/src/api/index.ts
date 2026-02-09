@@ -19,6 +19,7 @@ import { uploadRoutes } from './routes/uploads.js';
 import { comparisonRoutes } from './routes/comparison.js';
 import { aiRoutes } from './routes/ai.js';
 import { aiConfigRoutes } from './routes/ai-config.js';
+import { aiContextDocRoutes } from './routes/ai-context-documents.js';
 import { EchoProvider } from '../services/ai/providers/echo-provider.js';
 import { AnthropicProvider } from '../services/ai/providers/anthropic-provider.js';
 import { OpenAIProvider } from '../services/ai/providers/openai-provider.js';
@@ -115,6 +116,8 @@ api.route('/', comparisonRoutes);
 api.route('/ai', aiRoutes);
 // AI admin configuration routes (007-ai-assisted-authoring Phase 2)
 api.route('/ai/config', aiConfigRoutes);
+// AI context documents CRUD routes (admin-only)
+api.route('/ai/context-documents', aiContextDocRoutes);
 
 app.route('/api/v1', api);
 

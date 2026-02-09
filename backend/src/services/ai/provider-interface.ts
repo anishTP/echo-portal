@@ -24,6 +24,8 @@ export interface AIProviderGenerateParams {
   maxTokens?: number;
   selectedText?: string;
   cursorContext?: string;
+  contextDocuments?: Array<{ title: string; content: string }>;
+  images?: Array<{ mediaType: string; data: string }>;
 }
 
 export interface AIProviderTransformParams {
