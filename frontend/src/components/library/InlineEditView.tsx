@@ -20,6 +20,8 @@ export interface InlineEditViewHandle {
   cancelPendingSave: () => void;
   /** Replace the editor body content (forces editor remount) */
   setBody: (body: string) => void;
+  /** Insert content at the current cursor position */
+  insertAtCursor: (body: string) => void;
   /** Undo last editor action */
   undo: () => void;
   /** Redo last undone action */
@@ -203,6 +205,13 @@ const InlineEditViewComponent = forwardRef<InlineEditViewHandle, InlineEditViewP
         setEditorVersion((v) => v + 1);
       }
       autoSaveFn(contentRef.current);
+    },
+    insertAtCursor: (body: string) => {
+      if (milkdownRef.current?.insertAtCursor) {
+        milkdownRef.current.insertAtCursor(body);
+        // Read back the full body from contentRef (updated via onChange listener)
+        autoSaveFn(contentRef.current);
+      }
     },
     undo: () => milkdownRef.current?.undo(),
     redo: () => milkdownRef.current?.redo(),

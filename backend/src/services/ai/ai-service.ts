@@ -18,6 +18,8 @@ export interface GenerateInput {
   contentId?: string;
   prompt: string;
   conversationId?: string;
+  context?: string;
+  mode?: string;
   sessionId: string;
   sessionExpiresAt: Date;
 }
@@ -121,7 +123,8 @@ export class AIService {
     // Create the provider stream
     const providerStream = provider.generate({
       prompt: input.prompt,
-      context: undefined,
+      context: input.context,
+      mode: input.mode,
       conversationHistory: history,
       maxTokens: limits.maxTokens,
     });

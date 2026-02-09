@@ -770,10 +770,14 @@ export default function Library() {
         <AIChatPanel
           branchId={branchId}
           contentId={contentIdParam}
-          onContentAccepted={(aiContent) => {
+          getDocumentBody={() => inlineEditViewRef.current?.getContent().body}
+          onContentAccepted={(aiContent, mode) => {
             if (inlineEditViewRef.current) {
-              const existing = inlineEditViewRef.current.getContent().body;
-              inlineEditViewRef.current.setBody(existing + '\n\n' + aiContent);
+              if (mode === 'replace') {
+                inlineEditViewRef.current.setBody(aiContent);
+              } else {
+                inlineEditViewRef.current.insertAtCursor(aiContent);
+              }
             }
           }}
         />

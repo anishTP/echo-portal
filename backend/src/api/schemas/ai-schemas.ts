@@ -14,6 +14,8 @@ export const aiGenerateBodySchema = z.object({
   contentId: uuidSchema.optional(),
   prompt: z.string().min(1, 'Prompt is required').max(AI_DEFAULTS.MAX_PROMPT_LENGTH),
   conversationId: uuidSchema.optional(),
+  context: z.string().max(200_000).optional(),
+  mode: z.enum(['add', 'replace', 'analyse']).optional(),
 });
 
 export type AIGenerateBody = z.infer<typeof aiGenerateBodySchema>;

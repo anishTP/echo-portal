@@ -5,11 +5,22 @@ import { useAIConversation } from '../../hooks/useAIConversation.js';
 import { useAIStore } from '../../stores/aiStore.js';
 import { api } from '../../services/api.js';
 import { aiApi } from '../../services/ai-api.js';
+import type { AIResponseMode } from '@echo-portal/shared';
+
+function parseSlashCommand(input: string): { mode: AIResponseMode; prompt: string } {
+  const trimmed = input.trimStart();
+  if (trimmed.startsWith('/replace '))  return { mode: 'replace',  prompt: trimmed.slice('/replace '.length).trim() };
+  if (trimmed.startsWith('/analyse '))  return { mode: 'analyse',  prompt: trimmed.slice('/analyse '.length).trim() };
+  if (trimmed.startsWith('/analyze '))  return { mode: 'analyse',  prompt: trimmed.slice('/analyze '.length).trim() };
+  if (trimmed.startsWith('/add '))      return { mode: 'add',      prompt: trimmed.slice('/add '.length).trim() };
+  return { mode: 'add', prompt: input };
+}
 
 interface AIChatPanelProps {
   branchId: string;
   contentId?: string;
-  onContentAccepted?: (content: string) => void;
+  getDocumentBody?: () => string | undefined;
+  onContentAccepted?: (content: string, mode: 'add' | 'replace') => void;
 }
 
 /**
@@ -19,9 +30,10 @@ interface AIChatPanelProps {
  * conversation, streaming display, and accept/reject actions.
  * Checks AI enabled state from config (T044).
  */
-export function AIChatPanel({ branchId, contentId, onContentAccepted }: AIChatPanelProps) {
+export function AIChatPanel({ branchId, contentId, getDocumentBody, onContentAccepted }: AIChatPanelProps) {
   const [prompt, setPrompt] = useState('');
   const [currentPrompt, setCurrentPrompt] = useState<string | null>(null);
+  const [currentMode, setCurrentMode] = useState<AIResponseMode>('add');
   const [aiEnabled, setAIEnabled] = useState(true);
   const [configChecked, setConfigChecked] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -52,6 +64,17 @@ export function AIChatPanel({ branchId, contentId, onContentAccepted }: AIChatPa
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [ai.streamContent, conv.conversation?.requests?.length]);
+
+  // Auto-dismiss analysis responses — reject backend request so user isn't blocked
+  useEffect(() => {
+    if (ai.streamStatus === 'complete' && currentMode === 'analyse' && ai.streamRequestId) {
+      ai.reject(ai.streamRequestId).then(() => {
+        ai.resetStream();
+        conv.refreshConversation();
+        setCurrentPrompt(null);
+      });
+    }
+  }, [ai.streamStatus, currentMode, ai.streamRequestId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!store.panelOpen) return null;
 
@@ -98,11 +121,16 @@ export function AIChatPanel({ branchId, contentId, onContentAccepted }: AIChatPa
     setPrompt('');
     setCurrentPrompt(submittedPrompt);
 
+    const { mode, prompt: cleanPrompt } = parseSlashCommand(submittedPrompt);
+    setCurrentMode(mode);
+
     await ai.generate({
       branchId,
       contentId,
-      prompt: submittedPrompt,
+      prompt: cleanPrompt,
       conversationId: conv.conversationId ?? undefined,
+      context: getDocumentBody?.(),
+      mode,
     });
 
     // Refresh conversation to get updated state
@@ -119,9 +147,9 @@ export function AIChatPanel({ branchId, contentId, onContentAccepted }: AIChatPa
     }
     await ai.accept(requestId, {
       contentId,
-      changeDescription: 'AI-generated content',
+      changeDescription: currentMode === 'replace' ? 'AI-modified content' : 'AI-generated content',
     });
-    onContentAccepted?.(acceptedContent);
+    onContentAccepted?.(acceptedContent, currentMode as 'add' | 'replace');
     ai.resetStream();
     await conv.refreshConversation();
     setCurrentPrompt(null);
@@ -215,8 +243,8 @@ export function AIChatPanel({ branchId, contentId, onContentAccepted }: AIChatPa
           <AIChatMessage role="assistant" content={ai.streamContent} isStreaming />
         )}
 
-        {/* Completed stream waiting for accept/reject */}
-        {ai.streamStatus === 'complete' && ai.streamRequestId && (
+        {/* Completed stream waiting for accept/reject (not shown for analyse mode — auto-dismissed) */}
+        {ai.streamStatus === 'complete' && ai.streamRequestId && currentMode !== 'analyse' && (
           <AIChatMessage
             role="assistant"
             content={ai.streamContent}
@@ -255,7 +283,7 @@ export function AIChatPanel({ branchId, contentId, onContentAccepted }: AIChatPa
                 handleSubmit(e);
               }
             }}
-            placeholder={hasPending ? 'Resolve pending content first...' : 'Ask AI to generate content...'}
+            placeholder={hasPending ? 'Resolve pending content first...' : 'Ask AI... (try /replace or /analyse)'}
             disabled={hasPending || !conv.hasRemainingTurns}
             className="flex-1 resize-none rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
             style={{

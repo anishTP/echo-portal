@@ -74,8 +74,15 @@ export function AIChatMessage({
           </div>
         )}
 
+        {/* Analysis mode label — no accept/reject buttons */}
+        {!isUser && status === 'analysis' && !isStreaming && (
+          <div className="mt-2 pt-2 text-xs italic" style={{ borderTop: '1px solid var(--gray-6)', color: 'var(--gray-9)' }}>
+            Analysis only — no changes to apply
+          </div>
+        )}
+
         {/* Status indicator */}
-        {!isUser && status && status !== 'pending' && !isStreaming && (
+        {!isUser && status && status !== 'pending' && status !== 'analysis' && !isStreaming && (
           <div className="mt-1 text-xs capitalize" style={{ color: 'var(--gray-9)' }}>{status}</div>
         )}
       </div>

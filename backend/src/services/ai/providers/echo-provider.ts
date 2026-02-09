@@ -16,7 +16,7 @@ export class EchoProvider implements AIProvider {
   readonly displayName = 'Echo (Development)';
 
   async *generate(params: AIProviderGenerateParams): AsyncIterable<AIStreamChunk> {
-    const response = this.buildGenerateResponse(params.prompt, params.context);
+    const response = this.buildGenerateResponse(params.prompt, params.context, params.mode);
     yield* this.streamResponse(response);
   }
 
@@ -32,7 +32,36 @@ export class EchoProvider implements AIProvider {
     return true;
   }
 
-  private buildGenerateResponse(prompt: string, context?: string): string {
+  private buildGenerateResponse(prompt: string, context?: string, mode?: string): string {
+    if (mode === 'analyse') {
+      const lines = [
+        `**Analysis Feedback**\n`,
+        `Based on your request: "${prompt.slice(0, 200)}${prompt.length > 200 ? '...' : ''}"`,
+        '',
+      ];
+      if (context) {
+        lines.push(`Document reviewed (${context.length} chars).\n`);
+      }
+      lines.push(
+        'This is a development analysis from the Echo provider.',
+        'In production, the AI would provide constructive feedback about the document.',
+        '',
+        '- The document structure looks reasonable',
+        '- Consider adding more detail to the introduction',
+        '- Tone is consistent throughout',
+      );
+      return lines.join('\n');
+    }
+
+    if (mode === 'replace' && context) {
+      const lines = [
+        context,
+        '',
+        `<!-- Applied: ${prompt.slice(0, 100)} -->`,
+      ];
+      return lines.join('\n');
+    }
+
     const lines = [
       `**AI Generated Content**\n`,
       `Based on your request: "${prompt.slice(0, 200)}${prompt.length > 200 ? '...' : ''}"`,

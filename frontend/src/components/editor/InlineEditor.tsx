@@ -89,6 +89,8 @@ export interface InlineEditorHandle {
   redo: () => void;
   /** Replace editor body via ProseMirror transaction (preserves undo history) */
   replaceBody: (markdown: string) => void;
+  /** Insert markdown at the current cursor position */
+  insertAtCursor: (markdown: string) => void;
 }
 
 /** Bridge component that captures the editor instance, exposes undo/redo, and tracks history state */
@@ -152,6 +154,21 @@ function EditorBridge({
             const doc = parser(markdown);
             if (doc) {
               const tr = view.state.tr.replaceWith(0, view.state.doc.content.size, doc.content);
+              view.dispatch(tr);
+            }
+          });
+          checkHistory();
+        } catch { /* editor not ready */ }
+      },
+      insertAtCursor: (markdown: string) => {
+        try {
+          editor.action((ctx) => {
+            const parser = ctx.get(parserCtx);
+            const view = ctx.get(editorViewCtx);
+            const doc = parser(markdown);
+            if (doc) {
+              const pos = view.state.selection.from;
+              const tr = view.state.tr.insert(pos, doc.content);
               view.dispatch(tr);
             }
           });

@@ -19,6 +19,7 @@ export interface AIStreamChunk {
 export interface AIProviderGenerateParams {
   prompt: string;
   context?: string;
+  mode?: string;
   conversationHistory?: ConversationTurn[];
   maxTokens?: number;
 }

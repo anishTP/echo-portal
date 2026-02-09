@@ -66,11 +66,15 @@ export type AIStreamEvent =
 
 // --- API Request/Response Types ---
 
+export type AIResponseMode = 'add' | 'replace' | 'analyse';
+
 export interface AIGenerateParams {
   branchId: string;
   contentId?: string;
   prompt: string;
   conversationId?: string;
+  context?: string;
+  mode?: AIResponseMode;
 }
 
 export interface AITransformParams {
