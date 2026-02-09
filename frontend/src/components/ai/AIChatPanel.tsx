@@ -229,8 +229,10 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
-        {/* Conversation history */}
-        {conv.conversation?.requests?.map((req) => (
+        {/* Conversation history (exclude the request currently handled by local streaming state) */}
+        {conv.conversation?.requests
+          ?.filter((req) => req.id !== ai.streamRequestId)
+          .map((req) => (
           <React.Fragment key={req.id}>
             <AIChatMessage role="user" content={req.prompt} />
             {req.generatedContent && (

@@ -775,10 +775,9 @@ export default function Library() {
           onContentAccepted={(aiContent, mode, selectedText) => {
             if (inlineEditViewRef.current) {
               if (mode === 'replace' && selectedText) {
-                // Targeted replacement: swap the selected passage within the full body
-                const currentBody = inlineEditViewRef.current.getContent().body;
-                const newBody = currentBody.replace(selectedText, aiContent);
-                inlineEditViewRef.current.setBody(newBody);
+                // Targeted replacement: replace at ProseMirror selection positions
+                // (avoids plain-text vs markdown mismatch from string-based replace)
+                inlineEditViewRef.current.replaceSelection(aiContent);
               } else if (mode === 'replace') {
                 inlineEditViewRef.current.setBody(aiContent);
               } else {

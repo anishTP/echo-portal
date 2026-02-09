@@ -91,6 +91,8 @@ export interface InlineEditorHandle {
   replaceBody: (markdown: string) => void;
   /** Insert markdown at the current cursor position */
   insertAtCursor: (markdown: string) => void;
+  /** Replace the current ProseMirror selection range with new markdown content */
+  replaceSelection: (markdown: string) => void;
   /** Get the current selection context (highlighted text or paragraph at cursor) */
   getSelectionContext: () => { selectedText: string | null; cursorContext: string | null };
 }
@@ -171,6 +173,26 @@ function EditorBridge({
             if (doc) {
               const pos = view.state.selection.from;
               const tr = view.state.tr.insert(pos, doc.content);
+              view.dispatch(tr);
+            }
+          });
+          checkHistory();
+        } catch { /* editor not ready */ }
+      },
+      replaceSelection: (markdown: string) => {
+        try {
+          editor.action((ctx) => {
+            const parser = ctx.get(parserCtx);
+            const view = ctx.get(editorViewCtx);
+            const { from, to } = view.state.selection;
+            const doc = parser(markdown);
+            if (doc && from !== to) {
+              // Range selection exists — replace just that range
+              const tr = view.state.tr.replaceWith(from, to, doc.content);
+              view.dispatch(tr);
+            } else if (doc) {
+              // Selection collapsed — fall back to full body replacement
+              const tr = view.state.tr.replaceWith(0, view.state.doc.content.size, doc.content);
               view.dispatch(tr);
             }
           });

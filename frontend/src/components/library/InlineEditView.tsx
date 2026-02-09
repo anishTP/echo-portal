@@ -22,6 +22,8 @@ export interface InlineEditViewHandle {
   setBody: (body: string) => void;
   /** Insert content at the current cursor position */
   insertAtCursor: (body: string) => void;
+  /** Replace the current editor selection with new content */
+  replaceSelection: (body: string) => void;
   /** Undo last editor action */
   undo: () => void;
   /** Redo last undone action */
@@ -212,6 +214,12 @@ const InlineEditViewComponent = forwardRef<InlineEditViewHandle, InlineEditViewP
       if (milkdownRef.current?.insertAtCursor) {
         milkdownRef.current.insertAtCursor(body);
         // Read back the full body from contentRef (updated via onChange listener)
+        autoSaveFn(contentRef.current);
+      }
+    },
+    replaceSelection: (body: string) => {
+      if (milkdownRef.current?.replaceSelection) {
+        milkdownRef.current.replaceSelection(body);
         autoSaveFn(contentRef.current);
       }
     },
