@@ -25,6 +25,10 @@ interface AIChatPanelProps {
   getDocumentBody?: () => string | undefined;
   getSelectionContext?: () => { selectedText: string | null; cursorContext: string | null };
   onContentAccepted?: (content: string, mode: 'add' | 'replace', selectedText?: string) => void;
+  /** Called when a selection is referenced at submit time — used to highlight the range in the editor */
+  onSelectionReferenced?: () => void;
+  /** Called when the selection reference is cleared (accept/reject/cancel/new conversation) */
+  onSelectionCleared?: () => void;
 }
 
 /**
@@ -34,7 +38,7 @@ interface AIChatPanelProps {
  * conversation, streaming display, and accept/reject actions.
  * Checks AI enabled state from config (T044).
  */
-export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelectionContext, onContentAccepted }: AIChatPanelProps) {
+export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelectionContext, onContentAccepted, onSelectionReferenced, onSelectionCleared }: AIChatPanelProps) {
   const [prompt, setPrompt] = useState('');
   const [currentPrompt, setCurrentPrompt] = useState<string | null>(null);
   const [currentMode, setCurrentMode] = useState<AIResponseMode>('add');
@@ -53,7 +57,19 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
   const conv = useAIConversation(branchId);
 
   const isStreaming = ai.streamStatus === 'streaming';
-  const hasPending = store.streamingStatus === 'streaming' || store.pendingRequest !== null;
+  // Block new requests while any unresolved request exists:
+  // 1. Active SSE stream in progress
+  // 2. Store-tracked pending request
+  // 3. Completed stream awaiting accept/reject (non-analyse — those auto-dismiss)
+  // 4. Historical pending/generating requests in conversation
+  const hasUnresolvedStream = ai.streamStatus === 'complete' && ai.streamRequestId != null && currentMode !== 'analyse';
+  const hasConversationPending = conv.conversation?.requests?.some(
+    (req) => req.status === 'pending' || req.status === 'generating'
+  ) ?? false;
+  const hasPending = store.streamingStatus === 'streaming'
+    || store.pendingRequest !== null
+    || hasUnresolvedStream
+    || hasConversationPending;
 
   // Check if AI is enabled from config (T044)
   useEffect(() => {
@@ -163,7 +179,7 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
     return (
       <div
         className="flex flex-col h-full"
-        style={{ width: '340px', background: 'var(--color-background)', borderLeft: '1px solid var(--gray-6)' }}
+        style={{ width: 'var(--side-panel-width, 408px)', background: 'var(--color-background)', borderLeft: '1px solid var(--gray-6)' }}
       >
         <div
           className="flex items-center justify-between px-4 py-3"
@@ -213,6 +229,8 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
     if (selCtx.selectedText) {
       const label = selCtx.selectedText.slice(0, 80) + (selCtx.selectedText.length > 80 ? '...' : '');
       setPromptSelectionLabel(label);
+      // Highlight the referenced selection in the editor
+      onSelectionReferenced?.();
     } else {
       setPromptSelectionLabel(null);
     }
@@ -249,11 +267,35 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
     if (fenceMatch) {
       acceptedContent = fenceMatch[1].trim();
     }
+
+    // Compute the full document body to save to the server.
+    // For replace mode with selected text, splice the AI snippet into the document;
+    // for add mode, append to the current body; for analyse, use current body as-is.
+    let editedContent: string | undefined;
+    const currentBody = getDocumentBody?.();
+    if (currentMode === 'replace' && capturedSelectedText && currentBody != null) {
+      editedContent = currentBody.replace(capturedSelectedText, acceptedContent);
+    } else if (currentMode === 'add' && currentBody != null) {
+      editedContent = currentBody + '\n\n' + acceptedContent;
+    } else {
+      editedContent = acceptedContent;
+    }
+
     await ai.accept(requestId, {
       contentId,
+      editedContent,
       changeDescription: currentMode === 'replace' ? 'AI-modified content' : 'AI-generated content',
     });
-    onContentAccepted?.(acceptedContent, currentMode as 'add' | 'replace', capturedSelectedText ?? undefined);
+
+    // Update the local editor state.
+    // For replace mode: pass the pre-computed full body so Library.tsx just calls setBody().
+    if (currentMode === 'replace' && capturedSelectedText && currentBody != null) {
+      // editedContent is the full body with replacement already applied
+      onContentAccepted?.(editedContent!, 'replace' as const, undefined);
+    } else {
+      onContentAccepted?.(acceptedContent, currentMode as 'add' | 'replace', capturedSelectedText ?? undefined);
+    }
+    onSelectionCleared?.();
     ai.resetStream();
     await conv.refreshConversation();
     setCurrentPrompt(null);
@@ -278,10 +320,22 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
     }
   };
 
+  const handleDiscardStuck = async () => {
+    // Force-discard all pending/generating requests for this branch (handles server errors / stuck state)
+    await aiApi.discardPending(branchId).catch(() => {});
+    ai.resetStream();
+    await conv.refreshConversation();
+    setCurrentPrompt(null);
+    setCapturedSelectedText(null);
+    setPromptSelectionLabel(null);
+    setPromptImageCount(0);
+  };
+
   const handleNewConversation = async () => {
     // Discard any stale pending requests (handles server restart / stale state)
     await aiApi.discardPending(branchId).catch(() => {});
     await conv.clearConversation();
+    onSelectionCleared?.();
     ai.resetStream();
     setCurrentPrompt(null);
   };
@@ -290,7 +344,7 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
     <div
       className="flex flex-col h-full"
       style={{
-        width: '340px',
+        width: 'var(--side-panel-width, 408px)',
         background: 'var(--color-background)',
         borderLeft: '1px solid var(--gray-6)',
       }}
@@ -350,6 +404,22 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
                 onAccept={req.status === 'pending' ? () => handleAccept(req.id) : undefined}
                 onReject={req.status === 'pending' ? () => handleReject(req.id) : undefined}
               />
+            )}
+            {/* Orphaned request — server errored before generating content */}
+            {!req.generatedContent && (req.status === 'pending' || req.status === 'generating') && (
+              <div
+                className="rounded-lg p-3 text-sm"
+                style={{ background: 'var(--amber-3)', border: '1px solid var(--amber-6)' }}
+              >
+                <p style={{ color: 'var(--amber-11)' }}>This request did not complete.</p>
+                <button
+                  onClick={handleDiscardStuck}
+                  className="mt-2 text-xs px-3 py-1.5 rounded-md transition-colors hover:opacity-80"
+                  style={{ background: 'var(--gray-5)', color: 'var(--gray-12)' }}
+                >
+                  Discard
+                </button>
+              </div>
             )}
           </React.Fragment>
         ))}
@@ -429,7 +499,7 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
             </span>
             <button
               type="button"
-              onClick={() => setSelectionPreview(null)}
+              onClick={() => { setSelectionPreview(null); onSelectionCleared?.(); }}
               className="shrink-0 ml-auto"
               style={{ color: 'var(--accent-9)' }}
             >
@@ -476,16 +546,13 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
               }
             }}
             onFocus={() => {
-              // Only show selection indicator if there's a visible browser selection
-              // (avoids stale ProseMirror internal selections from previous operations)
-              const browserSel = window.getSelection();
-              if (!browserSel || browserSel.isCollapsed) {
-                setSelectionPreview(null);
-                return;
-              }
+              // Check ProseMirror's selection (persists after editor blur, unlike
+              // window.getSelection() which collapses when focus moves to this input)
               const selCtx = getSelectionContext?.();
               if (selCtx?.selectedText) {
                 setSelectionPreview(selCtx.selectedText.slice(0, 120) + (selCtx.selectedText.length > 120 ? '...' : ''));
+                // Apply highlight decoration immediately so it persists
+                onSelectionReferenced?.();
               } else {
                 setSelectionPreview(null);
               }
