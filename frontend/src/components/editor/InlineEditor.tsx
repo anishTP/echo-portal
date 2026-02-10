@@ -9,12 +9,52 @@ import { history, undoCommand, redoCommand } from '@milkdown/plugin-history';
 import { clipboard } from '@milkdown/plugin-clipboard';
 import { listener, listenerCtx } from '@milkdown/plugin-listener';
 import { upload, uploadConfig } from '@milkdown/plugin-upload';
+import { Plugin, PluginKey } from '@milkdown/prose/state';
+import { Decoration, DecorationSet } from '@milkdown/prose/view';
+import { $prose } from '@milkdown/utils';
 import { defaultImageUploader } from './milkdown-config';
 import { useVideoEmbedView } from './video-embed-plugin';
 import '@milkdown/theme-nord/style.css';
 import './editor.css';
 import { AIContextMenu } from '../ai/AIContextMenu';
 import { AIInlinePreview } from '../ai/AIInlinePreview';
+
+/**
+ * ProseMirror plugin that manages a decoration for highlighting the text range
+ * currently referenced by the AI chat panel. Dispatching a transaction with
+ * meta `{ add: { from, to } }` sets the highlight; `{ clear: true }` removes it.
+ * The decoration is mapped through document changes so it survives cursor moves
+ * and minor edits.
+ */
+const highlightPluginKey = new PluginKey('ai-selection-highlight');
+
+const aiHighlightPlugin = $prose(() => new Plugin({
+  key: highlightPluginKey,
+  state: {
+    init() {
+      return DecorationSet.empty;
+    },
+    apply(tr, set) {
+      // Map existing decorations through any document changes
+      set = set.map(tr.mapping, tr.doc);
+      const meta = tr.getMeta(highlightPluginKey);
+      if (meta?.add) {
+        const { from, to } = meta.add;
+        const deco = Decoration.inline(from, to, { class: 'ai-selection-highlight' });
+        return DecorationSet.create(tr.doc, [deco]);
+      }
+      if (meta?.clear) {
+        return DecorationSet.empty;
+      }
+      return set;
+    },
+  },
+  props: {
+    decorations(state) {
+      return highlightPluginKey.getState(state);
+    },
+  },
+}));
 
 export interface InlineEditorProps {
   defaultValue?: string;
@@ -77,7 +117,8 @@ function MilkdownEditor({
       .use(clipboard)
       .use(listener)
       .use(upload)
-      .use(videoEmbedView),
+      .use(videoEmbedView)
+      .use(aiHighlightPlugin),
     [] // Empty dependency - videoEmbedView is memoized and stable
   );
 
@@ -95,6 +136,10 @@ export interface InlineEditorHandle {
   replaceSelection: (markdown: string) => void;
   /** Get the current selection context (highlighted text or paragraph at cursor) */
   getSelectionContext: () => { selectedText: string | null; cursorContext: string | null };
+  /** Highlight the current ProseMirror selection range (for AI chat reference) */
+  highlightSelection: () => void;
+  /** Remove any active AI selection highlight */
+  clearHighlight: () => void;
 }
 
 /** Bridge component that captures the editor instance, exposes undo/redo, and tracks history state */
@@ -184,15 +229,24 @@ function EditorBridge({
           editor.action((ctx) => {
             const parser = ctx.get(parserCtx);
             const view = ctx.get(editorViewCtx);
-            const { from, to } = view.state.selection;
             const doc = parser(markdown);
-            if (doc && from !== to) {
-              // Range selection exists — replace just that range
+            if (!doc) return;
+
+            // Prefer highlight decoration positions — they persist even when the
+            // editor loses focus (e.g. user clicks Accept in the AI panel).
+            const decoSet = highlightPluginKey.getState(view.state);
+            const decos = decoSet?.find() ?? [];
+
+            let from: number, to: number;
+            if (decos.length > 0) {
+              from = decos[0].from;
+              to = decos[0].to;
+            } else {
+              ({ from, to } = view.state.selection);
+            }
+
+            if (from !== to) {
               const tr = view.state.tr.replaceWith(from, to, doc.content);
-              view.dispatch(tr);
-            } else if (doc) {
-              // Selection collapsed — fall back to full body replacement
-              const tr = view.state.tr.replaceWith(0, view.state.doc.content.size, doc.content);
               view.dispatch(tr);
             }
           });
@@ -203,7 +257,19 @@ function EditorBridge({
         try {
           return editor.action((ctx) => {
             const view = ctx.get(editorViewCtx);
-            const { from, to } = view.state.selection;
+
+            // Prefer highlight decoration positions (persist across focus changes)
+            const decoSet = highlightPluginKey.getState(view.state);
+            const decos = decoSet?.find() ?? [];
+
+            let from: number, to: number;
+            if (decos.length > 0) {
+              from = decos[0].from;
+              to = decos[0].to;
+            } else {
+              ({ from, to } = view.state.selection);
+            }
+
             if (from !== to) {
               return { selectedText: view.state.doc.textBetween(from, to, '\n'), cursorContext: null };
             }
@@ -213,6 +279,27 @@ function EditorBridge({
         } catch {
           return { selectedText: null, cursorContext: null };
         }
+      },
+      highlightSelection: () => {
+        try {
+          editor.action((ctx) => {
+            const view = ctx.get(editorViewCtx);
+            const { from, to } = view.state.selection;
+            if (from !== to) {
+              const tr = view.state.tr.setMeta(highlightPluginKey, { add: { from, to } });
+              view.dispatch(tr);
+            }
+          });
+        } catch { /* editor not ready */ }
+      },
+      clearHighlight: () => {
+        try {
+          editor.action((ctx) => {
+            const view = ctx.get(editorViewCtx);
+            const tr = view.state.tr.setMeta(highlightPluginKey, { clear: true });
+            view.dispatch(tr);
+          });
+        } catch { /* editor not ready */ }
       },
     };
 

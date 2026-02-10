@@ -402,3 +402,9 @@
   font-style: italic;
   opacity: 0.6;
 }
+
+/* AI selection highlight — marks text referenced by the AI chat panel */
+.ai-selection-highlight {
+  background: Highlight;
+  border-radius: 2px;
+}

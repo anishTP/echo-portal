@@ -34,6 +34,10 @@ export interface InlineEditViewHandle {
   canRedo: boolean;
   /** Get the current editor selection context (highlighted text or paragraph at cursor) */
   getSelectionContext: () => { selectedText: string | null; cursorContext: string | null };
+  /** Highlight the current editor selection (for AI chat reference) */
+  highlightSelection: () => void;
+  /** Remove any active AI selection highlight */
+  clearHighlight: () => void;
 }
 
 export interface InlineEditViewProps {
@@ -148,6 +152,16 @@ const InlineEditViewComponent = forwardRef<InlineEditViewHandle, InlineEditViewP
     const initializeDraft = async () => {
       const existingDraft = await loadDraft();
       if (existingDraft) {
+        // Check if the draft is based on the current server version.
+        // If the server has a newer version, the draft is stale (e.g. from a
+        // previous session that saved incorrect content) — discard it.
+        const currentServerVersion = content.currentVersion?.versionTimestamp;
+        const draftBaseVersion = existingDraft.serverVersionTimestamp;
+        if (draftBaseVersion && currentServerVersion && draftBaseVersion !== currentServerVersion) {
+          // Stale draft — server has been updated since this draft was created
+          return;
+        }
+
         contentRef.current = {
           title: existingDraft.title,
           body: existingDraft.body,
@@ -155,6 +169,11 @@ const InlineEditViewComponent = forwardRef<InlineEditViewHandle, InlineEditViewP
         };
         // Update initial body ref for the editor
         initialBody.current = existingDraft.body;
+        // If the editor already mounted before the async draft loaded,
+        // push the draft body into the editor so contentRef stays in sync.
+        if (milkdownRef.current?.replaceBody) {
+          milkdownRef.current.replaceBody(existingDraft.body);
+        }
       }
     };
 
@@ -229,6 +248,8 @@ const InlineEditViewComponent = forwardRef<InlineEditViewHandle, InlineEditViewP
     canRedo: historyState.canRedo,
     getSelectionContext: () =>
       milkdownRef.current?.getSelectionContext() ?? { selectedText: null, cursorContext: null },
+    highlightSelection: () => milkdownRef.current?.highlightSelection(),
+    clearHighlight: () => milkdownRef.current?.clearHighlight(),
   }), [saveNow, cancelAutoSave, autoSaveFn, historyState]);
 
   // Record activity on editor focus
