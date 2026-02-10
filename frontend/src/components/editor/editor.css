@@ -405,6 +405,6 @@
 
 /* AI selection highlight — marks text referenced by the AI chat panel */
 .ai-selection-highlight {
-  background: Highlight;
+  background: var(--orange-4, #ffdfb5);
   border-radius: 2px;
 }
