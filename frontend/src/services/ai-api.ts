@@ -5,6 +5,8 @@ import type {
   AIConversationDetail,
   AIRequestDetail,
   AIContextDocument,
+  ComplianceCategory,
+  ComplianceCategoryConfig,
 } from '@echo-portal/shared';
 
 const AI_BASE = '/ai';
@@ -85,4 +87,23 @@ export const aiApi = {
   /** Delete a context document */
   deleteContextDocument: (id: string) =>
     api.delete<{ success: boolean }>(`${AI_BASE}/context-documents/${id}`),
+
+  // --- Compliance Config (008-image-compliance-analysis) ---
+
+  /** Get AI config including compliance categories */
+  getConfig: () =>
+    api.get<{
+      config: {
+        global: Record<string, unknown>;
+        roles: Record<string, Record<string, unknown>>;
+        compliance: Record<ComplianceCategory, ComplianceCategoryConfig>;
+      };
+    }>(`${AI_BASE}/config`),
+
+  /** Update compliance category configuration */
+  updateComplianceConfig: (categories: Partial<Record<ComplianceCategory, ComplianceCategoryConfig>>) =>
+    apiFetch(`${AI_BASE}/config`, {
+      method: 'PUT',
+      body: JSON.stringify({ compliance: categories }),
+    }),
 };

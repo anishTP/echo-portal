@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { uuidSchema } from './common.js';
-import { AI_DEFAULTS } from '@echo-portal/shared';
+import { AI_DEFAULTS, COMPLIANCE_CATEGORIES } from '@echo-portal/shared';
 
 /**
  * Zod validation schemas for AI-assisted authoring endpoints
@@ -90,3 +90,23 @@ export const aiConversationIdParamSchema = z.object({
 });
 
 export type AIConversationIdParam = z.infer<typeof aiConversationIdParamSchema>;
+
+// --- Compliance Config (008-image-compliance-analysis) ---
+
+export const complianceSeveritySchema = z.enum(['error', 'warning', 'informational']);
+
+export const complianceCategoryConfigSchema = z.object({
+  enabled: z.boolean(),
+  severity: complianceSeveritySchema,
+});
+
+export const complianceCategoryKeySchema = z.enum(
+  COMPLIANCE_CATEGORIES as unknown as [string, ...string[]]
+);
+
+export const complianceConfigUpdateSchema = z.record(
+  complianceCategoryKeySchema,
+  complianceCategoryConfigSchema,
+);
+
+export type ComplianceConfigUpdate = z.infer<typeof complianceConfigUpdateSchema>;

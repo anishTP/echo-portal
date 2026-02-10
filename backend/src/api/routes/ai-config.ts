@@ -5,6 +5,8 @@ import { and, desc, eq, gte, like, lte, sql } from 'drizzle-orm';
 import { requireAuth, type AuthEnv } from '../middleware/auth.js';
 import { aiConfigService } from '../../services/ai/ai-config-service.js';
 import { AuditLogger } from '../../services/audit/logger.js';
+import { complianceConfigUpdateSchema } from '../schemas/ai-schemas.js';
+import { COMPLIANCE_CATEGORIES, type ComplianceCategory, type ComplianceCategoryConfig } from '@echo-portal/shared';
 import { db, schema } from '../../db/index.js';
 import { paginated } from '../utils/responses.js';
 import { users } from '../../db/schema/users.js';
@@ -80,6 +82,41 @@ aiConfigRoutes.put('/', requireAuth, async (c) => {
       resourceId: 'ai-config',
       metadata: { updates },
     });
+
+    // Process compliance category updates (008-image-compliance-analysis)
+    if (body.compliance) {
+      const parsed = complianceConfigUpdateSchema.safeParse(body.compliance);
+      if (!parsed.success) {
+        return c.json(
+          { error: { code: 'VALIDATION_ERROR', message: 'Invalid compliance configuration', details: parsed.error.issues } },
+          400,
+        );
+      }
+
+      const complianceUpdates: Array<{ category: string; oldValue: ComplianceCategoryConfig | null; newValue: ComplianceCategoryConfig }> = [];
+      const currentConfig = await aiConfigService.getComplianceCategories();
+
+      for (const [category, config] of Object.entries(parsed.data)) {
+        const oldValue = currentConfig[category as ComplianceCategory] ?? null;
+        await aiConfigService.updateComplianceCategory(
+          category as ComplianceCategory,
+          config,
+          user.id,
+        );
+        complianceUpdates.push({ category, oldValue, newValue: config });
+      }
+
+      if (complianceUpdates.length > 0) {
+        await auditLogger.log({
+          action: 'compliance.config_changed',
+          actorId: user.id,
+          actorType: 'user',
+          resourceType: 'content',
+          resourceId: 'compliance-config',
+          metadata: { updates: complianceUpdates },
+        });
+      }
+    }
 
     const config = await aiConfigService.getFullConfig();
     return c.json({ success: true, config });

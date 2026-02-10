@@ -26,6 +26,8 @@ export interface AIProviderGenerateParams {
   cursorContext?: string;
   contextDocuments?: Array<{ title: string; content: string }>;
   images?: Array<{ mediaType: string; data: string }>;
+  /** When set, analyse mode uses compliance-specific system prompts (008) */
+  complianceCategories?: Record<string, { enabled: boolean; severity: string }>;
 }
 
 export interface AIProviderTransformParams {

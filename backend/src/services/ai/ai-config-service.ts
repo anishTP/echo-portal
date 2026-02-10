@@ -1,7 +1,13 @@
 import { db } from '../../db/index.js';
 import { aiConfigurations } from '../../db/schema/ai-configurations.js';
 import { eq, and } from 'drizzle-orm';
-import { AI_DEFAULTS } from '@echo-portal/shared';
+import {
+  AI_DEFAULTS,
+  COMPLIANCE_CATEGORIES,
+  COMPLIANCE_DEFAULTS,
+  type ComplianceCategory,
+  type ComplianceCategoryConfig,
+} from '@echo-portal/shared';
 import type { AIConfiguration } from '../../db/schema/ai-configurations.js';
 
 /**
@@ -96,6 +102,7 @@ export class AIConfigService {
   async getFullConfig(): Promise<{
     global: Record<string, unknown>;
     roles: Record<string, Record<string, unknown>>;
+    compliance: Record<ComplianceCategory, ComplianceCategoryConfig>;
   }> {
     const allConfig = await db.select().from(aiConfigurations);
 
@@ -112,7 +119,34 @@ export class AIConfigService {
       }
     }
 
-    return { global, roles };
+    const compliance = await this.getComplianceCategories();
+
+    return { global, roles, compliance };
+  }
+
+  /**
+   * Get compliance category configuration with defaults (008-image-compliance-analysis).
+   */
+  async getComplianceCategories(): Promise<Record<ComplianceCategory, ComplianceCategoryConfig>> {
+    const configs = await this.getForScope('compliance');
+    const result = { ...COMPLIANCE_DEFAULTS };
+    for (const config of configs) {
+      if (COMPLIANCE_CATEGORIES.includes(config.key as ComplianceCategory)) {
+        result[config.key as ComplianceCategory] = config.value as ComplianceCategoryConfig;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Update a single compliance category configuration.
+   */
+  async updateComplianceCategory(
+    category: ComplianceCategory,
+    config: ComplianceCategoryConfig,
+    updatedBy: string,
+  ): Promise<AIConfiguration> {
+    return this.update('compliance', category, config, updatedBy);
   }
 }
 

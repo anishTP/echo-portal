@@ -5,6 +5,8 @@ import type {
   AIProviderGenerateParams,
   AIProviderTransformParams,
 } from '../provider-interface.js';
+import { buildComplianceSystemPrompt } from '../compliance-prompts.js';
+import type { ComplianceCategory, ComplianceCategoryConfig } from '@echo-portal/shared';
 
 function buildReferenceBlock(contextDocuments?: Array<{ title: string; content: string }>): string {
   if (!contextDocuments?.length) return '';
@@ -18,6 +20,7 @@ function getGenerateSystemPrompt(
   selectedText?: string,
   cursorContext?: string,
   contextDocuments?: Array<{ title: string; content: string }>,
+  complianceCategories?: Record<string, { enabled: boolean; severity: string }>,
 ): string {
   const refBlock = buildReferenceBlock(contextDocuments);
   const contextBlock = context ? `\n\nCurrent document:\n${context}` : '';
@@ -34,6 +37,12 @@ function getGenerateSystemPrompt(
       }
       return `You are a content editor for a documentation portal. The user wants to modify existing content. Apply the requested changes and return the COMPLETE updated document body in raw markdown. Include ALL content that should remain — not just the changed parts. Do NOT wrap output in code fences. Do NOT include conversational text.${refBlock}${contextBlock}${selectionBlock}`;
     case 'analyse':
+      if (complianceCategories) {
+        return buildComplianceSystemPrompt(
+          complianceCategories as Record<ComplianceCategory, ComplianceCategoryConfig>,
+          contextDocuments,
+        );
+      }
       return `You are a content reviewer for a documentation portal. Analyze the document and provide constructive feedback. You may use conversational language. Do NOT output replacement content — just your analysis.${selectedText ? ' If selected text is provided, focus your analysis on that section.' : ''}${refBlock}${contextBlock}${selectionBlock}`;
     default: // 'add'
       return `You are a content assistant for a documentation portal. Generate NEW content based on the user's request. Output ONLY raw markdown. Do NOT wrap output in code fences. Do NOT include conversational text, explanations, or preamble — just the content itself.${refBlock}${contextBlock}${selectionBlock}`;
@@ -99,7 +108,8 @@ export class AnthropicProvider implements AIProvider {
     }
 
     const systemPrompt = getGenerateSystemPrompt(
-      params.mode, params.context, params.selectedText, params.cursorContext, params.contextDocuments
+      params.mode, params.context, params.selectedText, params.cursorContext,
+      params.contextDocuments, params.complianceCategories,
     );
 
     yield* this.streamCompletion(systemPrompt, messages, params.maxTokens);

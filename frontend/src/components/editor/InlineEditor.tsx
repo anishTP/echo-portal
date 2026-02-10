@@ -66,6 +66,8 @@ export interface InlineEditorProps {
   className?: string;
   /** AI transform callback (007-ai-assisted-authoring) */
   onAITransform?: (selectedText: string, instruction: string) => void;
+  /** AI compliance check callback (008-image-compliance-analysis) */
+  onComplianceCheck?: (imageUrl: string) => void;
   /** AI inline preview state */
   aiPreview?: {
     content: string;
@@ -324,11 +326,12 @@ export function InlineEditor(props: InlineEditorProps & {
   editorRef?: React.MutableRefObject<InlineEditorHandle | null>;
   onHistoryChange?: (canUndo: boolean, canRedo: boolean) => void;
 }) {
-  const { className = '', onAITransform, aiPreview, editorRef, onHistoryChange } = props;
+  const { className = '', onAITransform, onComplianceCheck, aiPreview, editorRef, onHistoryChange } = props;
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
     text: string;
+    imageUrl?: string;
   } | null>(null);
   // Store selection position for the AI preview popover
   const [transformPosition, setTransformPosition] = useState<{ top: number; left: number } | null>(null);
@@ -342,9 +345,18 @@ export function InlineEditor(props: InlineEditorProps & {
   // Store the selection rect when the context menu opens
   const selectionRectRef = useRef<DOMRect | null>(null);
 
-  // Handle right-click context menu for AI transform (FR-014)
+  // Handle right-click context menu for AI transform (FR-014) and compliance check (008)
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
+      // Check if right-click is on an image (008-image-compliance-analysis)
+      const target = e.target as HTMLElement;
+      const imgElement = target.closest('img') as HTMLImageElement | null;
+      if (imgElement && onComplianceCheck) {
+        e.preventDefault();
+        setContextMenu({ x: e.clientX, y: e.clientY, text: '', imageUrl: imgElement.src });
+        return;
+      }
+
       if (!onAITransform) return;
 
       const selection = window.getSelection();
@@ -358,7 +370,7 @@ export function InlineEditor(props: InlineEditorProps & {
       e.preventDefault();
       setContextMenu({ x: e.clientX, y: e.clientY, text: selectedText });
     },
-    [onAITransform]
+    [onAITransform, onComplianceCheck]
   );
 
   const handleTransform = useCallback(
@@ -422,6 +434,8 @@ export function InlineEditor(props: InlineEditorProps & {
           selectedText={contextMenu.text}
           onTransform={handleTransform}
           onClose={() => setContextMenu(null)}
+          imageUrl={contextMenu.imageUrl}
+          onComplianceCheck={onComplianceCheck}
         />
       )}
     </div>

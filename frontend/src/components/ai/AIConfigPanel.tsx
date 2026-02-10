@@ -1,7 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Card, Button, Badge, TextField, Text, Callout, Heading, Flex, Switch, Box, Separator } from '@radix-ui/themes';
+import { Card, Button, Badge, TextField, Text, Callout, Heading, Flex, Switch, Box, Separator, Select } from '@radix-ui/themes';
 import { api } from '../../services/api.js';
-import { AI_DEFAULTS } from '@echo-portal/shared';
+import { aiApi } from '../../services/ai-api.js';
+import {
+  AI_DEFAULTS,
+  COMPLIANCE_CATEGORIES,
+  COMPLIANCE_DEFAULTS,
+  COMPLIANCE_CATEGORY_LABELS,
+  COMPLIANCE_CATEGORY_DESCRIPTIONS,
+  type ComplianceCategory,
+  type ComplianceCategoryConfig,
+  type ComplianceSeverity,
+} from '@echo-portal/shared';
 
 interface AIConfig {
   global: Record<string, unknown>;
@@ -34,6 +44,9 @@ export function AIConfigPanel() {
   const [rateLimit, setRateLimit] = useState<number>(AI_DEFAULTS.RATE_LIMIT_PER_HOUR);
   const [maxTurns, setMaxTurns] = useState<number>(AI_DEFAULTS.MAX_TURNS_PER_CONVERSATION);
   const [roleEnabled, setRoleEnabled] = useState<Record<string, boolean>>({});
+  const [complianceConfig, setComplianceConfig] = useState<Record<ComplianceCategory, ComplianceCategoryConfig>>(
+    { ...COMPLIANCE_DEFAULTS }
+  );
 
   // Fetch config on mount
   useEffect(() => {
@@ -61,6 +74,12 @@ export function AIConfigPanel() {
         }
       }
       setRoleEnabled(roleEnabledState);
+
+      // Load compliance config (008)
+      const compliance = (data.config as any)?.compliance;
+      if (compliance) {
+        setComplianceConfig({ ...COMPLIANCE_DEFAULTS, ...compliance });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load AI configuration');
     } finally {
@@ -91,6 +110,12 @@ export function AIConfigPanel() {
         updatePayload.roles[role] = { enabled };
       }
 
+      // Include compliance categories in the update payload
+      const fullPayload = {
+        ...updatePayload,
+        compliance: complianceConfig,
+      };
+
       // PUT is not on api helper — use fetch directly
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (localStorage.getItem('dev_auth') === 'true') {
@@ -100,7 +125,7 @@ export function AIConfigPanel() {
       const resp = await fetch(`${import.meta.env.VITE_API_URL || '/api/v1'}/ai/config`, {
         method: 'PUT',
         headers,
-        body: JSON.stringify(updatePayload),
+        body: JSON.stringify(fullPayload),
         credentials: 'include',
       });
       if (!resp.ok) {
@@ -120,6 +145,20 @@ export function AIConfigPanel() {
 
   const handleRoleToggle = (role: string, enabled: boolean) => {
     setRoleEnabled((prev) => ({ ...prev, [role]: enabled }));
+  };
+
+  const handleComplianceToggle = (category: ComplianceCategory, enabled: boolean) => {
+    setComplianceConfig((prev) => ({
+      ...prev,
+      [category]: { ...prev[category], enabled },
+    }));
+  };
+
+  const handleComplianceSeverity = (category: ComplianceCategory, severity: ComplianceSeverity) => {
+    setComplianceConfig((prev) => ({
+      ...prev,
+      [category]: { ...prev[category], severity },
+    }));
   };
 
   if (isLoading) {
@@ -229,6 +268,47 @@ export function AIConfigPanel() {
                   />
                 </Flex>
               </Flex>
+            ))}
+          </div>
+        </Box>
+
+        <Separator size="4" />
+
+        {/* Compliance Categories (008-image-compliance-analysis) */}
+        <Box>
+          <Heading as="h3" size="3" mb="3">Compliance Categories</Heading>
+          <Text as="p" size="2" color="gray" className="mb-3">
+            Configure which image compliance categories are checked and their severity levels
+          </Text>
+          <div className="space-y-3">
+            {COMPLIANCE_CATEGORIES.map((category) => (
+              <Box key={category} py="2">
+                <Flex align="center" justify="between" mb="1">
+                  <Box>
+                    <Text size="2" weight="medium">{COMPLIANCE_CATEGORY_LABELS[category]}</Text>
+                    <Text as="p" size="1" color="gray">{COMPLIANCE_CATEGORY_DESCRIPTIONS[category]}</Text>
+                  </Box>
+                  <Flex align="center" gap="3">
+                    <Select.Root
+                      value={complianceConfig[category].severity}
+                      onValueChange={(val: string) => handleComplianceSeverity(category, val as ComplianceSeverity)}
+                      disabled={isSaving || !complianceConfig[category].enabled}
+                    >
+                      <Select.Trigger style={{ width: '140px' }} />
+                      <Select.Content>
+                        <Select.Item value="error">Error</Select.Item>
+                        <Select.Item value="warning">Warning</Select.Item>
+                        <Select.Item value="informational">Informational</Select.Item>
+                      </Select.Content>
+                    </Select.Root>
+                    <Switch
+                      checked={complianceConfig[category].enabled}
+                      onCheckedChange={(checked) => handleComplianceToggle(category, checked)}
+                      disabled={isSaving}
+                    />
+                  </Flex>
+                </Flex>
+              </Box>
             ))}
           </div>
         </Box>

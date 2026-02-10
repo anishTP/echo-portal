@@ -9,6 +9,10 @@ interface AIContextMenuProps {
   onTransform: (instruction: string) => void;
   /** Close the menu */
   onClose: () => void;
+  /** Image URL when right-clicking on an image (008-image-compliance-analysis) */
+  imageUrl?: string;
+  /** Called when "Check Compliance" is clicked on an image (008-image-compliance-analysis) */
+  onComplianceCheck?: (imageUrl: string) => void;
 }
 
 const TRANSFORM_ACTIONS = [
@@ -24,7 +28,7 @@ const TRANSFORM_ACTIONS = [
  * Shows transformation actions positioned at the selection coordinates.
  * Supports predefined actions and a custom instruction input.
  */
-export function AIContextMenu({ position, selectedText, onTransform, onClose }: AIContextMenuProps) {
+export function AIContextMenu({ position, selectedText, onTransform, onClose, imageUrl, onComplianceCheck }: AIContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [showCustom, setShowCustom] = React.useState(false);
   const [customInstruction, setCustomInstruction] = React.useState('');
@@ -54,6 +58,43 @@ export function AIContextMenu({ position, selectedText, onTransform, onClose }: 
       onTransform(customInstruction.trim());
     }
   };
+
+  // Image compliance menu (008-image-compliance-analysis)
+  if (imageUrl) {
+    return (
+      <div
+        ref={menuRef}
+        className="fixed z-50 rounded-lg py-1 min-w-48"
+        style={{
+          left: position.x,
+          top: position.y,
+          background: 'var(--color-background)',
+          border: '1px solid var(--gray-6)',
+          boxShadow: 'var(--shadow-4)',
+        }}
+      >
+        <div
+          className="px-3 py-1.5 text-xs"
+          style={{ color: 'var(--gray-9)', borderBottom: '1px solid var(--gray-6)' }}
+        >
+          AI Image Actions
+        </div>
+        <button
+          onClick={() => {
+            onComplianceCheck?.(imageUrl);
+            onClose();
+          }}
+          className="w-full text-left px-3 py-2 text-sm transition-colors flex justify-between items-center"
+          style={{ color: 'var(--gray-12)' }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--gray-3)')}
+          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+        >
+          <span>Check Compliance</span>
+          <span className="text-xs" style={{ color: 'var(--gray-9)' }}>Analyse image</span>
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div

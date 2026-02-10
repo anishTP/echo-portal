@@ -145,3 +145,48 @@ export interface AIProviderInfo {
   id: string;
   displayName: string;
 }
+
+// ============================================
+// IMAGE COMPLIANCE ANALYSIS TYPES (008-image-compliance-analysis)
+// ============================================
+
+export const COMPLIANCE_CATEGORIES = [
+  'brand_adherence',
+  'accessibility',
+  'content_appropriateness',
+  'licensing_attribution',
+  'technical_quality',
+] as const;
+
+export type ComplianceCategory = typeof COMPLIANCE_CATEGORIES[number];
+
+export type ComplianceSeverity = 'error' | 'warning' | 'informational';
+
+export interface ComplianceCategoryConfig {
+  enabled: boolean;
+  severity: ComplianceSeverity;
+}
+
+export const COMPLIANCE_DEFAULTS: Record<ComplianceCategory, ComplianceCategoryConfig> = {
+  brand_adherence: { enabled: true, severity: 'warning' },
+  accessibility: { enabled: true, severity: 'warning' },
+  content_appropriateness: { enabled: true, severity: 'warning' },
+  licensing_attribution: { enabled: true, severity: 'warning' },
+  technical_quality: { enabled: true, severity: 'warning' },
+};
+
+export const COMPLIANCE_CATEGORY_LABELS: Record<ComplianceCategory, string> = {
+  brand_adherence: 'Brand Adherence',
+  accessibility: 'Accessibility',
+  content_appropriateness: 'Content Appropriateness',
+  licensing_attribution: 'Licensing & Attribution',
+  technical_quality: 'Technical Quality',
+};
+
+export const COMPLIANCE_CATEGORY_DESCRIPTIONS: Record<ComplianceCategory, string> = {
+  brand_adherence: 'Logo usage, colour palette, typography, and layout conformance',
+  accessibility: 'Alt-text quality, contrast ratios, text legibility, and decorative vs informational classification',
+  content_appropriateness: 'Professional quality, relevance to context, and absence of offensive imagery',
+  licensing_attribution: 'Watermark detection, stock photo attribution, and rights metadata presence',
+  technical_quality: 'Resolution adequacy, file size optimisation, and format appropriateness',
+};

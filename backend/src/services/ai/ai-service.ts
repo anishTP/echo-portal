@@ -1,7 +1,7 @@
 import { db } from '../../db/index.js';
 import { aiRequests } from '../../db/schema/ai-requests.js';
 import { eq, and, inArray, lt } from 'drizzle-orm';
-import { AI_DEFAULTS } from '@echo-portal/shared';
+import { AI_DEFAULTS, type ComplianceCategory, type ComplianceCategoryConfig } from '@echo-portal/shared';
 import type { AIRequest } from '../../db/schema/ai-requests.js';
 import type { AIStreamChunk, ConversationTurn } from './provider-interface.js';
 import { providerRegistry } from './provider-registry.js';
@@ -136,6 +136,31 @@ export class AIService {
       console.warn(`[AI] Context documents total ${totalChars} chars (~${Math.round(totalChars / 4)}tokens). Consider reducing.`);
     }
 
+    // Detect compliance mode: analyse + images → compliance-specific prompts (008)
+    let complianceCategories: Record<ComplianceCategory, ComplianceCategoryConfig> | undefined;
+    if (input.mode === 'analyse' && input.images?.length) {
+      complianceCategories = await aiConfigService.getComplianceCategories();
+      const anyEnabled = Object.values(complianceCategories).some((c) => c.enabled);
+      if (!anyEnabled) {
+        throw new AIServiceError('COMPLIANCE_DISABLED', 'All compliance categories are disabled', 400);
+      }
+      await auditLogger.log({
+        action: 'compliance.analysis_requested',
+        actorId: input.userId,
+        actorType: 'user',
+        resourceType: 'branch',
+        resourceId: input.branchId,
+        metadata: {
+          imageCount: input.images.length,
+          enabledCategories: Object.entries(complianceCategories)
+            .filter(([, c]) => c.enabled)
+            .map(([k]) => k),
+          providerId: provider.id,
+          conversationId: conversation.id,
+        },
+      });
+    }
+
     // Create the provider stream
     const providerStream = provider.generate({
       prompt: input.prompt,
@@ -147,6 +172,7 @@ export class AIService {
       cursorContext: input.cursorContext,
       contextDocuments: contextDocuments.length > 0 ? contextDocuments : undefined,
       images: input.images,
+      complianceCategories,
     });
 
     // Wrap stream to capture completion and update DB

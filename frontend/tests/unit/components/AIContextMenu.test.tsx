@@ -84,4 +84,66 @@ describe('AIContextMenu', () => {
 
     expect(defaultProps.onTransform).not.toHaveBeenCalled();
   });
+
+  // 008-image-compliance-analysis: Image compliance context menu
+  describe('Image Compliance (008)', () => {
+    const complianceProps = {
+      ...defaultProps,
+      imageUrl: 'https://example.com/image.png',
+      onComplianceCheck: vi.fn(),
+    };
+
+    it('renders "Check Compliance" when imageUrl is provided', () => {
+      render(<AIContextMenu {...complianceProps} />);
+      expect(screen.getByText('Check Compliance')).toBeInTheDocument();
+    });
+
+    it('renders "AI Image Actions" header when imageUrl is provided', () => {
+      render(<AIContextMenu {...complianceProps} />);
+      expect(screen.getByText('AI Image Actions')).toBeInTheDocument();
+    });
+
+    it('does not render text transform actions when imageUrl is provided', () => {
+      render(<AIContextMenu {...complianceProps} />);
+      expect(screen.queryByText('Rewrite')).not.toBeInTheDocument();
+      expect(screen.queryByText('Summarize')).not.toBeInTheDocument();
+      expect(screen.queryByText('Expand')).not.toBeInTheDocument();
+      expect(screen.queryByText('Change Tone')).not.toBeInTheDocument();
+    });
+
+    it('does not show "Custom instruction..." when imageUrl is provided', () => {
+      render(<AIContextMenu {...complianceProps} />);
+      expect(screen.queryByText('Custom instruction...')).not.toBeInTheDocument();
+    });
+
+    it('calls onComplianceCheck with imageUrl when "Check Compliance" clicked', () => {
+      render(<AIContextMenu {...complianceProps} />);
+      fireEvent.click(screen.getByText('Check Compliance'));
+      expect(complianceProps.onComplianceCheck).toHaveBeenCalledWith('https://example.com/image.png');
+    });
+
+    it('calls onClose after "Check Compliance" clicked', () => {
+      render(<AIContextMenu {...complianceProps} />);
+      fireEvent.click(screen.getByText('Check Compliance'));
+      expect(complianceProps.onClose).toHaveBeenCalled();
+    });
+
+    it('renders standard text menu when no imageUrl provided', () => {
+      render(<AIContextMenu {...defaultProps} />);
+      expect(screen.queryByText('Check Compliance')).not.toBeInTheDocument();
+      expect(screen.getByText('Rewrite')).toBeInTheDocument();
+    });
+
+    it('closes on Escape key in image mode', () => {
+      render(<AIContextMenu {...complianceProps} />);
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(complianceProps.onClose).toHaveBeenCalled();
+    });
+
+    it('closes on click outside in image mode', () => {
+      render(<AIContextMenu {...complianceProps} />);
+      fireEvent.mouseDown(document);
+      expect(complianceProps.onClose).toHaveBeenCalled();
+    });
+  });
 });
