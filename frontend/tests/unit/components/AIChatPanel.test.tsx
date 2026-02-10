@@ -8,6 +8,7 @@ Element.prototype.scrollIntoView = vi.fn();
 vi.mock('../../../src/hooks/useAIAssist', () => ({
   useAIAssist: vi.fn().mockReturnValue({
     generate: vi.fn(),
+    generateAnalysis: vi.fn(),
     accept: vi.fn(),
     reject: vi.fn(),
     cancel: vi.fn(),
@@ -24,6 +25,7 @@ vi.mock('../../../src/hooks/useAIConversation', () => ({
     conversationId: null,
     turnCount: 0,
     maxTurns: 20,
+    hasRemainingTurns: true,
     refreshConversation: vi.fn(),
     clearConversation: vi.fn(),
   }),
@@ -115,5 +117,44 @@ describe('AIChatPanel', () => {
 
     render(<AIChatPanel branchId="branch-1" />);
     expect(screen.getByRole('textbox')).toBeInTheDocument();
+  });
+
+  describe('analysisOnly mode', () => {
+    const storeOpen = {
+      panelOpen: true,
+      setPanelOpen: vi.fn(),
+      streamingStatus: 'idle',
+      pendingRequest: null,
+    };
+
+    it('shows analysis mode banner', () => {
+      (useAIStore as any).mockReturnValue(storeOpen);
+      render(<AIChatPanel analysisOnly />);
+      expect(screen.getByText('Analysis mode — ask questions about this content')).toBeInTheDocument();
+    });
+
+    it('hides turn counter', () => {
+      (useAIStore as any).mockReturnValue(storeOpen);
+      render(<AIChatPanel analysisOnly />);
+      expect(screen.queryByText('0/20')).not.toBeInTheDocument();
+    });
+
+    it('hides new conversation button', () => {
+      (useAIStore as any).mockReturnValue(storeOpen);
+      render(<AIChatPanel analysisOnly />);
+      expect(screen.queryByTitle('Start new conversation')).not.toBeInTheDocument();
+    });
+
+    it('shows analysis placeholder text', () => {
+      (useAIStore as any).mockReturnValue(storeOpen);
+      render(<AIChatPanel analysisOnly />);
+      expect(screen.getByRole('textbox').getAttribute('data-placeholder')).toBe('Ask about this content...');
+    });
+
+    it('renders without branchId', () => {
+      (useAIStore as any).mockReturnValue(storeOpen);
+      render(<AIChatPanel analysisOnly contentId="content-1" />);
+      expect(screen.getByText('AI Assistant')).toBeInTheDocument();
+    });
   });
 });

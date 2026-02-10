@@ -26,6 +26,10 @@ interface ContentRendererProps {
   branchMode?: boolean;
   /** Current branch state - Edit button hidden when 'review' or 'approved' */
   branchState?: BranchStateType;
+  /** Callback to toggle the AI analysis panel */
+  onToggleAI?: () => void;
+  /** Whether the AI panel is currently open */
+  aiPanelOpen?: boolean;
 }
 
 /**
@@ -142,6 +146,8 @@ export function ContentRenderer({
   onEditRequest,
   branchMode = false,
   branchState,
+  onToggleAI,
+  aiPanelOpen,
 }: ContentRendererProps) {
   const { isAuthenticated, user } = useAuth();
 
@@ -314,6 +320,26 @@ export function ContentRenderer({
           </div>
         )}
       </footer>
+
+      {/* AI Analysis FAB — shown in preview mode when onToggleAI is provided */}
+      {onToggleAI && !aiPanelOpen && (
+        <button
+          onClick={onToggleAI}
+          className="fixed z-30 flex items-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-medium transition-all"
+          style={{
+            right: 16,
+            bottom: 16,
+            background: 'var(--gray-3)',
+            color: 'var(--gray-12)',
+            boxShadow: 'var(--shadow-4)',
+            border: '1px solid var(--gray-6)',
+          }}
+          title="AI Analysis"
+          aria-label="Open AI Analysis"
+        >
+          AI
+        </button>
+      )}
     </article>
   );
 }

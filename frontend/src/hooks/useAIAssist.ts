@@ -50,6 +50,21 @@ export function useAIAssist() {
     [stream, store]
   );
 
+  const generateAnalysis = useCallback(
+    async (params: {
+      contentId?: string;
+      prompt: string;
+      context?: string;
+      selectedText?: string;
+      cursorContext?: string;
+      images?: Array<{ mediaType: string; data: string }>;
+    }) => {
+      const url = aiApi.getAnalyseUrl();
+      await stream.startStream(url, { body: params });
+    },
+    [stream]
+  );
+
   const transform = useCallback(
     async (params: AITransformParams) => {
       const url = aiApi.getTransformUrl();
@@ -95,6 +110,7 @@ export function useAIAssist() {
   return {
     // Actions
     generate,
+    generateAnalysis,
     transform,
     accept,
     reject,

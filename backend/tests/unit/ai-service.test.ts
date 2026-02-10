@@ -97,6 +97,14 @@ vi.mock('../../src/services/ai/ai-config-service', () => ({
       rateLimit: 50,
       maxTurns: 20,
     }),
+    getComplianceCategories: vi.fn().mockResolvedValue({}),
+  },
+}));
+
+// Mock context document service
+vi.mock('../../src/services/ai/ai-context-service', () => ({
+  aiContextDocumentService: {
+    getEnabled: vi.fn().mockResolvedValue([]),
   },
 }));
 
@@ -353,6 +361,86 @@ describe('AIService', () => {
           sessionExpiresAt: new Date(Date.now() + 86400000),
         })
       ).rejects.toThrow('AI request limit exceeded');
+    });
+  });
+
+  describe('analyse()', () => {
+    it('throws AI_DISABLED when AI is disabled', async () => {
+      (aiConfigService.isEnabled as any).mockResolvedValueOnce(false);
+
+      await expect(
+        service.analyse({
+          userId: 'user-1',
+          prompt: 'Analyze this content',
+          userRole: 'contributor',
+        })
+      ).rejects.toThrow('AI assistance is currently disabled');
+    });
+
+    it('throws RATE_LIMIT_EXCEEDED when rate limited', async () => {
+      (aiRateLimiter.checkLimit as any).mockResolvedValueOnce({
+        allowed: false,
+        remaining: 0,
+        resetAt: new Date(),
+      });
+
+      await expect(
+        service.analyse({
+          userId: 'user-1',
+          prompt: 'Analyze this content',
+          userRole: 'contributor',
+        })
+      ).rejects.toThrow('AI request limit exceeded');
+    });
+
+    it('throws PROVIDER_UNAVAILABLE when no provider configured', async () => {
+      (aiRateLimiter.checkLimit as any).mockResolvedValueOnce({
+        allowed: true,
+        remaining: 49,
+      });
+      (providerRegistry.getDefault as any).mockReturnValueOnce(null);
+
+      await expect(
+        service.analyse({
+          userId: 'user-1',
+          prompt: 'Analyze this content',
+          userRole: 'contributor',
+        })
+      ).rejects.toThrow('No AI provider configured');
+    });
+
+    it('returns stream when successful', async () => {
+      (aiRateLimiter.checkLimit as any).mockResolvedValueOnce({
+        allowed: true,
+        remaining: 49,
+      });
+
+      async function* mockStream() {
+        yield { type: 'token' as const, content: 'Analysis result' };
+        yield { type: 'done' as const, metadata: { tokensUsed: 100, model: 'echo-v1' } };
+      }
+
+      (providerRegistry.getDefault as any).mockReturnValueOnce({
+        id: 'echo',
+        generate: vi.fn().mockReturnValue(mockStream()),
+      });
+
+      const result = await service.analyse({
+        userId: 'user-1',
+        prompt: 'Analyze this content',
+        context: 'Some document body',
+        userRole: 'contributor',
+      });
+
+      expect(result).toHaveProperty('stream');
+
+      const chunks: any[] = [];
+      for await (const chunk of result.stream) {
+        chunks.push(chunk);
+      }
+
+      expect(chunks).toHaveLength(2);
+      expect(chunks[0]).toEqual({ type: 'token', content: 'Analysis result' });
     });
   });
 });

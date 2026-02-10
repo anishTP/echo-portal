@@ -57,6 +57,7 @@ vi.mock('../../src/services/audit/logger', () => ({
 
 // Mock AI service
 const mockGenerate = vi.fn();
+const mockAnalyse = vi.fn();
 const mockTransform = vi.fn();
 const mockAcceptRequest = vi.fn();
 const mockRejectRequest = vi.fn();
@@ -66,6 +67,7 @@ const mockGetRequestForUser = vi.fn();
 vi.mock('../../src/services/ai/ai-service', () => ({
   aiService: {
     generate: (...args: any[]) => mockGenerate(...args),
+    analyse: (...args: any[]) => mockAnalyse(...args),
     transform: (...args: any[]) => mockTransform(...args),
     acceptRequest: (...args: any[]) => mockAcceptRequest(...args),
     rejectRequest: (...args: any[]) => mockRejectRequest(...args),
@@ -469,6 +471,70 @@ describe('AI Routes — Integration', () => {
           authorType: 'system',
         })
       );
+    });
+  });
+
+  // ==========================================
+  // POST /analyse — Stateless analysis
+  // ==========================================
+  describe('POST /analyse', () => {
+    it('returns 401 when not authenticated', async () => {
+      const res = await app.request('/api/v1/ai/analyse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: 'Analyze this' }),
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 for empty prompt', async () => {
+      const res = await authRequest('POST', '/analyse', { prompt: '' });
+      expect(res.status).toBe(400);
+    });
+
+    it('calls aiService.analyse with correct params', async () => {
+      async function* mockStream() {
+        yield { type: 'token' as const, content: 'Analysis result' };
+        yield { type: 'done' as const, metadata: { tokensUsed: 50 } };
+      }
+
+      mockAnalyse.mockResolvedValue({
+        stream: mockStream(),
+      });
+
+      const res = await authRequest('POST', '/analyse', {
+        prompt: 'Analyze this content',
+        contentId: UUID_CONTENT,
+        context: 'Document body here',
+      });
+
+      // SSE responses may return 200
+      expect(res.status).toBe(200);
+      expect(mockAnalyse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: UUID_USER,
+          prompt: 'Analyze this content',
+          contentId: UUID_CONTENT,
+          context: 'Document body here',
+        })
+      );
+    });
+
+    it('does not require branchId', async () => {
+      async function* mockStream() {
+        yield { type: 'done' as const, metadata: { tokensUsed: 10 } };
+      }
+
+      mockAnalyse.mockResolvedValue({ stream: mockStream() });
+
+      const res = await authRequest('POST', '/analyse', {
+        prompt: 'Analyze this',
+      });
+
+      expect(res.status).toBe(200);
+      // Verify no branchId was passed to the service
+      const callArgs = mockAnalyse.mock.calls[0][0];
+      expect(callArgs).not.toHaveProperty('branchId');
     });
   });
 });

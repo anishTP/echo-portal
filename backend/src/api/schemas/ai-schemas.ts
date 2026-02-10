@@ -31,6 +31,27 @@ export const aiGenerateBodySchema = z.object({
 
 export type AIGenerateBody = z.infer<typeof aiGenerateBodySchema>;
 
+// --- Analyse (stateless — no branchId/conversationId/mode) ---
+
+export const aiAnalyseBodySchema = z.object({
+  contentId: uuidSchema.optional(),
+  prompt: z.string().min(1, 'Prompt is required').max(AI_DEFAULTS.MAX_PROMPT_LENGTH),
+  context: z.string().max(200_000).optional(),
+  selectedText: z.string().max(50_000).optional(),
+  cursorContext: z.string().max(5000).optional(),
+  images: z
+    .array(
+      z.object({
+        mediaType: z.enum(['image/jpeg', 'image/png', 'image/gif', 'image/webp']),
+        data: z.string().max(7_000_000),
+      })
+    )
+    .max(AI_DEFAULTS.MAX_IMAGES_PER_REQUEST)
+    .optional(),
+});
+
+export type AIAnalyseBody = z.infer<typeof aiAnalyseBodySchema>;
+
 // --- Transform ---
 
 export const aiTransformBodySchema = z.object({

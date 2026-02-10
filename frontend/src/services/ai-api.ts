@@ -21,6 +21,7 @@ export const aiApi = {
    */
   getGenerateUrl: () => `${import.meta.env.VITE_API_URL || '/api/v1'}${AI_BASE}/generate`,
   getTransformUrl: () => `${import.meta.env.VITE_API_URL || '/api/v1'}${AI_BASE}/transform`,
+  getAnalyseUrl: () => `${import.meta.env.VITE_API_URL || '/api/v1'}${AI_BASE}/analyse`,
 
   /** Accept pending AI content → creates content version */
   accept: (requestId: string, params: AIAcceptParams) =>

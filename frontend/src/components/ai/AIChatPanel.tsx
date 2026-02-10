@@ -20,7 +20,7 @@ function parseSlashCommand(input: string): { mode: AIResponseMode; prompt: strin
 }
 
 interface AIChatPanelProps {
-  branchId: string;
+  branchId?: string;
   contentId?: string;
   getDocumentBody?: () => string | undefined;
   getSelectionContext?: () => { selectedText: string | null; cursorContext: string | null };
@@ -29,6 +29,8 @@ interface AIChatPanelProps {
   onSelectionReferenced?: () => void;
   /** Called when the selection reference is cleared (accept/reject/cancel/new conversation) */
   onSelectionCleared?: () => void;
+  /** When true, restricts to analysis-only mode (no content modification, stateless) */
+  analysisOnly?: boolean;
 }
 
 /**
@@ -38,7 +40,7 @@ interface AIChatPanelProps {
  * conversation, streaming display, and accept/reject actions.
  * Checks AI enabled state from config (T044).
  */
-export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelectionContext, onContentAccepted, onSelectionReferenced, onSelectionCleared }: AIChatPanelProps) {
+export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelectionContext, onContentAccepted, onSelectionReferenced, onSelectionCleared, analysisOnly }: AIChatPanelProps) {
   const [prompt, setPrompt] = useState('');
   const [currentPrompt, setCurrentPrompt] = useState<string | null>(null);
   const [currentMode, setCurrentMode] = useState<AIResponseMode>('add');
@@ -54,7 +56,7 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const store = useAIStore();
   const ai = useAIAssist();
-  const conv = useAIConversation(branchId);
+  const conv = useAIConversation(branchId ?? null);
 
   const isStreaming = ai.streamStatus === 'streaming';
   // Block new requests while any unresolved request exists:
@@ -94,14 +96,20 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
 
   // Auto-dismiss analysis responses — reject backend request so user isn't blocked
   useEffect(() => {
-    if (ai.streamStatus === 'complete' && currentMode === 'analyse' && ai.streamRequestId) {
-      ai.reject(ai.streamRequestId).then(() => {
-        ai.resetStream();
-        conv.refreshConversation();
-        setCurrentPrompt(null);
-      });
+    if (ai.streamStatus === 'complete' && currentMode === 'analyse') {
+      if (ai.streamRequestId) {
+        // Stateful mode: reject the backend request
+        ai.reject(ai.streamRequestId).then(() => {
+          ai.resetStream();
+          conv.refreshConversation();
+          setCurrentPrompt(null);
+        });
+      } else if (analysisOnly) {
+        // Stateless mode (analysisOnly): no backend request to reject, just reset
+        // Keep content visible — don't reset stream yet (user reads the response)
+      }
     }
-  }, [ai.streamStatus, currentMode, ai.streamRequestId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ai.streamStatus, currentMode, ai.streamRequestId, analysisOnly]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const SUPPORTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
@@ -179,7 +187,7 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
     return (
       <div
         className="flex flex-col h-full"
-        style={{ width: 'var(--side-panel-width, 408px)', background: 'var(--color-background)', borderLeft: '1px solid var(--gray-6)' }}
+        style={{ width: analysisOnly ? '100%' : 'var(--side-panel-width, 408px)', background: 'var(--color-background)', borderLeft: analysisOnly ? 'none' : '1px solid var(--gray-6)' }}
       >
         <div
           className="flex items-center justify-between px-4 py-3"
@@ -212,13 +220,16 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!prompt.trim() || isStreaming || hasPending) return;
+    if (!prompt.trim() || isStreaming || hasPending || (!analysisOnly && !conv.hasRemainingTurns)) return;
 
     const submittedPrompt = prompt;
     setPrompt('');
     setCurrentPrompt(submittedPrompt);
 
-    const { mode, prompt: cleanPrompt } = parseSlashCommand(submittedPrompt);
+    const parsed = parseSlashCommand(submittedPrompt);
+    // In analysisOnly mode, force analyse regardless of slash command
+    const mode = analysisOnly ? 'analyse' : parsed.mode;
+    const cleanPrompt = parsed.prompt;
     setCurrentMode(mode);
 
     // Capture editor selection context at submit time
@@ -243,20 +254,31 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
     setPromptImageCount(attachedImages.length);
     setAttachedImages([]);
 
-    await ai.generate({
-      branchId,
-      contentId,
-      prompt: cleanPrompt,
-      conversationId: conv.conversationId ?? undefined,
-      context: getDocumentBody?.(),
-      mode,
-      selectedText: selCtx.selectedText ?? undefined,
-      cursorContext: selCtx.cursorContext ?? undefined,
-      images,
-    });
-
-    // Refresh conversation to get updated state
-    await conv.refreshConversation();
+    if (analysisOnly && !branchId) {
+      // Stateless analysis — no conversation, no branchId
+      await ai.generateAnalysis({
+        contentId,
+        prompt: cleanPrompt,
+        context: getDocumentBody?.(),
+        selectedText: selCtx.selectedText ?? undefined,
+        cursorContext: selCtx.cursorContext ?? undefined,
+        images,
+      });
+    } else {
+      await ai.generate({
+        branchId: branchId!,
+        contentId,
+        prompt: cleanPrompt,
+        conversationId: conv.conversationId ?? undefined,
+        context: getDocumentBody?.(),
+        mode,
+        selectedText: selCtx.selectedText ?? undefined,
+        cursorContext: selCtx.cursorContext ?? undefined,
+        images,
+      });
+      // Refresh conversation to get updated state
+      await conv.refreshConversation();
+    }
   };
 
   const handleAccept = async (requestId: string) => {
@@ -322,9 +344,11 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
 
   const handleDiscardStuck = async () => {
     // Force-discard all pending/generating requests for this branch (handles server errors / stuck state)
-    await aiApi.discardPending(branchId).catch(() => {});
+    if (branchId) {
+      await aiApi.discardPending(branchId).catch(() => {});
+    }
     ai.resetStream();
-    await conv.refreshConversation();
+    if (branchId) await conv.refreshConversation();
     setCurrentPrompt(null);
     setCapturedSelectedText(null);
     setPromptSelectionLabel(null);
@@ -332,9 +356,11 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
   };
 
   const handleNewConversation = async () => {
-    // Discard any stale pending requests (handles server restart / stale state)
-    await aiApi.discardPending(branchId).catch(() => {});
-    await conv.clearConversation();
+    if (branchId) {
+      // Discard any stale pending requests (handles server restart / stale state)
+      await aiApi.discardPending(branchId).catch(() => {});
+      await conv.clearConversation();
+    }
     onSelectionCleared?.();
     ai.resetStream();
     setCurrentPrompt(null);
@@ -344,28 +370,32 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
     <div
       className="flex flex-col h-full"
       style={{
-        width: 'var(--side-panel-width, 408px)',
+        width: analysisOnly ? '100%' : 'var(--side-panel-width, 408px)',
         background: 'var(--color-background)',
-        borderLeft: '1px solid var(--gray-6)',
+        borderLeft: analysisOnly ? 'none' : '1px solid var(--gray-6)',
       }}
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-2">
           <h3 className="font-semibold text-sm" style={{ color: 'var(--gray-12)' }}>AI Assistant</h3>
-          <span className="text-xs" style={{ color: 'var(--gray-9)' }}>
-            {conv.turnCount}/{conv.maxTurns}
-          </span>
+          {!analysisOnly && (
+            <span className="text-xs" style={{ color: 'var(--gray-9)' }}>
+              {conv.turnCount}/{conv.maxTurns}
+            </span>
+          )}
         </div>
         <div className="flex gap-1">
-          <button
-            onClick={handleNewConversation}
-            className="p-1.5 rounded-md transition-colors hover:bg-[var(--gray-4)]"
-            style={{ color: 'var(--gray-11)' }}
-            title="Start new conversation"
-          >
-            <PlusIcon />
-          </button>
+          {!analysisOnly && (
+            <button
+              onClick={handleNewConversation}
+              className="p-1.5 rounded-md transition-colors hover:bg-[var(--gray-4)]"
+              style={{ color: 'var(--gray-11)' }}
+              title="Start new conversation"
+            >
+              <PlusIcon />
+            </button>
+          )}
           <button
             onClick={() => store.setPanelOpen(false)}
             className="p-1.5 rounded-md transition-colors hover:bg-[var(--gray-4)]"
@@ -379,6 +409,16 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
 
       {/* Gradient accent separator */}
       <div style={{ height: '2px', background: 'linear-gradient(90deg, var(--accent-9), var(--accent-7), transparent)' }} />
+
+      {/* Analysis mode banner */}
+      {analysisOnly && (
+        <div
+          className="px-4 py-2 text-xs"
+          style={{ background: 'var(--accent-2)', color: 'var(--accent-11)', borderBottom: '1px solid var(--accent-5)' }}
+        >
+          Analysis mode — ask questions about this content
+        </div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-5 space-y-3">
@@ -445,6 +485,11 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
           />
         )}
 
+        {/* Stateless analysis response (analysisOnly mode — no requestId, read-only display) */}
+        {ai.streamStatus === 'complete' && analysisOnly && !ai.streamRequestId && ai.streamContent && (
+          <AIChatMessage role="assistant" content={ai.streamContent} />
+        )}
+
         {/* Error display */}
         {ai.streamStatus === 'error' && ai.streamError && (
           <div className="text-sm rounded p-2" style={{ color: 'var(--red-11)', background: 'var(--red-3)' }}>
@@ -457,8 +502,8 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
 
       {/* Input area */}
       <form onSubmit={handleSubmit} className="px-3 pb-3 pt-2">
-        {/* Turn limit warning */}
-        {!conv.hasRemainingTurns && (
+        {/* Turn limit warning (not applicable in analysisOnly mode) */}
+        {!analysisOnly && !conv.hasRemainingTurns && (
           <div className="text-xs text-amber-600 mb-2">
             Turn limit reached. Start a new conversation to continue.
           </div>
@@ -541,7 +586,7 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
             value={prompt}
             onChange={setPrompt}
             onSubmit={() => {
-              if (prompt.trim() && !isStreaming && !hasPending && conv.hasRemainingTurns) {
+              if (prompt.trim() && !isStreaming && !hasPending && (analysisOnly || conv.hasRemainingTurns)) {
                 handleSubmit({ preventDefault: () => {} } as React.FormEvent);
               }
             }}
@@ -557,8 +602,8 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
                 setSelectionPreview(null);
               }
             }}
-            placeholder={hasPending ? 'Resolve pending first...' : 'Ask AI...'}
-            disabled={hasPending || !conv.hasRemainingTurns}
+            placeholder={hasPending ? 'Resolve pending first...' : analysisOnly ? 'Ask about this content...' : 'Ask AI...'}
+            disabled={hasPending || (!analysisOnly && !conv.hasRemainingTurns)}
           />
           {isStreaming ? (
             <button
@@ -573,11 +618,11 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
           ) : (
             <button
               type="submit"
-              disabled={!prompt.trim() || hasPending || !conv.hasRemainingTurns}
+              disabled={!prompt.trim() || hasPending || (!analysisOnly && !conv.hasRemainingTurns)}
               className="p-2 rounded-full shrink-0 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               style={{
-                background: (!prompt.trim() || hasPending || !conv.hasRemainingTurns) ? 'var(--gray-5)' : 'var(--accent-9)',
-                color: (!prompt.trim() || hasPending || !conv.hasRemainingTurns) ? 'var(--gray-9)' : 'var(--accent-contrast)',
+                background: (!prompt.trim() || hasPending || (!analysisOnly && !conv.hasRemainingTurns)) ? 'var(--gray-5)' : 'var(--accent-9)',
+                color: (!prompt.trim() || hasPending || (!analysisOnly && !conv.hasRemainingTurns)) ? 'var(--gray-9)' : 'var(--accent-contrast)',
               }}
               title="Send message"
             >

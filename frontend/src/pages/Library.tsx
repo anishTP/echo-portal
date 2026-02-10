@@ -746,6 +746,8 @@ export default function Library() {
             onEditRequest={handleEditRequest}
             branchMode={isInBranchMode}
             branchState={activeBranch?.state}
+            onToggleAI={user && !isEditMode && !isReviewMode ? () => aiStore.togglePanel() : undefined}
+            aiPanelOpen={aiStore.panelOpen}
           />
 
           {/* Branch creation dialog (only for published content) */}
@@ -764,40 +766,58 @@ export default function Library() {
       )}
     </DocumentationLayout>
 
-    {/* AI Chat Panel — fixed sidebar, rendered outside layout flow */}
-    {isEditMode && branchId && aiStore.panelOpen && (
-      <div className="fixed right-0 bottom-0 z-30" style={{ top: 64, boxShadow: 'var(--shadow-4)' }}>
-        <AIChatPanel
-          branchId={branchId}
-          contentId={contentIdParam}
-          getDocumentBody={() => inlineEditViewRef.current?.getContent().body}
-          getSelectionContext={() => inlineEditViewRef.current?.getSelectionContext() ?? { selectedText: null, cursorContext: null }}
-          onContentAccepted={(aiContent, mode, selectedText) => {
-            if (inlineEditViewRef.current) {
-              if (mode === 'replace' && selectedText) {
-                // String-based replacement: find selectedText in the current body
-                // and replace with AI content. Works reliably even when the editor's
-                // ProseMirror selection/decorations have been lost due to focus changes.
-                const currentBody = inlineEditViewRef.current.getContent().body;
-                const newBody = currentBody.replace(selectedText, aiContent);
-                if (newBody !== currentBody) {
-                  inlineEditViewRef.current.setBody(newBody);
+    {/* AI Chat Panel — fixed sidebar in edit mode, floating window in preview mode */}
+    {aiStore.panelOpen && (
+      isEditMode && branchId ? (
+        // Edit mode: full-height third column sidebar
+        <div className="fixed right-0 bottom-0 z-30" style={{ top: 64, boxShadow: 'var(--shadow-4)' }}>
+          <AIChatPanel
+            branchId={branchId}
+            contentId={contentIdParam}
+            getDocumentBody={() => inlineEditViewRef.current?.getContent().body}
+            getSelectionContext={() => inlineEditViewRef.current?.getSelectionContext() ?? { selectedText: null, cursorContext: null }}
+            onContentAccepted={(aiContent, mode, selectedText) => {
+              if (inlineEditViewRef.current) {
+                if (mode === 'replace' && selectedText) {
+                  const currentBody = inlineEditViewRef.current.getContent().body;
+                  const newBody = currentBody.replace(selectedText, aiContent);
+                  if (newBody !== currentBody) {
+                    inlineEditViewRef.current.setBody(newBody);
+                  } else {
+                    inlineEditViewRef.current.replaceSelection(aiContent);
+                  }
+                } else if (mode === 'replace') {
+                  inlineEditViewRef.current.setBody(aiContent);
                 } else {
-                  // Fallback: text not found via string match (e.g. markdown formatting
-                  // differs from plain-text selection) — try ProseMirror decoration positions
-                  inlineEditViewRef.current.replaceSelection(aiContent);
+                  inlineEditViewRef.current.insertAtCursor(aiContent);
                 }
-              } else if (mode === 'replace') {
-                inlineEditViewRef.current.setBody(aiContent);
-              } else {
-                inlineEditViewRef.current.insertAtCursor(aiContent);
               }
-            }
+            }}
+            onSelectionReferenced={() => inlineEditViewRef.current?.highlightSelection()}
+            onSelectionCleared={() => inlineEditViewRef.current?.clearHighlight()}
+          />
+        </div>
+      ) : !isEditMode && !isReviewMode && user && selectedContent ? (
+        // Preview mode: floating collapsible window
+        <div
+          className="fixed z-40 overflow-hidden"
+          style={{
+            right: 16,
+            bottom: 16,
+            width: 380,
+            height: 480,
+            boxShadow: 'var(--shadow-5)',
+            border: '1px solid var(--gray-6)',
+            borderRadius: 12,
           }}
-          onSelectionReferenced={() => inlineEditViewRef.current?.highlightSelection()}
-          onSelectionCleared={() => inlineEditViewRef.current?.clearHighlight()}
-        />
-      </div>
+        >
+          <AIChatPanel
+            contentId={selectedContent.id}
+            getDocumentBody={() => selectedContent?.currentVersion?.body}
+            analysisOnly
+          />
+        </div>
+      ) : null
     )}
   </>
   );

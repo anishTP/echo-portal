@@ -28,6 +28,17 @@ export interface GenerateInput {
   sessionExpiresAt: Date;
 }
 
+export interface AnalyseInput {
+  userId: string;
+  contentId?: string;
+  prompt: string;
+  context?: string;
+  selectedText?: string;
+  cursorContext?: string;
+  images?: Array<{ mediaType: string; data: string }>;
+  userRole?: string;
+}
+
 export interface TransformInput {
   userId: string;
   branchId: string;
@@ -183,6 +194,78 @@ export class AIService {
       stream: wrappedStream,
       conversationId: conversation.id,
     };
+  }
+
+  /**
+   * Stateless AI analysis — no DB conversation/request records created.
+   * Used for preview-mode analysis where no branchId exists.
+   */
+  async analyse(input: AnalyseInput): Promise<{
+    stream: AsyncIterable<AIStreamChunk>;
+  }> {
+    // Check if AI is enabled
+    const enabled = await aiConfigService.isEnabled(input.userRole);
+    if (!enabled) {
+      throw new AIServiceError('AI_DISABLED', 'AI assistance is currently disabled', 403);
+    }
+
+    // Check rate limit (per userId — no branchId needed)
+    const rateCheck = await aiRateLimiter.checkLimit(input.userId, input.userRole);
+    if (!rateCheck.allowed) {
+      throw new AIServiceError('RATE_LIMIT_EXCEEDED', 'AI request limit exceeded', 429);
+    }
+
+    // Get provider
+    const provider = providerRegistry.getDefault();
+    if (!provider) {
+      throw new AIServiceError('PROVIDER_UNAVAILABLE', 'No AI provider configured', 503);
+    }
+
+    // Fetch enabled context documents for system prompt injection
+    const enabledDocs = await aiContextDocumentService.getEnabled();
+    const contextDocuments = enabledDocs.map((d) => ({ title: d.title, content: d.content }));
+
+    // Get effective token limit from config
+    const limits = await aiConfigService.getEffectiveLimits(input.userRole);
+
+    // Detect compliance mode: images → compliance-specific prompts
+    let complianceCategories: Record<ComplianceCategory, ComplianceCategoryConfig> | undefined;
+    if (input.images?.length) {
+      complianceCategories = await aiConfigService.getComplianceCategories();
+      const anyEnabled = Object.values(complianceCategories).some((c) => c.enabled);
+      if (!anyEnabled) {
+        throw new AIServiceError('COMPLIANCE_DISABLED', 'All compliance categories are disabled', 400);
+      }
+    }
+
+    // Audit: analysis requested
+    await auditLogger.log({
+      action: 'ai.analysis_requested',
+      actorId: input.userId,
+      actorType: 'user',
+      resourceType: 'content',
+      resourceId: input.contentId ?? 'unknown',
+      metadata: {
+        providerId: provider.id,
+        hasImages: !!input.images?.length,
+      },
+    });
+
+    // Create the provider stream (stateless — no conversation history)
+    const providerStream = provider.generate({
+      prompt: input.prompt,
+      context: input.context,
+      mode: 'analyse',
+      conversationHistory: [],
+      maxTokens: limits.maxTokens,
+      selectedText: input.selectedText,
+      cursorContext: input.cursorContext,
+      contextDocuments: contextDocuments.length > 0 ? contextDocuments : undefined,
+      images: input.images,
+      complianceCategories,
+    });
+
+    return { stream: providerStream };
   }
 
   /**

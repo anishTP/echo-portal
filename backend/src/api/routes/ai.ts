@@ -14,6 +14,7 @@ import { db, schema } from '../../db/index.js';
 import { createMetadataSnapshot } from '../../models/content.js';
 import {
   aiGenerateBodySchema,
+  aiAnalyseBodySchema,
   aiTransformBodySchema,
   aiAcceptBodySchema,
   aiRejectBodySchema,
@@ -128,6 +129,82 @@ aiRoutes.post(
         await sseStream.writeSSE({
           data: JSON.stringify({
             requestId: request.id,
+            tokensUsed,
+            fullContent,
+          }),
+          event: 'done',
+        });
+      });
+    } catch (error) {
+      return handleAIError(c, error);
+    }
+  }
+);
+
+// ==========================================
+// POST /analyse — Stateless SSE streaming (no branchId required)
+// ==========================================
+aiRoutes.post(
+  '/analyse',
+  requireAuth,
+  aiRateLimitMiddleware,
+  zValidator('json', aiAnalyseBodySchema),
+  async (c) => {
+    const user = c.get('user')!;
+    const body = c.req.valid('json');
+
+    try {
+      // No assertCanEditBranch — view-mode users don't need branch edit permission
+      const { stream } = await aiService.analyse({
+        userId: user.id,
+        contentId: body.contentId,
+        prompt: body.prompt,
+        context: body.context,
+        selectedText: body.selectedText,
+        cursorContext: body.cursorContext,
+        images: body.images,
+        userRole: user.roles?.[0],
+      });
+
+      const provider = providerRegistry.getDefault();
+
+      return streamSSE(c, async (sseStream) => {
+        // Send meta event (stateless — null IDs)
+        const meta: AIStreamMetaEvent = {
+          requestId: null as unknown as string,
+          conversationId: null as unknown as string,
+          providerId: provider?.id ?? 'unknown',
+          modelId: provider?.id ?? 'unknown',
+        };
+        await sseStream.writeSSE({ data: JSON.stringify(meta), event: 'meta' });
+
+        // Stream tokens
+        let fullContent = '';
+        let tokensUsed = 0;
+        for await (const chunk of stream) {
+          if (chunk.type === 'token' && chunk.content) {
+            fullContent += chunk.content;
+            await sseStream.writeSSE({
+              data: JSON.stringify({ content: chunk.content }),
+              event: 'token',
+            });
+          }
+          if (chunk.type === 'done') {
+            tokensUsed = chunk.metadata?.tokensUsed ?? 0;
+          }
+          if (chunk.type === 'error') {
+            await sseStream.writeSSE({
+              data: JSON.stringify({ code: 'PROVIDER_ERROR', message: chunk.error }),
+              event: 'error',
+            });
+            return;
+          }
+        }
+
+        // Send done event (stateless — null requestId)
+        await sseStream.writeSSE({
+          data: JSON.stringify({
+            requestId: null,
             tokensUsed,
             fullContent,
           }),
