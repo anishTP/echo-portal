@@ -602,7 +602,7 @@ export default function Library() {
   <>
     <DocumentationLayout
       fullWidth={isReviewMode && reviewDisplayMode === 'split'}
-      contentRightOffset={isEditMode && aiStore.panelOpen ? 384 : undefined}
+      contentRightOffset={isEditMode && aiStore.panelOpen ? 340 : undefined}
       sidebar={
         <LibrarySidebar
           search={search}

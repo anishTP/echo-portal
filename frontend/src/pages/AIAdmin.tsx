@@ -1,16 +1,27 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { AIConfigPanel } from '../components/ai/AIConfigPanel';
 import { AIContextDocuments } from '../components/ai/AIContextDocuments';
 import { AIAuditDashboard } from '../components/ai/AIAuditDashboard';
+import { GearIcon, FileTextIcon, ActivityLogIcon } from '@radix-ui/react-icons';
+
+const tabs = [
+  { id: 'config', label: 'Configuration', icon: GearIcon },
+  { id: 'context', label: 'Context Documents', icon: FileTextIcon },
+  { id: 'audit', label: 'Activity Audit', icon: ActivityLogIcon },
+] as const;
+
+type TabId = (typeof tabs)[number]['id'];
 
 /**
  * AI Admin page — admin-only page for AI configuration and audit.
- * Renders AIConfigPanel and AIAuditDashboard components.
+ * Uses a tabbed layout for Configuration, Context Documents, and Activity Audit.
  */
 export default function AIAdmin() {
   const { hasRole } = useAuth();
   const isAdmin = hasRole?.('administrator') ?? false;
+  const [activeTab, setActiveTab] = useState<TabId>('config');
 
   if (!isAdmin) {
     return (
@@ -64,10 +75,35 @@ export default function AIAdmin() {
       </header>
 
       <main className="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
-        <div className="px-4 space-y-8 sm:px-0">
-          <AIConfigPanel />
-          <AIContextDocuments />
-          <AIAuditDashboard />
+        <div className="px-4 sm:px-0">
+          {/* Tab bar */}
+          <div className="border-b border-gray-200 mb-6">
+            <nav className="flex gap-6" aria-label="AI Admin tabs">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-2 py-3 text-sm font-medium border-b-2 transition-colors ${
+                      isActive
+                        ? 'border-blue-600 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <Icon />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+
+          {/* Tab content */}
+          {activeTab === 'config' && <AIConfigPanel />}
+          {activeTab === 'context' && <AIContextDocuments />}
+          {activeTab === 'audit' && <AIAuditDashboard />}
         </div>
       </main>
     </div>
