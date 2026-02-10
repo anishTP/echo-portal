@@ -372,7 +372,7 @@ contentRoutes.post(
     try {
       const version = await versionService.revert(
         contentId,
-        body.targetVersionTimestamp,
+        { versionId: body.targetVersionId, versionTimestamp: body.targetVersionTimestamp },
         body.changeDescription,
         { userId: user.id }
       );

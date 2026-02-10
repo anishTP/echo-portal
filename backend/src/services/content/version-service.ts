@@ -172,16 +172,21 @@ export const versionService = {
    */
   async revert(
     contentId: string,
-    targetVersionTimestamp: string,
+    target: { versionId?: string; versionTimestamp?: string },
     changeDescription: string,
     actor: { userId: string; authorType?: 'user' | 'system' }
   ): Promise<ContentVersionDetail> {
-    // Find the target version
+    // Find the target version — prefer ID lookup (exact) over timestamp (precision-lossy)
     const targetVersion = await db.query.contentVersions.findFirst({
-      where: and(
-        eq(schema.contentVersions.contentId, contentId),
-        eq(schema.contentVersions.versionTimestamp, new Date(targetVersionTimestamp))
-      ),
+      where: target.versionId
+        ? and(
+            eq(schema.contentVersions.contentId, contentId),
+            eq(schema.contentVersions.id, target.versionId)
+          )
+        : and(
+            eq(schema.contentVersions.contentId, contentId),
+            eq(schema.contentVersions.versionTimestamp, new Date(target.versionTimestamp!))
+          ),
     });
     if (!targetVersion) {
       throw new Error('Target version not found');

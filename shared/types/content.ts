@@ -87,7 +87,8 @@ export interface ContentUpdateInput {
 }
 
 export interface ContentRevertInput {
-  targetVersionTimestamp: string;
+  targetVersionId?: string;
+  targetVersionTimestamp?: string;
   changeDescription: string;
 }
 

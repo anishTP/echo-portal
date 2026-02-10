@@ -50,9 +50,13 @@ export type UpdateContentBody = z.infer<typeof updateContentBodySchema>;
  * Schema for reverting content to a previous version
  */
 export const revertContentBodySchema = z.object({
-  targetVersionTimestamp: z.string().datetime(),
+  targetVersionId: z.string().uuid().optional(),
+  targetVersionTimestamp: z.string().datetime().optional(),
   changeDescription: z.string().min(1).max(2000),
-});
+}).refine(
+  (data) => data.targetVersionId || data.targetVersionTimestamp,
+  { message: 'Either targetVersionId or targetVersionTimestamp is required' }
+);
 
 export type RevertContentBody = z.infer<typeof revertContentBodySchema>;
 

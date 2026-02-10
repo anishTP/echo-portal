@@ -51,7 +51,7 @@ export function VersionHistory({ contentId, onSelectDiff, isReadOnly }: VersionH
       setRevertError(null);
       try {
         await revertMutation.mutateAsync({
-          targetVersionTimestamp: revertVersion.versionTimestamp,
+          targetVersionId: revertVersion.id,
           changeDescription: description,
         });
         setRevertVersion(null);
