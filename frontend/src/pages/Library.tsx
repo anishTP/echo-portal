@@ -602,7 +602,7 @@ export default function Library() {
   <>
     <DocumentationLayout
       fullWidth={isReviewMode && reviewDisplayMode === 'split'}
-      contentRightOffset={isEditMode && aiStore.panelOpen ? 340 : undefined}
+      contentRightOffset={isEditMode && aiStore.panelOpen ? 'var(--side-panel-width, 408px)' : undefined}
       sidebar={
         <LibrarySidebar
           search={search}
@@ -775,9 +775,18 @@ export default function Library() {
           onContentAccepted={(aiContent, mode, selectedText) => {
             if (inlineEditViewRef.current) {
               if (mode === 'replace' && selectedText) {
-                // Targeted replacement: replace at ProseMirror selection positions
-                // (avoids plain-text vs markdown mismatch from string-based replace)
-                inlineEditViewRef.current.replaceSelection(aiContent);
+                // String-based replacement: find selectedText in the current body
+                // and replace with AI content. Works reliably even when the editor's
+                // ProseMirror selection/decorations have been lost due to focus changes.
+                const currentBody = inlineEditViewRef.current.getContent().body;
+                const newBody = currentBody.replace(selectedText, aiContent);
+                if (newBody !== currentBody) {
+                  inlineEditViewRef.current.setBody(newBody);
+                } else {
+                  // Fallback: text not found via string match (e.g. markdown formatting
+                  // differs from plain-text selection) — try ProseMirror decoration positions
+                  inlineEditViewRef.current.replaceSelection(aiContent);
+                }
               } else if (mode === 'replace') {
                 inlineEditViewRef.current.setBody(aiContent);
               } else {
@@ -785,6 +794,8 @@ export default function Library() {
               }
             }
           }}
+          onSelectionReferenced={() => inlineEditViewRef.current?.highlightSelection()}
+          onSelectionCleared={() => inlineEditViewRef.current?.clearHighlight()}
         />
       </div>
     )}

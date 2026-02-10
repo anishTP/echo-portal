@@ -58,7 +58,7 @@
 
 /* Right Sidebar */
 .rightSidebar {
-  width: 320px;
+  width: var(--side-panel-width, 408px);
   flex-shrink: 0;
   border-left: 1px solid var(--gray-6);
   background: var(--color-panel-solid);

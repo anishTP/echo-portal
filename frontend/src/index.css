@@ -7,6 +7,11 @@
 /* Monaco Editor theme bridge - maps Radix tokens to VS Code variables */
 @import "./styles/monaco-bridge.css";
 
+/* Layout dimensions */
+:root {
+  --side-panel-width: 408px;
+}
+
 /* Base styles */
 body {
   margin: 0;

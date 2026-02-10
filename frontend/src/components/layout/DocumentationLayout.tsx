@@ -14,7 +14,7 @@ export interface DocumentationLayoutProps {
   /** Whether main content should expand to full width (no max-width constraint) */
   fullWidth?: boolean;
   /** Optional right margin offset to make room for fixed panels (e.g., AI chat) */
-  contentRightOffset?: number;
+  contentRightOffset?: number | string;
 }
 
 /**
