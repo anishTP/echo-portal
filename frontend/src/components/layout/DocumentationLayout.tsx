@@ -60,14 +60,16 @@ export function DocumentationLayout({
     lastSidebarRef.current = rightSidebar;
   }
 
-  // Derived state: when sidebar disappears, retain its content for exit animation
+  // Derived state: when sidebar disappears, retain its content for exit animation.
+  // Only track the rightSidebar prop (not retainedSidebar) to avoid re-retention
+  // loop when the exit animation completes and clears retainedSidebar.
   if (hadSidebarRef.current && !rightSidebar && !retainedSidebar) {
     setRetainedSidebar(lastSidebarRef.current);
   }
   if (rightSidebar && retainedSidebar) {
     setRetainedSidebar(null);
   }
-  hadSidebarRef.current = !!rightSidebar || !!retainedSidebar;
+  hadSidebarRef.current = !!rightSidebar;
 
   const sidebarToRender = rightSidebar ?? retainedSidebar;
   const isSidebarExiting = !rightSidebar && !!retainedSidebar;
@@ -90,12 +92,13 @@ export function DocumentationLayout({
       opacity: [0, 1],
       duration: 300,
       ease: 'out(3)',
-      onComplete: () => { el.style.overflow = ''; el.style.width = ''; },
+      onComplete: () => { el.style.overflow = ''; el.style.width = ''; el.style.opacity = ''; },
     });
     return () => {
       sidebarAnimRef.current?.cancel();
       el.style.overflow = '';
       el.style.width = '';
+      el.style.opacity = '';
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when sidebar presence toggles
   }, [!!rightSidebar]);
@@ -115,6 +118,7 @@ export function DocumentationLayout({
       onComplete: () => {
         el.style.overflow = '';
         el.style.width = '';
+        el.style.opacity = '';
         setRetainedSidebar(null);
       },
     });
@@ -122,6 +126,7 @@ export function DocumentationLayout({
       sidebarAnimRef.current?.cancel();
       el.style.overflow = '';
       el.style.width = '';
+      el.style.opacity = '';
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when exit state changes
   }, [isSidebarExiting]);
