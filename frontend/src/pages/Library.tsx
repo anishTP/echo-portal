@@ -655,12 +655,23 @@ export default function Library() {
     // Cancel any running animation
     panelAnimRef.current?.cancel();
 
+    // CRITICAL: Normalize inline styles to computed px values before animation.
+    // anime.js reads inline styles first (before getComputedStyle). If a previous
+    // onComplete or other code set a non-numeric value (e.g. calc()), anime.js
+    // would decompose it as a COMPLEX type and produce incorrect interpolations.
+    const cs = getComputedStyle(el);
+    el.style.top = cs.top;
+    el.style.right = cs.right;
+    el.style.width = cs.width;
+    el.style.height = cs.height;
+    el.style.borderRadius = cs.borderRadius;
+
     // Update non-animatable properties instantly
     el.style.boxShadow = isEditPanel ? 'var(--shadow-4)' : 'var(--shadow-5)';
     el.style.border = isEditPanel ? 'none' : '1px solid var(--gray-6)';
     el.style.borderLeft = isEditPanel ? '1px solid var(--gray-6)' : '';
 
-    // Animate layout properties
+    // Animate layout properties — all values are numeric px
     panelAnimRef.current = animateEl(el, {
       top: target.top,
       right: target.right,
@@ -670,17 +681,29 @@ export default function Library() {
       duration: 350,
       ease: 'out(3)',
       onComplete: () => {
-        // After animation: set responsive calc() values so viewport resize works
-        if (isEditPanel) {
-          el.style.height = 'calc(100vh - 64px)';
-        } else {
-          el.style.top = 'calc(100vh - 496px)';
-        }
+        // Clear ref so cleanup doesn't cancel a completed animation
+        panelAnimRef.current = null;
       },
     });
 
     return () => { panelAnimRef.current?.cancel(); };
   }, [isEditPanel, showAIPanel]);
+
+  // Resize handler: keep panel pixel values in sync with viewport
+  useEffect(() => {
+    if (!showAIPanel || !panelRef.current) return;
+    const onResize = () => {
+      const el = panelRef.current;
+      if (!el || panelAnimRef.current) return; // Skip while animating
+      if (isEditPanel) {
+        el.style.height = `${window.innerHeight - 64}px`;
+      } else {
+        el.style.top = `${window.innerHeight - 496}px`;
+      }
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [showAIPanel, isEditPanel]);
 
   // Determine content to display
   const contentForView = selectedContent;
