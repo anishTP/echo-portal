@@ -67,14 +67,20 @@ export function DocumentationLayout({
   const headerToRender = header ?? retainedHeaderRef.current;
   const isHeaderExiting = !header && !!retainedHeaderRef.current;
 
-  // Snapshot header width when exit starts so it doesn't expand
-  // as centerWrapper's margin-right transitions away
+  // When exit starts: snapshot width (prevents expansion as margin-right
+  // transitions away) and collapse layout space via max-height so the
+  // content below rises in sync with the visual translateY slide-up.
   useLayoutEffect(() => {
     const el = contentHeaderRef.current;
     if (isHeaderExiting && el) {
-      el.style.width = `${el.getBoundingClientRect().width}px`;
+      const rect = el.getBoundingClientRect();
+      el.style.width = `${rect.width}px`;
+      el.style.maxHeight = `${rect.height}px`;
+      void el.offsetHeight; // force reflow — commit explicit dimensions
+      el.style.maxHeight = '0px'; // triggers max-height transition
     } else if (el) {
       el.style.width = '';
+      el.style.maxHeight = '';
     }
   }, [isHeaderExiting]);
 
