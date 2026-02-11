@@ -1,4 +1,6 @@
-import { useState, useCallback, type ReactNode } from 'react';
+import { useState, useCallback, useLayoutEffect, useRef, type ReactNode } from 'react';
+import { animate as animateEl } from 'animejs';
+import type { JSAnimation } from 'animejs';
 import { HamburgerMenuIcon, Cross1Icon } from '@radix-ui/react-icons';
 import styles from './DocumentationLayout.module.css';
 
@@ -46,6 +48,84 @@ export function DocumentationLayout({
     setIsMobileMenuOpen(false);
   }, []);
 
+  // --- Right sidebar animated entrance/exit ---
+  const rightSidebarRef = useRef<HTMLElement>(null);
+  const sidebarAnimRef = useRef<JSAnimation | null>(null);
+  const lastSidebarRef = useRef<ReactNode>(null);
+  const [retainedSidebar, setRetainedSidebar] = useState<ReactNode>(null);
+  const hadSidebarRef = useRef(!!rightSidebar);
+
+  // Synchronously capture the last non-null sidebar content
+  if (rightSidebar) {
+    lastSidebarRef.current = rightSidebar;
+  }
+
+  // Derived state: when sidebar disappears, retain its content for exit animation
+  if (hadSidebarRef.current && !rightSidebar && !retainedSidebar) {
+    setRetainedSidebar(lastSidebarRef.current);
+  }
+  if (rightSidebar && retainedSidebar) {
+    setRetainedSidebar(null);
+  }
+  hadSidebarRef.current = !!rightSidebar || !!retainedSidebar;
+
+  const sidebarToRender = rightSidebar ?? retainedSidebar;
+  const isSidebarExiting = !rightSidebar && !!retainedSidebar;
+
+  // Entrance animation: width grows from 0, opacity fades in
+  const sidebarPresentOnMountRef = useRef(!!rightSidebar);
+  useLayoutEffect(() => {
+    const el = rightSidebarRef.current;
+    if (!rightSidebar || !el) return;
+    // Skip entrance animation on initial mount (sidebar was already present)
+    if (sidebarPresentOnMountRef.current) {
+      sidebarPresentOnMountRef.current = false;
+      return;
+    }
+    const targetWidth = parseFloat(getComputedStyle(el).width) || 408;
+    sidebarAnimRef.current?.cancel();
+    el.style.overflow = 'hidden';
+    sidebarAnimRef.current = animateEl(el, {
+      width: [0, targetWidth],
+      opacity: [0, 1],
+      duration: 300,
+      ease: 'out(3)',
+      onComplete: () => { el.style.overflow = ''; el.style.width = ''; },
+    });
+    return () => {
+      sidebarAnimRef.current?.cancel();
+      el.style.overflow = '';
+      el.style.width = '';
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when sidebar presence toggles
+  }, [!!rightSidebar]);
+
+  // Exit animation: width shrinks to 0, opacity fades out
+  useLayoutEffect(() => {
+    const el = rightSidebarRef.current;
+    if (!isSidebarExiting || !el) return;
+    const currentWidth = el.getBoundingClientRect().width;
+    sidebarAnimRef.current?.cancel();
+    el.style.overflow = 'hidden';
+    sidebarAnimRef.current = animateEl(el, {
+      width: [currentWidth, 0],
+      opacity: [1, 0],
+      duration: 300,
+      ease: 'out(3)',
+      onComplete: () => {
+        el.style.overflow = '';
+        el.style.width = '';
+        setRetainedSidebar(null);
+      },
+    });
+    return () => {
+      sidebarAnimRef.current?.cancel();
+      el.style.overflow = '';
+      el.style.width = '';
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when exit state changes
+  }, [isSidebarExiting]);
+
   return (
     <div className={styles.layout}>
       {/* Mobile overlay */}
@@ -65,21 +145,25 @@ export function DocumentationLayout({
         <div className={styles.sidebarInner}>{sidebar}</div>
       </aside>
 
-      {/* Main Content */}
-      <main
-        className={styles.main}
+      {/* Center area: header spans full width, main + right sidebar sit below */}
+      <div
+        className={styles.centerWrapper}
         style={contentRightOffset ? { marginRight: contentRightOffset } : undefined}
       >
         {header && <div className={styles.contentHeader}>{header}</div>}
-        <div className={fullWidth ? styles.mainContentFullWidth : styles.mainContent}>{children}</div>
-      </main>
+        <div className={styles.centerBody}>
+          <main className={styles.main}>
+            <div className={fullWidth ? styles.mainContentFullWidth : styles.mainContent}>{children}</div>
+          </main>
 
-      {/* Right Sidebar (optional) */}
-      {rightSidebar && (
-        <aside className={styles.rightSidebar} aria-label="Page sidebar">
-          <div className={styles.rightSidebarInner}>{rightSidebar}</div>
-        </aside>
-      )}
+          {/* Right Sidebar (optional, with delayed unmount for exit animation) */}
+          {sidebarToRender && (
+            <aside ref={rightSidebarRef} className={styles.rightSidebar} aria-label="Page sidebar">
+              <div className={styles.rightSidebarInner}>{sidebarToRender}</div>
+            </aside>
+          )}
+        </div>
+      </div>
 
       {/* Mobile Menu Button */}
       <button
