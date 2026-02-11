@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, type ReactNode } from 'react';
+import { useState, useCallback, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { HamburgerMenuIcon, Cross1Icon } from '@radix-ui/react-icons';
 import styles from './DocumentationLayout.module.css';
 
@@ -50,6 +50,7 @@ export function DocumentationLayout({
   const [, forceRender] = useState(0);
 
   // --- Content header animated exit via CSS transitions ---
+  const contentHeaderRef = useRef<HTMLDivElement>(null);
   const lastHeaderRef = useRef<ReactNode>(null);
   const retainedHeaderRef = useRef<ReactNode>(null);
   const prevHeaderRef = useRef(!!header);
@@ -65,6 +66,45 @@ export function DocumentationLayout({
 
   const headerToRender = header ?? retainedHeaderRef.current;
   const isHeaderExiting = !header && !!retainedHeaderRef.current;
+
+  // Snapshot header width when exit starts so it doesn't expand
+  // as centerWrapper's margin-right transitions away
+  useLayoutEffect(() => {
+    const el = contentHeaderRef.current;
+    if (isHeaderExiting && el) {
+      el.style.width = `${el.getBoundingClientRect().width}px`;
+    } else if (el) {
+      el.style.width = '';
+    }
+  }, [isHeaderExiting]);
+
+  // When header enters with AI panel offset, apply margin-right AND sidebar collapse
+  // instantly (no transition) so the two width changes cancel out and content doesn't
+  // get double-squeezed during a 300ms gap.
+  const centerWrapperRef = useRef<HTMLDivElement>(null);
+  const prevHadHeaderForTransition = useRef(!!header);
+  useLayoutEffect(() => {
+    const headerJustAppeared = !!header && !prevHadHeaderForTransition.current;
+    prevHadHeaderForTransition.current = !!header;
+
+    const el = centerWrapperRef.current;
+    if (headerJustAppeared && contentRightOffset && el) {
+      el.style.transition = 'none';
+      // Also skip sidebar collapse transition to prevent double-squeeze
+      const sidebarEl = rightSidebarRef.current;
+      if (sidebarEl) sidebarEl.style.transition = 'none';
+      el.getBoundingClientRect(); // force reflow — both changes apply instantly
+      requestAnimationFrame(() => {
+        el.style.transition = '';
+        if (sidebarEl) sidebarEl.style.transition = '';
+      });
+      // Clear retained sidebar content (transitionend won't fire without a transition)
+      if (retainedSidebarRef.current) {
+        retainedSidebarRef.current = null;
+        forceRender((c) => c + 1);
+      }
+    }
+  });
 
   const handleHeaderTransitionEnd = useCallback((e: React.TransitionEvent) => {
     if (e.propertyName !== 'transform') return;
@@ -127,11 +167,13 @@ export function DocumentationLayout({
 
       {/* Center area: header spans full width, main + right sidebar sit below */}
       <div
+        ref={centerWrapperRef}
         className={styles.centerWrapper}
         style={contentRightOffset ? { marginRight: contentRightOffset } : undefined}
       >
         {headerToRender && (
           <div
+            ref={contentHeaderRef}
             className={styles.contentHeader}
             data-exiting={isHeaderExiting || undefined}
             onTransitionEnd={isHeaderExiting ? handleHeaderTransitionEnd : undefined}

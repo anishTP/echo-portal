@@ -31,7 +31,7 @@
   display: flex;
   flex-direction: column;
   max-width: 100%;
-  transition: margin-right 0.2s ease;
+  transition: margin-right 300ms ease-out;
 }
 
 /* Row containing main content + right sidebar */
@@ -61,6 +61,7 @@
 
 .contentHeader[data-exiting] {
   transform: translateY(-100%);
+  pointer-events: none;
 }
 
 .mainContent {
