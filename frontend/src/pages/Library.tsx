@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { useSearchParams, useParams, useNavigate, useBlocker } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import { animate as animateEl } from 'animejs';
+import type { JSAnimation } from 'animejs';
 import { DocumentationLayout } from '../components/layout';
 import {
   LibrarySidebar,
@@ -75,6 +77,11 @@ export default function Library() {
 
   // Ref to access InlineEditView's content
   const inlineEditViewRef = useRef<InlineEditViewHandle>(null);
+
+  // Refs for AI panel morph animation
+  const panelRef = useRef<HTMLDivElement>(null);
+  const panelAnimRef = useRef<JSAnimation | null>(null);
+  const isFirstPanelRender = useRef(true);
 
   // Undo/redo availability for EditModeHeader buttons
   const [canUndo, setCanUndo] = useState(false);
@@ -595,6 +602,86 @@ export default function Library() {
       })
     : undefined;
 
+  // AI panel visibility and mode derivation
+  const showAIPanel = aiStore.panelOpen && (
+    (isEditMode && !!branchId) ||
+    (!isEditMode && !isReviewMode && !!user && !!selectedContent)
+  );
+  const isEditPanel = isEditMode && !!branchId;
+
+  // Animate AI panel morph when switching between edit (sidebar) and preview (floating) modes
+  useEffect(() => {
+    if (!panelRef.current || !showAIPanel) {
+      isFirstPanelRender.current = true;
+      return;
+    }
+
+    const el = panelRef.current;
+
+    // Compute target styles in pixels (anime.js interpolates numerics smoothly)
+    const sidebarStyles = {
+      top: 64,
+      right: 0,
+      width: 408,
+      height: window.innerHeight - 64,
+      borderRadius: 0,
+    };
+    const floatingStyles = {
+      top: window.innerHeight - 496,
+      right: 16,
+      width: 380,
+      height: 480,
+      borderRadius: 12,
+    };
+
+    const target = isEditPanel ? sidebarStyles : floatingStyles;
+
+    if (isFirstPanelRender.current) {
+      // First render: set position instantly (no animation)
+      isFirstPanelRender.current = false;
+      Object.assign(el.style, {
+        top: `${target.top}px`,
+        right: `${target.right}px`,
+        width: `${target.width}px`,
+        height: `${target.height}px`,
+        borderRadius: `${target.borderRadius}px`,
+        boxShadow: isEditPanel ? 'var(--shadow-4)' : 'var(--shadow-5)',
+        border: isEditPanel ? 'none' : '1px solid var(--gray-6)',
+        borderLeft: isEditPanel ? '1px solid var(--gray-6)' : '',
+      });
+      return;
+    }
+
+    // Cancel any running animation
+    panelAnimRef.current?.cancel();
+
+    // Update non-animatable properties instantly
+    el.style.boxShadow = isEditPanel ? 'var(--shadow-4)' : 'var(--shadow-5)';
+    el.style.border = isEditPanel ? 'none' : '1px solid var(--gray-6)';
+    el.style.borderLeft = isEditPanel ? '1px solid var(--gray-6)' : '';
+
+    // Animate layout properties
+    panelAnimRef.current = animateEl(el, {
+      top: target.top,
+      right: target.right,
+      width: target.width,
+      height: target.height,
+      borderRadius: target.borderRadius,
+      duration: 350,
+      ease: 'out(3)',
+      onComplete: () => {
+        // After animation: set responsive calc() values so viewport resize works
+        if (isEditPanel) {
+          el.style.height = 'calc(100vh - 64px)';
+        } else {
+          el.style.top = 'calc(100vh - 496px)';
+        }
+      },
+    });
+
+    return () => { panelAnimRef.current?.cancel(); };
+  }, [isEditPanel, showAIPanel]);
+
   // Determine content to display
   const contentForView = selectedContent;
 
@@ -766,11 +853,14 @@ export default function Library() {
       )}
     </DocumentationLayout>
 
-    {/* AI Chat Panel — fixed sidebar in edit mode, floating window in preview mode */}
-    {aiStore.panelOpen && (
-      isEditMode && branchId ? (
-        // Edit mode: full-height third column sidebar
-        <div className="fixed right-0 bottom-0 z-30" style={{ top: 64, boxShadow: 'var(--shadow-4)' }}>
+    {/* AI Chat Panel — unified container with anime.js morph transition */}
+    {showAIPanel && (
+      <div
+        ref={panelRef}
+        className="fixed z-40 overflow-hidden"
+        /* Position/size styles managed by anime.js effect */
+      >
+        {isEditPanel ? (
           <AIChatPanel
             branchId={branchId}
             contentId={contentIdParam}
@@ -796,28 +886,14 @@ export default function Library() {
             onSelectionReferenced={() => inlineEditViewRef.current?.highlightSelection()}
             onSelectionCleared={() => inlineEditViewRef.current?.clearHighlight()}
           />
-        </div>
-      ) : !isEditMode && !isReviewMode && user && selectedContent ? (
-        // Preview mode: floating collapsible window
-        <div
-          className="fixed z-40 overflow-hidden"
-          style={{
-            right: 16,
-            bottom: 16,
-            width: 380,
-            height: 480,
-            boxShadow: 'var(--shadow-5)',
-            border: '1px solid var(--gray-6)',
-            borderRadius: 12,
-          }}
-        >
+        ) : selectedContent ? (
           <AIChatPanel
             contentId={selectedContent.id}
             getDocumentBody={() => selectedContent?.currentVersion?.body}
             analysisOnly
           />
-        </div>
-      ) : null
+        ) : null}
+      </div>
     )}
   </>
   );

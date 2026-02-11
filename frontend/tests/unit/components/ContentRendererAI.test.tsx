@@ -41,6 +41,10 @@ vi.mock('react-markdown', () => ({
 
 vi.mock('rehype-raw', () => ({ default: () => {} }));
 
+vi.mock('animejs', () => ({
+  animate: vi.fn().mockReturnValue({ cancel: vi.fn() }),
+}));
+
 import { ContentRenderer } from '../../../src/components/library/ContentRenderer';
 
 const mockContent: any = {
@@ -93,7 +97,7 @@ describe('ContentRenderer AI FAB', () => {
     expect(onToggleAI).toHaveBeenCalledTimes(1);
   });
 
-  it('hides FAB when AI panel is open', () => {
+  it('disables FAB interaction when AI panel is open', () => {
     const onToggleAI = vi.fn();
     render(
       <MemoryRouter>
@@ -106,7 +110,10 @@ describe('ContentRenderer AI FAB', () => {
         />
       </MemoryRouter>
     );
-    expect(screen.queryByLabelText('Open AI Analysis')).not.toBeInTheDocument();
+    // FAB stays in DOM for animation but is non-interactive
+    const fab = screen.getByLabelText('Open AI Analysis');
+    expect(fab).toBeInTheDocument();
+    expect(fab).toHaveStyle({ pointerEvents: 'none' });
   });
 
   it('does not render FAB when onToggleAI is not provided', () => {

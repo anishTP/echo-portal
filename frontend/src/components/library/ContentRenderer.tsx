@@ -1,8 +1,11 @@
+import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import Markdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import { Badge, Button, Callout } from '@radix-ui/themes';
 import { Pencil1Icon } from '@radix-ui/react-icons';
+import { animate as animateEl } from 'animejs';
+import type { JSAnimation } from 'animejs';
 import type { ContentDetail, BranchStateType } from '@echo-portal/shared';
 import styles from './ContentRenderer.module.css';
 import { useAuth } from '../../hooks/useAuth';
@@ -150,6 +153,22 @@ export function ContentRenderer({
   aiPanelOpen,
 }: ContentRendererProps) {
   const { isAuthenticated, user } = useAuth();
+
+  // Refs for FAB animation
+  const fabRef = useRef<HTMLButtonElement>(null);
+  const fabAnimRef = useRef<JSAnimation | null>(null);
+
+  useEffect(() => {
+    if (!fabRef.current || !onToggleAI) return;
+    fabAnimRef.current?.cancel();
+    fabAnimRef.current = animateEl(fabRef.current, {
+      opacity: aiPanelOpen ? 0 : 1,
+      scale: aiPanelOpen ? 0.8 : 1,
+      duration: 200,
+      ease: 'out(2)',
+    });
+    return () => { fabAnimRef.current?.cancel(); };
+  }, [aiPanelOpen, onToggleAI]);
 
   // Check if user can edit (authenticated with contributor role)
   const canEdit = isAuthenticated && user?.roles?.some(
@@ -322,10 +341,11 @@ export function ContentRenderer({
       </footer>
 
       {/* AI Analysis FAB — shown in preview mode when onToggleAI is provided */}
-      {onToggleAI && !aiPanelOpen && (
+      {onToggleAI && (
         <button
+          ref={fabRef}
           onClick={onToggleAI}
-          className="fixed z-30 flex items-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-medium transition-all"
+          className="fixed z-30 flex items-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-medium"
           style={{
             right: 16,
             bottom: 16,
@@ -333,6 +353,7 @@ export function ContentRenderer({
             color: 'var(--gray-12)',
             boxShadow: 'var(--shadow-4)',
             border: '1px solid var(--gray-6)',
+            pointerEvents: aiPanelOpen ? 'none' : 'auto',
           }}
           title="AI Analysis"
           aria-label="Open AI Analysis"
