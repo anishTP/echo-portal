@@ -459,38 +459,39 @@ export default function Library() {
     }
   }, [currentDraft, autoSave, draftSync, contentIdParam, branchId, queryClient]);
 
-  // Handle done editing - saves merged content and navigates to branch view
-  const handleDoneEditing = useCallback(async () => {
+  // Handle done editing - exits immediately for concurrent animations, saves in background
+  const handleDoneEditing = useCallback(() => {
     const currentBranchId = branchId;
     const currentContentId = contentIdParam;
 
+    // Capture editor content before exit unmounts InlineEditView
+    let mergedContent: DraftContent | null = null;
     if (inlineEditViewRef.current && currentDraft) {
-      // Cancel any pending debounced saves from InlineEditView to prevent race conditions
       inlineEditViewRef.current.cancelPendingSave();
-
       const editorContent = inlineEditViewRef.current.getContent();
-      const mergedContent: DraftContent = {
+      mergedContent = {
         title: currentDraft.title,
         body: editorContent.body,
         metadata: currentDraft.metadata,
       };
-      await autoSave.saveNow(mergedContent);
-      await draftSync.sync();
-
-      if (currentContentId) {
-        await queryClient.invalidateQueries({ queryKey: contentKeys.detail(currentContentId) });
-      }
-      if (currentBranchId) {
-        // Use prefix ['contents', 'list', branchId] to match any filter variations
-        await queryClient.invalidateQueries({ queryKey: [...contentKeys.lists(), currentBranchId] });
-      }
     }
 
-    setCurrentDraft(null);
-    setIsDirty(false);
-
-    // Stay on Library page (which now shows branch content) instead of navigating away
+    // Exit edit mode immediately — triggers concurrent header/sidebar/content animations
     exitEditMode();
+
+    // Save in background using captured values
+    if (mergedContent) {
+      (async () => {
+        await autoSave.saveNow(mergedContent);
+        await draftSync.sync();
+        if (currentContentId) {
+          await queryClient.invalidateQueries({ queryKey: contentKeys.detail(currentContentId) });
+        }
+        if (currentBranchId) {
+          await queryClient.invalidateQueries({ queryKey: [...contentKeys.lists(), currentBranchId] });
+        }
+      })();
+    }
   }, [branchId, contentIdParam, currentDraft, autoSave, draftSync, queryClient, exitEditMode]);
 
   // Handle discard

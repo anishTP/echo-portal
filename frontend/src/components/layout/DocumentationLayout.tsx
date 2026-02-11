@@ -1,6 +1,4 @@
-import { useState, useCallback, useLayoutEffect, useRef, type ReactNode } from 'react';
-import { animate as animateEl } from 'animejs';
-import type { JSAnimation } from 'animejs';
+import { useState, useCallback, useRef, type ReactNode } from 'react';
 import { HamburgerMenuIcon, Cross1Icon } from '@radix-ui/react-icons';
 import styles from './DocumentationLayout.module.css';
 
@@ -48,88 +46,65 @@ export function DocumentationLayout({
     setIsMobileMenuOpen(false);
   }, []);
 
-  // --- Right sidebar animated entrance/exit ---
-  const rightSidebarRef = useRef<HTMLElement>(null);
-  const sidebarAnimRef = useRef<JSAnimation | null>(null);
-  const lastSidebarRef = useRef<ReactNode>(null);
-  const [retainedSidebar, setRetainedSidebar] = useState<ReactNode>(null);
-  const hadSidebarRef = useRef(!!rightSidebar);
+  // Shared forceRender for both header and sidebar retained-content cleanup
+  const [, forceRender] = useState(0);
 
-  // Synchronously capture the last non-null sidebar content
+  // --- Content header animated exit via CSS transitions ---
+  const lastHeaderRef = useRef<ReactNode>(null);
+  const retainedHeaderRef = useRef<ReactNode>(null);
+  const prevHeaderRef = useRef(!!header);
+
+  if (header) {
+    lastHeaderRef.current = header;
+    retainedHeaderRef.current = null;
+  }
+  if (prevHeaderRef.current && !header && !retainedHeaderRef.current) {
+    retainedHeaderRef.current = lastHeaderRef.current;
+  }
+  prevHeaderRef.current = !!header;
+
+  const headerToRender = header ?? retainedHeaderRef.current;
+  const isHeaderExiting = !header && !!retainedHeaderRef.current;
+
+  const handleHeaderTransitionEnd = useCallback((e: React.TransitionEvent) => {
+    if (e.propertyName !== 'transform') return;
+    if (retainedHeaderRef.current) {
+      retainedHeaderRef.current = null;
+      forceRender((c) => c + 1);
+    }
+  }, []);
+
+  // --- Right sidebar animated entrance/exit via CSS transitions ---
+  // Uses CSS transitions instead of anime.js to avoid React strict mode
+  // and re-render interference. The browser handles the animation natively.
+  const rightSidebarRef = useRef<HTMLElement>(null);
+  const lastSidebarRef = useRef<ReactNode>(null);
+  const retainedSidebarRef = useRef<ReactNode>(null);
+  const prevSidebarRef = useRef(!!rightSidebar);
+
   if (rightSidebar) {
     lastSidebarRef.current = rightSidebar;
+    retainedSidebarRef.current = null;
   }
 
-  // Derived state: when sidebar disappears, retain its content for exit animation.
-  // Only track the rightSidebar prop (not retainedSidebar) to avoid re-retention
-  // loop when the exit animation completes and clears retainedSidebar.
-  if (hadSidebarRef.current && !rightSidebar && !retainedSidebar) {
-    setRetainedSidebar(lastSidebarRef.current);
+  // When sidebar prop disappears, retain its content for the exit transition
+  if (prevSidebarRef.current && !rightSidebar && !retainedSidebarRef.current) {
+    retainedSidebarRef.current = lastSidebarRef.current;
   }
-  if (rightSidebar && retainedSidebar) {
-    setRetainedSidebar(null);
-  }
-  hadSidebarRef.current = !!rightSidebar;
+  prevSidebarRef.current = !!rightSidebar;
 
-  const sidebarToRender = rightSidebar ?? retainedSidebar;
-  const isSidebarExiting = !rightSidebar && !!retainedSidebar;
+  const sidebarContent = rightSidebar ?? retainedSidebarRef.current;
+  const isSidebarCollapsed = !rightSidebar;
 
-  // Entrance animation: width grows from 0, opacity fades in
-  const sidebarPresentOnMountRef = useRef(!!rightSidebar);
-  useLayoutEffect(() => {
-    const el = rightSidebarRef.current;
-    if (!rightSidebar || !el) return;
-    // Skip entrance animation on initial mount (sidebar was already present)
-    if (sidebarPresentOnMountRef.current) {
-      sidebarPresentOnMountRef.current = false;
-      return;
+  // Handle transitionend to clear retained sidebar content after exit animation
+  const handleSidebarTransitionEnd = useCallback((e: React.TransitionEvent) => {
+    // Only act on the width transition (not opacity) to avoid double-fire
+    if (e.propertyName !== 'width') return;
+    if (retainedSidebarRef.current) {
+      retainedSidebarRef.current = null;
+      forceRender((c) => c + 1);
     }
-    const targetWidth = parseFloat(getComputedStyle(el).width) || 408;
-    sidebarAnimRef.current?.cancel();
-    el.style.overflow = 'hidden';
-    sidebarAnimRef.current = animateEl(el, {
-      width: [0, targetWidth],
-      opacity: [0, 1],
-      duration: 300,
-      ease: 'out(3)',
-      onComplete: () => { el.style.overflow = ''; el.style.width = ''; el.style.opacity = ''; },
-    });
-    return () => {
-      sidebarAnimRef.current?.cancel();
-      el.style.overflow = '';
-      el.style.width = '';
-      el.style.opacity = '';
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when sidebar presence toggles
-  }, [!!rightSidebar]);
-
-  // Exit animation: width shrinks to 0, opacity fades out
-  useLayoutEffect(() => {
-    const el = rightSidebarRef.current;
-    if (!isSidebarExiting || !el) return;
-    const currentWidth = el.getBoundingClientRect().width;
-    sidebarAnimRef.current?.cancel();
-    el.style.overflow = 'hidden';
-    sidebarAnimRef.current = animateEl(el, {
-      width: [currentWidth, 0],
-      opacity: [1, 0],
-      duration: 300,
-      ease: 'out(3)',
-      onComplete: () => {
-        el.style.overflow = '';
-        el.style.width = '';
-        el.style.opacity = '';
-        setRetainedSidebar(null);
-      },
-    });
-    return () => {
-      sidebarAnimRef.current?.cancel();
-      el.style.overflow = '';
-      el.style.width = '';
-      el.style.opacity = '';
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when exit state changes
-  }, [isSidebarExiting]);
+  }, []);
 
   return (
     <div className={styles.layout}>
@@ -155,18 +130,30 @@ export function DocumentationLayout({
         className={styles.centerWrapper}
         style={contentRightOffset ? { marginRight: contentRightOffset } : undefined}
       >
-        {header && <div className={styles.contentHeader}>{header}</div>}
+        {headerToRender && (
+          <div
+            className={styles.contentHeader}
+            data-exiting={isHeaderExiting || undefined}
+            onTransitionEnd={isHeaderExiting ? handleHeaderTransitionEnd : undefined}
+          >
+            {headerToRender}
+          </div>
+        )}
         <div className={styles.centerBody}>
           <main className={styles.main}>
             <div className={fullWidth ? styles.mainContentFullWidth : styles.mainContent}>{children}</div>
           </main>
 
-          {/* Right Sidebar (optional, with delayed unmount for exit animation) */}
-          {sidebarToRender && (
-            <aside ref={rightSidebarRef} className={styles.rightSidebar} aria-label="Page sidebar">
-              <div className={styles.rightSidebarInner}>{sidebarToRender}</div>
-            </aside>
-          )}
+          {/* Right Sidebar — always in DOM for enter/exit CSS transitions */}
+          <aside
+            ref={rightSidebarRef}
+            className={styles.rightSidebar}
+            data-collapsed={isSidebarCollapsed || undefined}
+            onTransitionEnd={retainedSidebarRef.current ? handleSidebarTransitionEnd : undefined}
+            aria-label="Page sidebar"
+          >
+            {sidebarContent && <div className={styles.rightSidebarInner}>{sidebarContent}</div>}
+          </aside>
         </div>
       </div>
 

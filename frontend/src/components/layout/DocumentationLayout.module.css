@@ -56,6 +56,11 @@
   top: 64px; /* Below app header */
   z-index: 10;
   overflow: hidden; /* Clip header during slide-down animation */
+  transition: transform 300ms ease-in;
+}
+
+.contentHeader[data-exiting] {
+  transform: translateY(-100%);
 }
 
 .mainContent {
@@ -83,6 +88,15 @@
   height: calc(100vh - 64px);
   overflow-y: auto;
   overflow-x: hidden;
+  transition: width 300ms ease-out, opacity 300ms ease-out, border-left-color 300ms ease-out;
+}
+
+.rightSidebar[data-collapsed] {
+  width: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-left-color: transparent;
 }
 
 .rightSidebarInner {
