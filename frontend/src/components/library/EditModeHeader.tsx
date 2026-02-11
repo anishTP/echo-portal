@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button, Text, Badge } from '@radix-ui/themes';
 import { animate as animateEl } from 'animejs';
 import {
@@ -76,7 +76,9 @@ export function EditModeHeader({
   canRedo = false,
 }: EditModeHeaderProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
   const headerRef = useRef<HTMLDivElement>(null);
+  const exitCallbackRef = useRef<(() => void) | null>(null);
 
   // Slide-down entrance animation on mount
   useEffect(() => {
@@ -88,6 +90,23 @@ export function EditModeHeader({
       });
     }
   }, []);
+
+  // Play slide-up exit animation, then invoke the callback
+  const animateExit = useCallback((callback: () => void) => {
+    if (isExiting) return;
+    setIsExiting(true);
+    exitCallbackRef.current = callback;
+    if (headerRef.current) {
+      animateEl(headerRef.current, {
+        translateY: ['0%', '-100%'],
+        duration: 300,
+        ease: 'in(3)',
+        onComplete: () => { exitCallbackRef.current?.(); },
+      });
+    } else {
+      callback();
+    }
+  }, [isExiting]);
 
   const getStatusBadge = () => {
     if (isSaving || saveStatus === 'saving') {
@@ -194,8 +213,8 @@ export function EditModeHeader({
           <Button
             variant="soft"
             size="2"
-            onClick={onCancel}
-            disabled={isSaving}
+            onClick={() => animateExit(onCancel)}
+            disabled={isSaving || isExiting}
           >
             <Cross2Icon />
             Cancel
@@ -205,8 +224,8 @@ export function EditModeHeader({
             variant="solid"
             size="2"
             color="green"
-            onClick={onDone}
-            disabled={isSaving}
+            onClick={() => animateExit(onDone)}
+            disabled={isSaving || isExiting}
           >
             <CheckIcon />
             Done
