@@ -40,6 +40,7 @@
   position: sticky;
   top: 64px; /* Below app header */
   z-index: 10;
+  overflow: hidden; /* Clip header during slide-down animation */
 }
 
 .mainContent {

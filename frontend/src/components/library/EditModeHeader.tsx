@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button, Text, Badge } from '@radix-ui/themes';
+import { animate as animateEl } from 'animejs';
 import {
   CommitIcon,
   CheckIcon,
@@ -75,6 +76,18 @@ export function EditModeHeader({
   canRedo = false,
 }: EditModeHeaderProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const headerRef = useRef<HTMLDivElement>(null);
+
+  // Slide-down entrance animation on mount
+  useEffect(() => {
+    if (headerRef.current) {
+      animateEl(headerRef.current, {
+        translateY: ['-100%', '0%'],
+        duration: 300,
+        ease: 'out(3)',
+      });
+    }
+  }, []);
 
   const getStatusBadge = () => {
     if (isSaving || saveStatus === 'saving') {
@@ -95,7 +108,7 @@ export function EditModeHeader({
   };
 
   return (
-    <div className={styles.header}>
+    <div ref={headerRef} className={styles.header}>
       <div className={styles.content}>
         <div className={styles.info}>
           <div className={styles.branchBadge}>
