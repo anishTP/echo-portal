@@ -132,13 +132,56 @@ export type ReferenceTypeValue = (typeof ReferenceType)[keyof typeof ReferenceTy
  * Notification types
  */
 export const NotificationType = {
+  // Review category
   REVIEW_REQUESTED: 'review_requested',
-  REVIEW_COMPLETED: 'review_completed',
-  CHANGES_REQUESTED: 'changes_requested',
+  REVIEW_COMMENT_ADDED: 'review_comment_added',
+  REVIEW_COMMENT_REPLY: 'review_comment_reply',
+  REVIEW_APPROVED: 'review_approved',
+  REVIEW_CHANGES_REQUESTED: 'review_changes_requested',
+  REVIEWER_ADDED: 'reviewer_added',
+  REVIEWER_REMOVED: 'reviewer_removed',
+  // Lifecycle category
+  COLLABORATOR_ADDED: 'collaborator_added',
+  COLLABORATOR_REMOVED: 'collaborator_removed',
   CONTENT_PUBLISHED: 'content_published',
+  BRANCH_ARCHIVED: 'branch_archived',
+  ROLE_CHANGED: 'role_changed',
+  // AI category
+  AI_COMPLIANCE_ERROR: 'ai_compliance_error',
 } as const;
 
 export type NotificationTypeValue = (typeof NotificationType)[keyof typeof NotificationType];
+
+/**
+ * Notification categories
+ */
+export const NotificationCategory = {
+  REVIEW: 'review',
+  LIFECYCLE: 'lifecycle',
+  AI: 'ai',
+} as const;
+
+export type NotificationCategoryValue =
+  (typeof NotificationCategory)[keyof typeof NotificationCategory];
+
+/**
+ * Mapping from notification type to category
+ */
+export const NOTIFICATION_TYPE_TO_CATEGORY: Record<NotificationTypeValue, NotificationCategoryValue> = {
+  review_requested: 'review',
+  review_comment_added: 'review',
+  review_comment_reply: 'review',
+  review_approved: 'review',
+  review_changes_requested: 'review',
+  reviewer_added: 'review',
+  reviewer_removed: 'review',
+  collaborator_added: 'lifecycle',
+  collaborator_removed: 'lifecycle',
+  content_published: 'lifecycle',
+  branch_archived: 'lifecycle',
+  role_changed: 'lifecycle',
+  ai_compliance_error: 'ai',
+};
 
 /**
  * Content size limit (50 MB in bytes)

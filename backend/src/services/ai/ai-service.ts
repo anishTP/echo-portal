@@ -10,6 +10,7 @@ import { aiRateLimiter } from './rate-limiter.js';
 import { aiConfigService } from './ai-config-service.js';
 import { aiContextDocumentService } from './ai-context-service.js';
 import { AuditLogger } from '../audit/logger.js';
+import { notifyAIComplianceError } from '../notification/notification-triggers.js';
 
 const auditLogger = new AuditLogger();
 
@@ -187,7 +188,12 @@ export class AIService {
     });
 
     // Wrap stream to capture completion and update DB
-    const wrappedStream = this.wrapStream(providerStream, request.id, conversation.id, input.userId);
+    const complianceCtx = complianceCategories ? {
+      branchId: input.branchId,
+      branchName: input.branchId,
+      recipientIds: [input.userId],
+    } : undefined;
+    const wrappedStream = this.wrapStream(providerStream, request.id, conversation.id, input.userId, complianceCtx);
 
     return {
       request,
@@ -583,7 +589,8 @@ export class AIService {
     stream: AsyncIterable<AIStreamChunk>,
     requestId: string,
     conversationId: string,
-    userId: string
+    userId: string,
+    complianceContext?: { branchId: string; branchName: string; recipientIds: string[] }
   ): AsyncIterable<AIStreamChunk> {
     let fullContent = '';
     let tokensUsed = 0;
@@ -644,6 +651,19 @@ export class AIService {
         },
         initiatingUserId: userId,
       });
+
+      // Fire-and-forget: notify on compliance error findings
+      if (complianceContext && /\*\*Severity\*\*:\s*error/i.test(fullContent)) {
+        const firstIssueMatch = fullContent.match(/\*\*Issue\*\*:\s*(.+)/i);
+        const summary = firstIssueMatch?.[1]?.trim() || 'Error-severity compliance issue detected';
+        notifyAIComplianceError(
+          complianceContext.branchId,
+          complianceContext.branchName,
+          complianceContext.recipientIds,
+          userId,
+          summary
+        );
+      }
     } catch (error) {
       // Provider failure — update request
       await db

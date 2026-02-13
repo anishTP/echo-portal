@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { LoginButton, LogoutButton, RoleBadge } from '../auth';
 import { ThemeToggle } from './ThemeToggle';
 import { BranchSelector } from './BranchSelector';
+import { NotificationPopover } from '../notification/NotificationPopover';
 
 export function AppHeader() {
   const { user, isAuthenticated, isLoading, loginDev, hasRole } = useAuth();
@@ -99,6 +100,9 @@ export function AppHeader() {
                   {/* Role Badge */}
                   <RoleBadge role={user.role} size="sm" />
                 </div>
+
+                {/* Notifications */}
+                <NotificationPopover />
 
                 {/* Theme Toggle */}
                 <ThemeToggle />

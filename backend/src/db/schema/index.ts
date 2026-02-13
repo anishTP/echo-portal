@@ -12,6 +12,7 @@ export * from './sessions.js';
 export * from './login-attempts.js';
 export * from './contents.js';
 export * from './notifications.js';
+export * from './notification-preferences.js';
 export * from './review-snapshots.js';
 export * from './ai-conversations.js';
 export * from './ai-requests.js';

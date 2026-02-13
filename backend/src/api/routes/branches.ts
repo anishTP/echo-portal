@@ -11,6 +11,7 @@ import { conflictResolutionService } from '../../services/content/conflict-resol
 import { contentService } from '../../services/content/content-service.js';
 import { contentInheritanceService } from '../../services/content/content-inheritance-service.js';
 import { auditLogger } from '../../services/audit/logger.js';
+import { notifyCollaboratorAdded, notifyCollaboratorRemoved, notifyContentPublished, notifyBranchArchived } from '../../services/notification/notification-triggers.js';
 import { requireAuth, type AuthEnv } from '../middleware/auth.js';
 import { success, created, paginated, noContent } from '../utils/responses.js';
 import { NotFoundError, ForbiddenError, ValidationError } from '../utils/errors.js';
@@ -422,8 +423,10 @@ branchRoutes.post(
     const { collaboratorIds } = c.req.valid('json');
 
     // Add each collaborator
+    const branch = await branchService.getById(id);
     for (const collaboratorId of collaboratorIds) {
       await teamService.addCollaborator(id, collaboratorId, user.id);
+      notifyCollaboratorAdded(id, collaboratorId, branch?.name || id, user.id);
     }
 
     const collaborators = await teamService.getBranchCollaborators(id);
@@ -443,7 +446,9 @@ branchRoutes.delete(
     const user = c.get('user')!;
     const { id, collaboratorId } = c.req.valid('param');
 
+    const branchForNotif = await branchService.getById(id);
     await teamService.removeCollaborator(id, collaboratorId, user.id);
+    notifyCollaboratorRemoved(id, collaboratorId, branchForNotif?.name || id, user.id);
     const collaborators = await teamService.getBranchCollaborators(id);
     return success(c, collaborators);
   }
@@ -627,6 +632,10 @@ branchRoutes.post(
     // Mark all content in the branch as published
     await contentService.markPublished(id, user.id);
 
+    // Notify branch owner + collaborators about publication
+    const publishRecipients = [branch.ownerId, ...(branch.collaborators || [])];
+    notifyContentPublished(id, branch.name, publishRecipients, user.id);
+
     // Auto-archive the branch after publishing (no further edits allowed)
     await transitionService.executeTransition({
       branchId: id,
@@ -674,6 +683,11 @@ branchRoutes.post(
 
     if (!result.success) {
       throw new ValidationError(result.error || 'Transition failed');
+    }
+
+    // Send archive notification if this was an explicit ARCHIVE transition
+    if (event === TransitionEvent.ARCHIVE) {
+      notifyBranchArchived(id, branch.name, branch.ownerId, user.id);
     }
 
     // If this was a PUBLISH transition, merge content to main and mark as published

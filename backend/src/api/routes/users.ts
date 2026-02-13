@@ -8,6 +8,7 @@ import { requireAuth, type AuthEnv } from '../middleware/auth.js';
 import { success } from '../utils/responses.js';
 import { NotFoundError, ForbiddenError, BadRequestError, PermissionDenials } from '../utils/errors.js';
 import { auditLogger } from '../../services/audit';
+import { notifyRoleChanged } from '../../services/notification/notification-triggers.js';
 import type { RoleType } from '@echo-portal/shared';
 
 const usersRoutes = new Hono<AuthEnv>();
@@ -194,6 +195,9 @@ usersRoutes.put(
 
     // SC-007: Session cache will be invalidated automatically on next validation
     // (30-second TTL ensures role change takes effect within 30 seconds)
+
+    // Notify the affected user about the role change
+    notifyRoleChanged(targetUserId, oldRole, newRole, currentUser.id);
 
     return success(c, {
       user: updatedUser,

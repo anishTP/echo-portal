@@ -6,6 +6,7 @@ export const notificationKeys = {
   all: ['notifications'] as const,
   list: (params?: Record<string, unknown>) => [...notificationKeys.all, 'list', params] as const,
   unreadCount: () => [...notificationKeys.all, 'unread-count'] as const,
+  preferences: () => [...notificationKeys.all, 'preferences'] as const,
 };
 
 /**
@@ -21,7 +22,7 @@ export function useUnreadCount() {
       setUnreadCount(result.count);
       return result;
     },
-    refetchInterval: 30_000, // Poll every 30 seconds
+    refetchInterval: 30_000,
   });
 }
 
@@ -31,6 +32,7 @@ export function useUnreadCount() {
 export function useNotificationList(params?: {
   isRead?: boolean;
   type?: string;
+  category?: string;
   page?: number;
   limit?: number;
 }) {
@@ -58,6 +60,47 @@ export function useMarkNotificationRead() {
     onSuccess: (_, notificationId) => {
       markAsRead(notificationId);
       queryClient.invalidateQueries({ queryKey: notificationKeys.unreadCount() });
+    },
+  });
+}
+
+/**
+ * Mark all notifications as read
+ */
+export function useMarkAllRead() {
+  const queryClient = useQueryClient();
+  const setUnreadCount = useNotificationStore((s) => s.setUnreadCount);
+
+  return useMutation({
+    mutationFn: () => notificationApi.markAllRead(),
+    onSuccess: () => {
+      setUnreadCount(0);
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+    },
+  });
+}
+
+/**
+ * Fetch notification preferences
+ */
+export function useNotificationPreferences() {
+  return useQuery({
+    queryKey: notificationKeys.preferences(),
+    queryFn: () => notificationApi.getPreferences(),
+  });
+}
+
+/**
+ * Update a notification preference
+ */
+export function useUpdatePreference() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ category, enabled }: { category: string; enabled: boolean }) =>
+      notificationApi.updatePreference(category, enabled),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: notificationKeys.preferences() });
     },
   });
 }

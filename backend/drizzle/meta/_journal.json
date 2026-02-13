@@ -15,6 +15,13 @@
       "when": 1769534278858,
       "tag": "0001_adorable_doctor_octopus",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1769817600000,
+      "tag": "0003_notification_preferences",
+      "breakpoints": true
     }
   ]
 }

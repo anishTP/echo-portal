@@ -3,16 +3,15 @@ import { devtools } from 'zustand/middleware';
 import type { Notification } from '@echo-portal/shared';
 
 interface NotificationState {
-  // Unread count for badge
   unreadCount: number;
   setUnreadCount: (count: number) => void;
 
-  // Notification list
   notifications: Notification[];
   setNotifications: (notifications: Notification[]) => void;
 
-  // Mark a notification as read locally
   markAsRead: (notificationId: string) => void;
+
+  addNotification: (notification: Notification) => void;
 }
 
 export const useNotificationStore = create<NotificationState>()(
@@ -31,6 +30,18 @@ export const useNotificationStore = create<NotificationState>()(
           ),
           unreadCount: Math.max(0, state.unreadCount - 1),
         })),
+
+      addNotification: (notification) =>
+        set((state) => {
+          // Avoid duplicates
+          if (state.notifications.some((n) => n.id === notification.id)) {
+            return state;
+          }
+          return {
+            notifications: [notification, ...state.notifications],
+            unreadCount: state.unreadCount + 1,
+          };
+        }),
     }),
     { name: 'notification-store' }
   )

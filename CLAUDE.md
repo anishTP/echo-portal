@@ -13,6 +13,8 @@ Auto-generated from all feature plans. Last updated: 2026-01-21
 - PostgreSQL (existing schema + new `ai_requests`, `ai_conversations`, `ai_configurations` tables) (007-ai-assisted-authoring)
 - TypeScript 5.9+, Node.js 20 LTS + Hono 4.8.2 (backend), React 19 + Zustand + TanStack Query 5 (frontend), Milkdown (editor), Drizzle ORM 0.44 (PostgreSQL), Zod 3.24.2 (008-image-compliance-analysis)
 - PostgreSQL (existing `ai_configurations` table — no new tables) (008-image-compliance-analysis)
+- TypeScript 5.9+, Node.js 20 LTS + Hono 4.8.2 (backend), React 19 + Zustand + TanStack Query 5 (frontend), Drizzle ORM 0.44 (PostgreSQL), Zod 3.24.2, @radix-ui/themes + @radix-ui/react-popover (009-notification-alerts)
+- PostgreSQL (existing `notifications` table + new `notification_preferences` table) (009-notification-alerts)
 
 - TypeScript 5.9+, Node.js 20 LTS + React 19, Vite 7, isomorphic-git (client-side Git), PostgreSQL (metadata) (001-branch-isolation-model)
 
@@ -32,9 +34,9 @@ npm test && npm run lint
 TypeScript 5.9+, Node.js 20 LTS: Follow standard conventions
 
 ## Recent Changes
+- 009-notification-alerts: Added TypeScript 5.9+, Node.js 20 LTS + Hono 4.8.2 (backend), React 19 + Zustand + TanStack Query 5 (frontend), Drizzle ORM 0.44 (PostgreSQL), Zod 3.24.2, @radix-ui/themes + @radix-ui/react-popover
 - 008-image-compliance-analysis: Added TypeScript 5.9+, Node.js 20 LTS + Hono 4.8.2 (backend), React 19 + Zustand + TanStack Query 5 (frontend), Milkdown (editor), Drizzle ORM 0.44 (PostgreSQL), Zod 3.24.2
 - 007-ai-assisted-authoring: Added TypeScript 5.9+, Node.js 20 LTS + Hono 4.8.2 (backend), React 19 + Zustand + TanStack Query 5 (frontend), Milkdown (editor), Drizzle ORM 0.44 (PostgreSQL), XState 5.19.2, Zod 3.24.2
-- 006-review-approval: Added TypeScript 5.9+, Node.js 20 LTS + Hono 4.8.2 (backend), React 19 (frontend), Drizzle ORM 0.44.0, XState 5.19.2, Zod 3.24.2
 
 
 <!-- MANUAL ADDITIONS START -->

@@ -28,8 +28,8 @@ export const NotificationBell = memo(function NotificationBell({ onClick }: Noti
         </svg>
       </IconButton>
       {count > 0 && (
-        <span className="absolute right-0 top-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
-          {count > 9 ? '9+' : count}
+        <span className="absolute -right-1 -top-1 flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+          {count > 99 ? '99+' : count}
         </span>
       )}
     </div>

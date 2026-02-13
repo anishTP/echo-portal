@@ -1,15 +1,29 @@
 import { memo, useCallback } from 'react';
 import { Button } from '@radix-ui/themes';
-import { useNotificationList, useMarkNotificationRead } from '../../hooks/useNotifications';
+import { useNavigate } from 'react-router-dom';
+import { useNotificationList, useMarkNotificationRead, useMarkAllRead } from '../../hooks/useNotifications';
 import type { Notification } from '@echo-portal/shared';
 
 interface NotificationListProps {
+  mode?: 'popover' | 'full';
+  maxItems?: number;
+  page?: number;
+  onPageChange?: (page: number) => void;
   onClose?: () => void;
 }
 
-export function NotificationList({ onClose }: NotificationListProps) {
-  const { data, isLoading } = useNotificationList();
+export function NotificationList({
+  mode = 'full',
+  maxItems,
+  page = 1,
+  onPageChange,
+  onClose,
+}: NotificationListProps) {
+  const limit = mode === 'popover' ? (maxItems ?? 5) : 20;
+  const { data, isLoading } = useNotificationList({ page, limit });
   const markReadMutation = useMarkNotificationRead();
+  const markAllReadMutation = useMarkAllRead();
+  const navigate = useNavigate();
 
   const handleMarkRead = useCallback(
     (notificationId: string) => {
@@ -18,25 +32,48 @@ export function NotificationList({ onClose }: NotificationListProps) {
     [markReadMutation]
   );
 
+  const handleMarkAllRead = useCallback(() => {
+    markAllReadMutation.mutate();
+  }, [markAllReadMutation]);
+
+  const handleShowAll = useCallback(() => {
+    onClose?.();
+    navigate('/notifications');
+  }, [navigate, onClose]);
+
   if (isLoading) {
     return <div className="p-4 text-sm text-gray-500">Loading notifications...</div>;
   }
 
   const notifications = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const hasMore = data?.hasMore ?? false;
 
   return (
-    <div className="max-h-96 overflow-y-auto">
+    <div className={mode === 'popover' ? 'max-h-96 overflow-y-auto' : ''}>
       <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
         <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
-        {onClose && (
-          <Button variant="ghost" size="1" onClick={onClose}>
-            Close
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {total > 0 && (
+            <Button
+              variant="ghost"
+              size="1"
+              onClick={handleMarkAllRead}
+              disabled={markAllReadMutation.isPending}
+            >
+              Mark all as read
+            </Button>
+          )}
+          {mode === 'popover' && onClose && (
+            <Button variant="ghost" size="1" onClick={onClose}>
+              Close
+            </Button>
+          )}
+        </div>
       </div>
 
       {notifications.length === 0 ? (
-        <div className="p-8 text-center text-sm text-gray-500">No notifications</div>
+        <div className="p-8 text-center text-sm text-gray-500">No notifications yet</div>
       ) : (
         <div className="divide-y divide-gray-100">
           {notifications.map((notification) => (
@@ -46,6 +83,38 @@ export function NotificationList({ onClose }: NotificationListProps) {
               onMarkRead={handleMarkRead}
             />
           ))}
+        </div>
+      )}
+
+      {mode === 'popover' && total > limit && (
+        <div className="border-t border-gray-200 px-4 py-3 text-center">
+          <Button variant="ghost" size="1" onClick={handleShowAll}>
+            Show all ({total})
+          </Button>
+        </div>
+      )}
+
+      {mode === 'full' && total > limit && (
+        <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
+          <Button
+            variant="ghost"
+            size="1"
+            disabled={page <= 1}
+            onClick={() => onPageChange?.(page - 1)}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-gray-500">
+            Page {page} of {Math.ceil(total / limit)}
+          </span>
+          <Button
+            variant="ghost"
+            size="1"
+            disabled={!hasMore}
+            onClick={() => onPageChange?.(page + 1)}
+          >
+            Next
+          </Button>
         </div>
       )}
     </div>

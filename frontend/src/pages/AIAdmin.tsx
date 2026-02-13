@@ -4,12 +4,14 @@ import { useAuth } from '../context/AuthContext';
 import { AIConfigPanel } from '../components/ai/AIConfigPanel';
 import { AIContextDocuments } from '../components/ai/AIContextDocuments';
 import { AIAuditDashboard } from '../components/ai/AIAuditDashboard';
-import { GearIcon, FileTextIcon, ActivityLogIcon } from '@radix-ui/react-icons';
+import { NotificationMetrics } from '../components/notification/NotificationMetrics';
+import { GearIcon, FileTextIcon, ActivityLogIcon, BellIcon } from '@radix-ui/react-icons';
 
 const tabs = [
   { id: 'config', label: 'Configuration', icon: GearIcon },
   { id: 'context', label: 'Context Documents', icon: FileTextIcon },
   { id: 'audit', label: 'Activity Audit', icon: ActivityLogIcon },
+  { id: 'notifications', label: 'Notifications', icon: BellIcon },
 ] as const;
 
 type TabId = (typeof tabs)[number]['id'];
@@ -104,6 +106,7 @@ export default function AIAdmin() {
           {activeTab === 'config' && <AIConfigPanel />}
           {activeTab === 'context' && <AIContextDocuments />}
           {activeTab === 'audit' && <AIAuditDashboard />}
+          {activeTab === 'notifications' && <NotificationMetrics />}
         </div>
       </main>
     </div>

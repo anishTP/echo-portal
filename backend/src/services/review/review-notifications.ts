@@ -1,5 +1,4 @@
-import { db } from '../../db/index.js';
-import { notifications } from '../../db/schema/notifications.js';
+import { notificationService } from '../notification/notification-service.js';
 import type { ReviewComment } from '@echo-portal/shared';
 
 /**
@@ -23,14 +22,19 @@ export async function notifyReviewSubmitted(
   branchName: string
 ): Promise<void> {
   try {
-    await db.insert(notifications).values({
-      userId: review.reviewerId,
-      type: ReviewNotificationType.REVIEW_REQUESTED,
-      title: 'Review Requested',
-      message: `You have been requested to review "${branchName}"`,
-      resourceType: 'review',
-      resourceId: review.id,
-    });
+    await notificationService.createBulk(
+      [review.reviewerId],
+      {
+        type: ReviewNotificationType.REVIEW_REQUESTED,
+        category: 'review',
+        title: 'Review Requested',
+        message: `You have been requested to review "${branchName}"`,
+        resourceType: 'review',
+        resourceId: review.id,
+        actorId: review.requestedById,
+      },
+      { branchId: review.branchId }
+    );
   } catch (error) {
     console.error('[ReviewNotifications] Failed to send review requested notification:', error);
   }
@@ -45,21 +49,19 @@ export async function notifyCommentAdded(
   recipientIds: string[]
 ): Promise<void> {
   try {
-    // Filter out the comment author from recipients
-    const filteredRecipients = recipientIds.filter((id) => id !== comment.authorId);
-
-    if (filteredRecipients.length === 0) return;
-
-    const notificationValues = filteredRecipients.map((userId) => ({
-      userId,
-      type: ReviewNotificationType.REVIEW_COMMENT_ADDED,
-      title: 'New Review Comment',
-      message: 'A new comment was added to a review you\'re participating in',
-      resourceType: 'review' as const,
-      resourceId: review.id,
-    }));
-
-    await db.insert(notifications).values(notificationValues);
+    await notificationService.createBulk(
+      recipientIds,
+      {
+        type: ReviewNotificationType.REVIEW_COMMENT_ADDED,
+        category: 'review',
+        title: 'New Review Comment',
+        message: 'A new comment was added to a review you\'re participating in',
+        resourceType: 'review',
+        resourceId: review.id,
+        actorId: comment.authorId,
+      },
+      { branchId: review.branchId }
+    );
   } catch (error) {
     console.error('[ReviewNotifications] Failed to send comment notification:', error);
   }
@@ -71,20 +73,22 @@ export async function notifyCommentAdded(
 export async function notifyCommentReply(
   review: { id: string; branchId: string },
   reply: ReviewComment,
-  parentCommentAuthorId: string
+  threadParticipantIds: string[]
 ): Promise<void> {
   try {
-    // Don't notify if replying to own comment
-    if (reply.authorId === parentCommentAuthorId) return;
-
-    await db.insert(notifications).values({
-      userId: parentCommentAuthorId,
-      type: ReviewNotificationType.REVIEW_COMMENT_REPLY,
-      title: 'Reply to Your Comment',
-      message: 'Someone replied to your comment on a review',
-      resourceType: 'review',
-      resourceId: review.id,
-    });
+    await notificationService.createBulk(
+      threadParticipantIds,
+      {
+        type: ReviewNotificationType.REVIEW_COMMENT_REPLY,
+        category: 'review',
+        title: 'Reply to Comment',
+        message: 'Someone replied to a comment thread you\'re participating in',
+        resourceType: 'review',
+        resourceId: review.id,
+        actorId: reply.authorId,
+      },
+      { branchId: review.branchId }
+    );
   } catch (error) {
     console.error('[ReviewNotifications] Failed to send reply notification:', error);
   }
@@ -98,14 +102,19 @@ export async function notifyReviewApproved(
   branchName: string
 ): Promise<void> {
   try {
-    await db.insert(notifications).values({
-      userId: review.requestedById,
-      type: ReviewNotificationType.REVIEW_APPROVED,
-      title: 'Review Approved',
-      message: `Your branch "${branchName}" has been approved`,
-      resourceType: 'review',
-      resourceId: review.id,
-    });
+    await notificationService.createBulk(
+      [review.requestedById],
+      {
+        type: ReviewNotificationType.REVIEW_APPROVED,
+        category: 'review',
+        title: 'Review Approved',
+        message: `Your branch "${branchName}" has been approved`,
+        resourceType: 'review',
+        resourceId: review.id,
+        actorId: review.reviewerId,
+      },
+      { branchId: review.branchId }
+    );
   } catch (error) {
     console.error('[ReviewNotifications] Failed to send approval notification:', error);
   }
@@ -120,14 +129,19 @@ export async function notifyChangesRequested(
   reason?: string
 ): Promise<void> {
   try {
-    await db.insert(notifications).values({
-      userId: review.requestedById,
-      type: ReviewNotificationType.REVIEW_CHANGES_REQUESTED,
-      title: 'Changes Requested',
-      message: `Changes have been requested on "${branchName}"${reason ? `: ${reason.slice(0, 100)}` : ''}`,
-      resourceType: 'review',
-      resourceId: review.id,
-    });
+    await notificationService.createBulk(
+      [review.requestedById],
+      {
+        type: ReviewNotificationType.REVIEW_CHANGES_REQUESTED,
+        category: 'review',
+        title: 'Changes Requested',
+        message: `Changes have been requested on "${branchName}"${reason ? `: ${reason.slice(0, 100)}` : ''}`,
+        resourceType: 'review',
+        resourceId: review.id,
+        actorId: review.reviewerId,
+      },
+      { branchId: review.branchId }
+    );
   } catch (error) {
     console.error('[ReviewNotifications] Failed to send changes requested notification:', error);
   }
@@ -140,17 +154,22 @@ export async function notifyReviewerAdded(
   branchId: string,
   reviewerId: string,
   branchName: string,
-  _addedById: string
+  addedById: string
 ): Promise<void> {
   try {
-    await db.insert(notifications).values({
-      userId: reviewerId,
-      type: ReviewNotificationType.REVIEWER_ADDED,
-      title: 'Added as Reviewer',
-      message: `You have been added as a reviewer to "${branchName}"`,
-      resourceType: 'branch',
-      resourceId: branchId,
-    });
+    await notificationService.createBulk(
+      [reviewerId],
+      {
+        type: ReviewNotificationType.REVIEWER_ADDED,
+        category: 'review',
+        title: 'Added as Reviewer',
+        message: `You have been added as a reviewer to "${branchName}"`,
+        resourceType: 'branch',
+        resourceId: branchId,
+        actorId: addedById,
+      },
+      { branchId }
+    );
   } catch (error) {
     console.error('[ReviewNotifications] Failed to send reviewer added notification:', error);
   }
@@ -163,17 +182,22 @@ export async function notifyReviewerRemoved(
   branchId: string,
   reviewerId: string,
   branchName: string,
-  _removedById: string
+  removedById: string
 ): Promise<void> {
   try {
-    await db.insert(notifications).values({
-      userId: reviewerId,
-      type: ReviewNotificationType.REVIEWER_REMOVED,
-      title: 'Removed from Review',
-      message: `You have been removed as a reviewer from "${branchName}"`,
-      resourceType: 'branch',
-      resourceId: branchId,
-    });
+    await notificationService.createBulk(
+      [reviewerId],
+      {
+        type: ReviewNotificationType.REVIEWER_REMOVED,
+        category: 'review',
+        title: 'Removed from Review',
+        message: `You have been removed as a reviewer from "${branchName}"`,
+        resourceType: 'branch',
+        resourceId: branchId,
+        actorId: removedById,
+      },
+      { branchId }
+    );
   } catch (error) {
     console.error('[ReviewNotifications] Failed to send reviewer removed notification:', error);
   }

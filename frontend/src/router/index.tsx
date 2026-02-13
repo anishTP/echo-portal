@@ -13,6 +13,8 @@ const AuthCallback = lazy(() => import('../pages/AuthCallback'));
 const AuditLog = lazy(() => import('../pages/AuditLog'));
 const UserManagement = lazy(() => import('../pages/UserManagement'));
 const AIAdmin = lazy(() => import('../pages/AIAdmin'));
+const Notifications = lazy(() => import('../pages/Notifications'));
+const NotificationSettings = lazy(() => import('../pages/NotificationSettings'));
 
 // Loading fallback
 function LoadingFallback() {
@@ -97,6 +99,15 @@ const router = createBrowserRouter([
       {
         path: 'admin/ai',
         element: <AIAdmin />,
+      },
+      // Notification routes (009-notification-alerts)
+      {
+        path: 'notifications',
+        element: <Notifications />,
+      },
+      {
+        path: 'settings/notifications',
+        element: <NotificationSettings />,
       },
     ],
   },
