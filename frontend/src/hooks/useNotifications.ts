@@ -60,6 +60,19 @@ export function useMarkNotificationRead() {
     onSuccess: (_, notificationId) => {
       markAsRead(notificationId);
       queryClient.invalidateQueries({ queryKey: notificationKeys.unreadCount() });
+      // Update list query cache so the UI reflects read state immediately
+      queryClient.setQueriesData(
+        { queryKey: [...notificationKeys.all, 'list'] },
+        (old: any) => {
+          if (!old?.items) return old;
+          return {
+            ...old,
+            items: old.items.map((n: any) =>
+              n.id === notificationId ? { ...n, isRead: true, readAt: new Date().toISOString() } : n
+            ),
+          };
+        }
+      );
     },
   });
 }
