@@ -40,6 +40,8 @@ interface FullArticleDiffViewProps {
   onUnresolve?: (commentId: string) => Promise<unknown>;
   /** Callback when replying to a comment */
   onReply?: (commentId: string, content: string) => Promise<unknown>;
+  /** Comment ID to auto-scroll to and open popover for (from notification click) */
+  focusCommentId?: string;
 }
 
 export function FullArticleDiffView({
@@ -52,6 +54,7 @@ export function FullArticleDiffView({
   onResolve,
   onUnresolve,
   onReply,
+  focusCommentId,
 }: FullArticleDiffViewProps) {
   const { fullContent, additions, deletions } = file;
 
@@ -90,6 +93,7 @@ export function FullArticleDiffView({
         onResolve={onResolve}
         onUnresolve={onUnresolve}
         onReply={onReply}
+        focusCommentId={focusCommentId}
       />
     );
   }
@@ -129,6 +133,7 @@ function UnifiedArticleView({
   onResolve,
   onUnresolve,
   onReply,
+  focusCommentId,
 }: {
   oldContent: string | null;
   newContent: string | null;
@@ -143,6 +148,7 @@ function UnifiedArticleView({
   onResolve?: (commentId: string) => Promise<unknown>;
   onUnresolve?: (commentId: string) => Promise<unknown>;
   onReply?: (commentId: string, content: string) => Promise<unknown>;
+  focusCommentId?: string;
 }) {
   const articleRef = useRef<HTMLElement>(null);
   const { selection, clearSelection } = useTextSelection(articleRef);
@@ -228,6 +234,7 @@ function UnifiedArticleView({
           onResolve={onResolve}
           onUnresolve={onUnresolve}
           onReply={onReply}
+          focusCommentId={focusCommentId}
         />
       )}
 

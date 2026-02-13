@@ -27,6 +27,8 @@ interface CommentHighlightsProps {
   onUnresolve?: (commentId: string) => Promise<unknown>;
   /** Callback when replying to a comment */
   onReply?: (commentId: string, content: string) => Promise<unknown>;
+  /** Comment ID to auto-scroll to and open popover for (from notification click) */
+  focusCommentId?: string;
 }
 
 type HighlightContext = 'default' | 'addition' | 'deletion';
@@ -139,6 +141,7 @@ export function CommentHighlights({
   onResolve,
   onUnresolve,
   onReply,
+  focusCommentId,
 }: CommentHighlightsProps) {
   const [highlights, setHighlights] = useState<HighlightPosition[]>([]);
   const [selectedComment, setSelectedComment] = useState<ReviewComment | null>(null);
@@ -288,6 +291,51 @@ export function CommentHighlights({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [selectedComment]);
 
+  // Auto-scroll to and open popover for a specific comment (from notification click).
+  // We poll the button's viewport position until it stabilises (scroll has finished)
+  // before reading final coords for the fixed-position popover.
+  useEffect(() => {
+    if (!focusCommentId || highlights.length === 0) return;
+    const highlight = highlights.find((h) => h.comment.id === focusCommentId);
+    if (!highlight) return;
+
+    const button = document.querySelector(`[data-comment-id="${focusCommentId}"]`) as HTMLElement | null;
+    if (!button) return;
+
+    let cancelled = false;
+
+    button.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    // Poll until the button's top position stops changing (scroll finished)
+    let lastTop = button.getBoundingClientRect().top;
+    let stableFrames = 0;
+    const STABLE_THRESHOLD = 3; // require 3 consecutive stable frames
+
+    const poll = () => {
+      if (cancelled) return;
+      const top = button.getBoundingClientRect().top;
+      if (Math.abs(top - lastTop) < 1) {
+        stableFrames++;
+      } else {
+        stableFrames = 0;
+      }
+      lastTop = top;
+
+      if (stableFrames >= STABLE_THRESHOLD) {
+        const rect = button.getBoundingClientRect();
+        setPopoverPosition({ top: rect.top, left: rect.right + 12 });
+        setSelectedComment(highlight.comment);
+      } else {
+        requestAnimationFrame(poll);
+      }
+    };
+
+    // Start polling on the next frame (after scrollIntoView kicks off)
+    requestAnimationFrame(poll);
+
+    return () => { cancelled = true; };
+  }, [focusCommentId, highlights]);
+
   if (highlights.length === 0) return null;
 
   return (
@@ -313,6 +361,7 @@ export function CommentHighlights({
           <button
             type="button"
             className={`${styles.indicator} ${styles[`indicator--${highlight.context}`]}`}
+            data-comment-id={highlight.comment.id}
             style={{
               top: highlight.indicatorPosition.top,
               left: highlight.indicatorPosition.left,

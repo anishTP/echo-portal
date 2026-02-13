@@ -53,6 +53,7 @@ export default function Library() {
   const mode = (searchParams.get('mode') as 'view' | 'edit' | 'review') || 'view';
   const branchId = searchParams.get('branchId') || undefined;
   const contentIdParam = searchParams.get('contentId') || undefined;
+  const commentIdParam = searchParams.get('commentId') || undefined;
 
   // Determine if we're in inline edit mode (editing branch content)
   const isEditMode = mode === 'edit' && !!branchId && !!contentIdParam;
@@ -251,6 +252,18 @@ export default function Library() {
     isLoadingBranchList,
     navigate,
   ]);
+
+  // Auto-select content item matching a commentId from notification click
+  useEffect(() => {
+    if (!commentIdParam || !comments || comments.length === 0 || !contentComparison?.files) return;
+    const comment = comments.find((c) => c.id === commentIdParam);
+    if (!comment?.path) return;
+    const matchingFile = contentComparison.files.find((f) => f.path === comment.path);
+    if (matchingFile?.contentId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional state sync from URL param
+      setSelectedBranchContentId(matchingFile.contentId);
+    }
+  }, [commentIdParam, comments, contentComparison?.files]);
 
   // Clear selected branch content when switching branches or exiting branch mode
   useEffect(() => {
@@ -829,6 +842,7 @@ export default function Library() {
           onResolve={(commentId) => resolveComment.mutateAsync(commentId)}
           onUnresolve={(commentId) => unresolveComment.mutateAsync(commentId)}
           onReply={(commentId, content) => replyToComment.mutateAsync({ commentId, content })}
+          focusCommentId={commentIdParam}
         />
       ) : isEditMode && editModeContent && currentDraft ? (
         <InlineEditView

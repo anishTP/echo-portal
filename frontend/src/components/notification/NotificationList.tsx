@@ -60,11 +60,29 @@ export function NotificationList({
       if (!url) return;
 
       if (url === 'resolve' && notification.resourceId) {
-        // Legacy review notification — resolve review UUID to branch ID
+        // Resolve review UUID to branch ID, then navigate
         try {
-          const review = await api.get<{ branchId: string }>(`/reviews/${notification.resourceId}`);
+          const review = await api.get<{
+            branchId: string;
+            comments: Array<{ id: string; authorId: string; parentId?: string | null; createdAt: string }>;
+          }>(`/reviews/${notification.resourceId}`);
           onClose?.();
-          navigate(`/branches/${review.branchId}`);
+          const isCommentNotification =
+            notification.type === 'review_comment_added' ||
+            notification.type === 'review_comment_reply';
+          if (isCommentNotification) {
+            // Find the target comment: match actorId, pick most recent by createdAt
+            const isReply = notification.type === 'review_comment_reply';
+            const candidates = (review.comments || []).filter(
+              (c) => c.authorId === notification.actorId && (isReply ? !!c.parentId : !c.parentId)
+            );
+            candidates.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            const targetComment = candidates[0];
+            const commentParam = targetComment ? `&commentId=${targetComment.id}` : '';
+            navigate(`/library?mode=review&branchId=${review.branchId}${commentParam}`);
+          } else {
+            navigate(`/branches/${review.branchId}`);
+          }
         } catch {
           // Review may have been deleted — silently ignore
         }

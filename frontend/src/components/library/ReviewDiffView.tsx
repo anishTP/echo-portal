@@ -25,6 +25,8 @@ export interface ReviewDiffViewProps {
   onUnresolve?: (commentId: string) => Promise<unknown>;
   /** Callback when replying to a comment */
   onReply?: (commentId: string, content: string) => Promise<unknown>;
+  /** Comment ID to auto-scroll to and open popover for (from notification click) */
+  focusCommentId?: string;
 }
 
 
@@ -45,6 +47,7 @@ export function ReviewDiffView({
   onResolve,
   onUnresolve,
   onReply,
+  focusCommentId,
 }: ReviewDiffViewProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -108,6 +111,7 @@ export function ReviewDiffView({
           onResolve={onResolve}
           onUnresolve={onUnresolve}
           onReply={onReply}
+          focusCommentId={focusCommentId}
         />
       </div>
     );
