@@ -2,7 +2,25 @@ import { memo, useCallback } from 'react';
 import { Button } from '@radix-ui/themes';
 import { useNavigate } from 'react-router-dom';
 import { useNotificationList, useMarkNotificationRead, useMarkAllRead } from '../../hooks/useNotifications';
+import api from '../../services/api';
 import type { Notification } from '@echo-portal/shared';
+
+function getNotificationUrl(notification: Notification): string | null {
+  const { resourceType, resourceId } = notification;
+  if (!resourceId) return null;
+  if (resourceType === 'branch') {
+    return `/branches/${resourceId}`;
+  }
+  // 'review' type requires async resolution — handled in handleNavigate
+  if (resourceType === 'review') return 'resolve';
+  return null;
+}
+
+function isNavigable(notification: Notification): boolean {
+  const { resourceType, resourceId } = notification;
+  if (!resourceId) return false;
+  return resourceType === 'branch' || resourceType === 'review';
+}
 
 interface NotificationListProps {
   mode?: 'popover' | 'full';
@@ -35,6 +53,29 @@ export function NotificationList({
   const handleMarkAllRead = useCallback(() => {
     markAllReadMutation.mutate();
   }, [markAllReadMutation]);
+
+  const handleNavigate = useCallback(
+    async (notification: Notification) => {
+      const url = getNotificationUrl(notification);
+      if (!url) return;
+
+      if (url === 'resolve' && notification.resourceId) {
+        // Legacy review notification — resolve review UUID to branch ID
+        try {
+          const review = await api.get<{ branchId: string }>(`/reviews/${notification.resourceId}`);
+          onClose?.();
+          navigate(`/branches/${review.branchId}`);
+        } catch {
+          // Review may have been deleted — silently ignore
+        }
+        return;
+      }
+
+      onClose?.();
+      navigate(url);
+    },
+    [navigate, onClose]
+  );
 
   const handleShowAll = useCallback(() => {
     onClose?.();
@@ -81,6 +122,7 @@ export function NotificationList({
               key={notification.id}
               notification={notification}
               onMarkRead={handleMarkRead}
+              onNavigate={handleNavigate}
             />
           ))}
         </div>
@@ -124,11 +166,13 @@ export function NotificationList({
 interface NotificationItemProps {
   notification: Notification;
   onMarkRead: (id: string) => void;
+  onNavigate: (notification: Notification) => void;
 }
 
 const NotificationItem = memo(function NotificationItem({
   notification,
   onMarkRead,
+  onNavigate,
 }: NotificationItemProps) {
   const formattedDate = new Date(notification.createdAt).toLocaleDateString('en-US', {
     month: 'short',
@@ -137,10 +181,20 @@ const NotificationItem = memo(function NotificationItem({
     minute: '2-digit',
   });
 
+  const hasUrl = isNavigable(notification);
+
+  const handleClick = () => {
+    if (!notification.isRead) {
+      onMarkRead(notification.id);
+    }
+    onNavigate(notification);
+  };
+
   return (
     <div
       className={`px-4 py-3 ${notification.isRead ? 'bg-white' : 'bg-blue-50'}`}
-      onClick={() => !notification.isRead && onMarkRead(notification.id)}
+      style={{ cursor: hasUrl ? 'pointer' : 'default' }}
+      onClick={handleClick}
       role="button"
       tabIndex={0}
     >

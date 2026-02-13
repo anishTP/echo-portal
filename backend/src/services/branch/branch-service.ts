@@ -17,6 +17,7 @@ import { NotFoundError, ValidationError, ConflictError, ForbiddenError } from '.
 import { BranchState, ActorType, Role } from '@echo-portal/shared';
 import type { RoleType } from '@echo-portal/shared';
 import { contentInheritanceService } from '../content/content-inheritance-service.js';
+import { notifyReviewerAdded, notifyReviewerRemoved } from '../review/review-notifications.js';
 
 export interface BranchListOptions {
   ownerId?: string;
@@ -543,6 +544,15 @@ export class BranchService {
       .where(eq(branches.id, id))
       .returning();
 
+    // Notify only the newly added reviewers (not those already on the branch)
+    const addedReviewerIds = reviewerIds.filter((rid) => !currentReviewers.includes(rid));
+    const branchName = existing.name || existing.id;
+    for (const reviewerId of addedReviewerIds) {
+      notifyReviewerAdded(id, reviewerId, branchName, actorId).catch(
+        (err) => console.error('[BranchService] Failed to send reviewer added notification:', err)
+      );
+    }
+
     return createBranchModel(updated);
   }
 
@@ -585,6 +595,14 @@ export class BranchService {
       .set(updateData)
       .where(eq(branches.id, id))
       .returning();
+
+    // Notify the removed reviewer (only if they were actually on the branch)
+    if (existing.reviewers.includes(reviewerId)) {
+      const branchName = existing.name || existing.id;
+      notifyReviewerRemoved(id, reviewerId, branchName, actorId).catch(
+        (err) => console.error('[BranchService] Failed to send reviewer removed notification:', err)
+      );
+    }
 
     // Log the state transition if we auto-returned to Draft
     if (shouldReturnToDraft) {
