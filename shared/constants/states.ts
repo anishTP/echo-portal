@@ -145,6 +145,7 @@ export const NotificationType = {
   COLLABORATOR_REMOVED: 'collaborator_removed',
   CONTENT_PUBLISHED: 'content_published',
   BRANCH_ARCHIVED: 'branch_archived',
+  BRANCH_READY_TO_PUBLISH: 'branch_ready_to_publish',
   ROLE_CHANGED: 'role_changed',
   // AI category
   AI_COMPLIANCE_ERROR: 'ai_compliance_error',
@@ -179,6 +180,7 @@ export const NOTIFICATION_TYPE_TO_CATEGORY: Record<NotificationTypeValue, Notifi
   collaborator_removed: 'lifecycle',
   content_published: 'lifecycle',
   branch_archived: 'lifecycle',
+  branch_ready_to_publish: 'lifecycle',
   role_changed: 'lifecycle',
   ai_compliance_error: 'ai',
 };

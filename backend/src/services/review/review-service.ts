@@ -32,6 +32,7 @@ import {
   notifyChangesRequested,
   notifyReviewerAdded,
   notifyReviewerRemoved,
+  notifyBranchReadyToPublish,
 } from './review-notifications.js';
 
 export interface ReviewListOptions {
@@ -390,6 +391,11 @@ export class ReviewService {
             `Failed to transition branch: ${transitionResult.error || 'Unknown error'}`
           );
         }
+
+        // Notify admins that the branch is ready to publish
+        notifyBranchReadyToPublish(review.branchId, branchName, actorId).catch(
+          (err) => console.error('[Review] Failed to send ready-to-publish notification:', err)
+        );
       }
       // Otherwise, branch stays in review state, just accumulating approvals
     } else if (decision === ReviewDecision.CHANGES_REQUESTED) {

@@ -14,6 +14,14 @@ vi.mock('../../src/services/notification/notification-service', () => ({
 // Mock @echo-portal/shared for ReviewComment type (and any other imports)
 vi.mock('@echo-portal/shared', () => ({}));
 
+// Mock db for notifyBranchReadyToPublish admin user query
+const mockDbSelect = vi.fn();
+vi.mock('../../src/db/index', () => ({
+  db: {
+    select: (...args: unknown[]) => mockDbSelect(...args),
+  },
+}));
+
 // ---------------------------------------------------------------------------
 // Imports — AFTER all vi.mock calls so hoisting resolves correctly
 // ---------------------------------------------------------------------------
@@ -28,6 +36,7 @@ import {
   notifyChangesRequested,
   notifyReviewerAdded,
   notifyReviewerRemoved,
+  notifyBranchReadyToPublish,
 } from '../../src/services/review/review-notifications';
 
 // ---------------------------------------------------------------------------
@@ -597,6 +606,95 @@ describe('review-notifications', () => {
         error,
       );
       consoleSpy.mockRestore();
+    });
+  });
+
+  // =========================================================================
+  // notifyBranchReadyToPublish
+  // =========================================================================
+  describe('notifyBranchReadyToPublish()', () => {
+    const ADMIN_ID_1 = '00000000-0000-4000-a000-000000000030';
+    const ADMIN_ID_2 = '00000000-0000-4000-a000-000000000031';
+    const ACTOR_ID = '00000000-0000-4000-a000-000000000040';
+
+    function setupDbMock(adminRows: { id: string }[]) {
+      const mockWhere = vi.fn().mockResolvedValue(adminRows);
+      const mockFrom = vi.fn().mockReturnValue({ where: mockWhere });
+      mockDbSelect.mockReturnValue({ from: mockFrom });
+      return { mockFrom, mockWhere };
+    }
+
+    it('queries active admin users and calls createBulk with all admin IDs', async () => {
+      setupDbMock([{ id: ADMIN_ID_1 }, { id: ADMIN_ID_2 }]);
+
+      await notifyBranchReadyToPublish(BRANCH_ID, BRANCH_NAME, ACTOR_ID);
+
+      expect(notificationService.createBulk).toHaveBeenCalledTimes(1);
+      expect(notificationService.createBulk).toHaveBeenCalledWith(
+        [ADMIN_ID_1, ADMIN_ID_2],
+        {
+          type: 'branch_ready_to_publish',
+          category: 'lifecycle',
+          title: 'Branch Ready to Publish',
+          message: `"${BRANCH_NAME}" has been approved and is ready to publish`,
+          resourceType: 'branch',
+          resourceId: BRANCH_ID,
+          actorId: ACTOR_ID,
+        },
+        { branchId: BRANCH_ID },
+      );
+    });
+
+    it('passes category: lifecycle (not review)', async () => {
+      setupDbMock([{ id: ADMIN_ID_1 }]);
+
+      await notifyBranchReadyToPublish(BRANCH_ID, BRANCH_NAME, ACTOR_ID);
+
+      const callArgs = (notificationService.createBulk as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(callArgs[1].category).toBe('lifecycle');
+    });
+
+    it('passes resourceType: branch', async () => {
+      setupDbMock([{ id: ADMIN_ID_1 }]);
+
+      await notifyBranchReadyToPublish(BRANCH_ID, BRANCH_NAME, ACTOR_ID);
+
+      const callArgs = (notificationService.createBulk as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(callArgs[1].resourceType).toBe('branch');
+      expect(callArgs[1].resourceId).toBe(BRANCH_ID);
+    });
+
+    it('skips createBulk when no admins are found', async () => {
+      setupDbMock([]);
+
+      await notifyBranchReadyToPublish(BRANCH_ID, BRANCH_NAME, ACTOR_ID);
+
+      expect(notificationService.createBulk).not.toHaveBeenCalled();
+    });
+
+    it('does not propagate errors and calls console.error on failure', async () => {
+      const error = new Error('DB query failed');
+      mockDbSelect.mockImplementation(() => { throw error; });
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      await expect(
+        notifyBranchReadyToPublish(BRANCH_ID, BRANCH_NAME, ACTOR_ID),
+      ).resolves.toBeUndefined();
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        '[ReviewNotifications] Failed to send ready-to-publish notification:',
+        error,
+      );
+      consoleSpy.mockRestore();
+    });
+
+    it('passes branchId for self-suppression via resolveRecipients', async () => {
+      setupDbMock([{ id: ADMIN_ID_1 }]);
+
+      await notifyBranchReadyToPublish(BRANCH_ID, BRANCH_NAME, ACTOR_ID);
+
+      const callArgs = (notificationService.createBulk as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(callArgs[2]).toEqual({ branchId: BRANCH_ID });
     });
   });
 

@@ -1,4 +1,7 @@
 import { notificationService } from '../notification/notification-service.js';
+import { db } from '../../db/index.js';
+import { users } from '../../db/schema/users.js';
+import { eq, and, sql } from 'drizzle-orm';
 import type { ReviewComment } from '@echo-portal/shared';
 
 /**
@@ -200,5 +203,40 @@ export async function notifyReviewerRemoved(
     );
   } catch (error) {
     console.error('[ReviewNotifications] Failed to send reviewer removed notification:', error);
+  }
+}
+
+/**
+ * Notify all active admins when a branch is ready to publish
+ */
+export async function notifyBranchReadyToPublish(
+  branchId: string,
+  branchName: string,
+  actorId: string
+): Promise<void> {
+  try {
+    const adminUsers = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(and(eq(users.isActive, true), sql`'administrator' = ANY(${users.roles})`));
+
+    const adminIds = adminUsers.map((u) => u.id);
+    if (adminIds.length === 0) return;
+
+    await notificationService.createBulk(
+      adminIds,
+      {
+        type: 'branch_ready_to_publish',
+        category: 'lifecycle',
+        title: 'Branch Ready to Publish',
+        message: `"${branchName}" has been approved and is ready to publish`,
+        resourceType: 'branch',
+        resourceId: branchId,
+        actorId,
+      },
+      { branchId }
+    );
+  } catch (error) {
+    console.error('[ReviewNotifications] Failed to send ready-to-publish notification:', error);
   }
 }
