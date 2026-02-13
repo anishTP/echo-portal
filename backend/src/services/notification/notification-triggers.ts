@@ -121,6 +121,51 @@ export function notifyAIComplianceError(
     .catch((err) => console.error('[NotificationTriggers] ai_compliance_error failed:', err));
 }
 
+export function notifyReviewCommentAdded(
+  reviewId: string,
+  commentAuthorId: string,
+  recipientId: string,
+  actorId: string
+): void {
+  notificationService
+    .createBulk(
+      [recipientId],
+      {
+        type: 'review_comment_added',
+        category: 'review',
+        title: 'New Review Comment',
+        message: 'A new comment was added to your review',
+        resourceType: 'review',
+        resourceId: reviewId,
+        actorId,
+      },
+      { reviewId }
+    )
+    .catch((err) => console.error('[NotificationTriggers] review_comment_added failed:', err));
+}
+
+export function notifyReviewCommentReply(
+  reviewId: string,
+  parentCommentAuthorId: string,
+  actorId: string
+): void {
+  notificationService
+    .createBulk(
+      [parentCommentAuthorId],
+      {
+        type: 'review_comment_reply',
+        category: 'review',
+        title: 'Reply to Your Comment',
+        message: 'Someone replied to your comment',
+        resourceType: 'review',
+        resourceId: reviewId,
+        actorId,
+      },
+      { reviewId }
+    )
+    .catch((err) => console.error('[NotificationTriggers] review_comment_reply failed:', err));
+}
+
 export function notifyRoleChanged(
   userId: string,
   oldRole: string,

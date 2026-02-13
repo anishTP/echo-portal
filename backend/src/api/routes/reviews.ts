@@ -22,6 +22,10 @@ import {
 } from '../schemas/reviews.js';
 import type { ReviewModel } from '../../models/review.js';
 import type { ReviewComment } from '@echo-portal/shared';
+import {
+  notifyReviewCommentAdded,
+  notifyReviewCommentReply,
+} from '../../services/notification/notification-triggers.js';
 
 const reviewRoutes = new Hono<AuthEnv>();
 
@@ -300,6 +304,12 @@ reviewRoutes.post(
     const body = c.req.valid('json');
 
     const comment = await reviewCommentService.addComment(id, body, user.id);
+
+    // Notify the other party (reviewer or requester) about the new comment
+    const review = await reviewService.getByIdOrThrow(id);
+    const recipientId = user.id === review.reviewerId ? review.requestedById : review.reviewerId;
+    notifyReviewCommentAdded(id, user.id, recipientId, user.id);
+
     return created(c, comment);
   }
 );
@@ -408,6 +418,15 @@ reviewRoutes.post(
     const { content } = c.req.valid('json');
 
     const reply = await reviewCommentService.addReply(id, commentId, content, user.id);
+
+    // Notify the parent comment's author about the reply
+    const review = await reviewService.getByIdOrThrow(id);
+    const comments = (review.comments as ReviewComment[]) || [];
+    const parentComment = comments.find((c) => c.id === commentId);
+    if (parentComment && parentComment.authorId !== user.id) {
+      notifyReviewCommentReply(id, parentComment.authorId, user.id);
+    }
+
     return created(c, reply);
   }
 );
