@@ -19,6 +19,13 @@
     {
       "idx": 2,
       "version": "7",
+      "when": 1769534300000,
+      "tag": "0002_content_version_immutability_trigger",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
       "when": 1769817600000,
       "tag": "0003_notification_preferences",
       "breakpoints": true

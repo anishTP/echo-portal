@@ -86,10 +86,10 @@ export function NotificationList({
         </div>
       )}
 
-      {mode === 'popover' && total > limit && (
+      {mode === 'popover' && (
         <div className="border-t border-gray-200 px-4 py-3 text-center">
           <Button variant="ghost" size="1" onClick={handleShowAll}>
-            Show all ({total})
+            {total > limit ? `Show all (${total})` : 'View all notifications'}
           </Button>
         </div>
       )}
