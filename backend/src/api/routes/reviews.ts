@@ -25,6 +25,7 @@ import type { ReviewComment } from '@echo-portal/shared';
 import {
   notifyReviewCommentAdded,
   notifyReviewCommentReply,
+  notifyCommentResolved,
 } from '../../services/notification/notification-triggers.js';
 
 const reviewRoutes = new Hono<AuthEnv>();
@@ -443,6 +444,12 @@ reviewRoutes.post(
     const { id, commentId } = c.req.valid('param');
 
     const comment = await reviewCommentService.resolveComment(id, commentId, user.id);
+
+    // Notify the comment author that their comment was resolved
+    if (comment.authorId && comment.authorId !== user.id) {
+      notifyCommentResolved(id, comment.authorId, user.id);
+    }
+
     return success(c, comment);
   }
 );

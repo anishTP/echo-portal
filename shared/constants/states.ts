@@ -138,6 +138,7 @@ export const NotificationType = {
   REVIEW_COMMENT_REPLY: 'review_comment_reply',
   REVIEW_APPROVED: 'review_approved',
   REVIEW_CHANGES_REQUESTED: 'review_changes_requested',
+  REVIEW_COMMENT_RESOLVED: 'review_comment_resolved',
   REVIEWER_ADDED: 'reviewer_added',
   REVIEWER_REMOVED: 'reviewer_removed',
   // Lifecycle category
@@ -174,6 +175,7 @@ export const NOTIFICATION_TYPE_TO_CATEGORY: Record<NotificationTypeValue, Notifi
   review_comment_reply: 'review',
   review_approved: 'review',
   review_changes_requested: 'review',
+  review_comment_resolved: 'review',
   reviewer_added: 'review',
   reviewer_removed: 'review',
   collaborator_added: 'lifecycle',

@@ -166,6 +166,27 @@ export function notifyReviewCommentReply(
     .catch((err) => console.error('[NotificationTriggers] review_comment_reply failed:', err));
 }
 
+export function notifyCommentResolved(
+  reviewId: string,
+  commentAuthorId: string,
+  actorId: string
+): void {
+  notificationService
+    .createBulk(
+      [commentAuthorId],
+      {
+        type: 'review_comment_resolved',
+        category: 'review',
+        title: 'Comment Resolved',
+        message: 'Your review comment has been resolved',
+        resourceType: 'review',
+        resourceId: reviewId,
+        actorId,
+      }
+    )
+    .catch((err) => console.error('[NotificationTriggers] review_comment_resolved failed:', err));
+}
+
 export function notifyRoleChanged(
   userId: string,
   oldRole: string,
