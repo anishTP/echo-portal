@@ -706,6 +706,10 @@ branchRoutes.post(
       // Mark branch content as published (for tracking purposes)
       await contentService.markPublished(id, user.id);
 
+      // Notify branch owner + collaborators about publication
+      const publishRecipients = [branch.ownerId, ...(branch.collaborators || [])];
+      notifyContentPublished(id, branch.name, publishRecipients, user.id);
+
       // Auto-archive the branch after publishing (no further edits allowed)
       await transitionService.executeTransition({
         branchId: id,
