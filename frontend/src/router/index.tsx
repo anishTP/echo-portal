@@ -11,8 +11,7 @@ const BranchWorkspace = lazy(() => import('../pages/BranchWorkspace'));
 const PublishConfirm = lazy(() => import('../pages/PublishConfirm'));
 const AuthCallback = lazy(() => import('../pages/AuthCallback'));
 const AuditLog = lazy(() => import('../pages/AuditLog'));
-const UserManagement = lazy(() => import('../pages/UserManagement'));
-const AIAdmin = lazy(() => import('../pages/AIAdmin'));
+const AdminSettings = lazy(() => import('../pages/AdminSettings'));
 const Notifications = lazy(() => import('../pages/Notifications'));
 const NotificationSettings = lazy(() => import('../pages/NotificationSettings'));
 const LoginPage = lazy(() => import('../pages/LoginPage'));
@@ -117,15 +116,10 @@ const router = createBrowserRouter([
         path: 'audit',
         element: <AuditLog />,
       },
-      // User management routes (Phase 9 - US7)
+      // Admin settings — unified user management + AI admin
       {
-        path: 'users',
-        element: <UserManagement />,
-      },
-      // AI administration routes (007-ai-assisted-authoring)
-      {
-        path: 'admin/ai',
-        element: <AIAdmin />,
+        path: 'admin',
+        element: <AdminSettings />,
       },
       // Notification routes (009-notification-alerts)
       {

@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, Button, Select, TextArea, Text, Badge, Callout, Flex } from '@radix-ui/themes';
 import { ExclamationTriangleIcon, CrossCircledIcon } from '@radix-ui/react-icons';
 import { RoleDisplayNames, RoleDescriptions, ALL_ROLES } from '@echo-portal/shared';
+import { apiFetch } from '../../services/api';
 import type { User, RoleType } from '@echo-portal/shared';
 
 interface RoleChangeDialogProps {
@@ -31,21 +32,10 @@ export function RoleChangeDialog({
   // Role change mutation
   const roleChangeMutation = useMutation({
     mutationFn: async (role: RoleType) => {
-      const response = await fetch(`/api/v1/users/${user.id}/role`, {
+      return apiFetch(`/users/${user.id}/role`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
         body: JSON.stringify({ role }),
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to change role');
-      }
-
-      return response.json();
     },
     onSuccess: () => {
       // Invalidate users queries to refresh list
