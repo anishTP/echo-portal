@@ -53,6 +53,15 @@ export function AppHeader() {
               )}
               {isAuthenticated && isAdmin && (
                 <Link
+                  to="/users"
+                  className="text-sm font-medium transition-colors"
+                  style={{ color: isActive('/users') ? 'var(--accent-11)' : 'var(--gray-11)' }}
+                >
+                  Users
+                </Link>
+              )}
+              {isAuthenticated && isAdmin && (
+                <Link
                   to="/admin/ai"
                   className="text-sm font-medium transition-colors"
                   style={{ color: isActive('/admin/ai') ? 'var(--accent-11)' : 'var(--gray-11)' }}
