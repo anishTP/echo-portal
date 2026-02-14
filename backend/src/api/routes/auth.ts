@@ -3,15 +3,21 @@ import { setCookie, deleteCookie, getCookie } from 'hono/cookie';
 import { z } from 'zod';
 import { db } from '../../db/index.js';
 import { users, sessions, loginAttempts } from '../../db/schema/index.js';
-import { eq, desc, and, gte } from 'drizzle-orm';
+import { eq, desc, and, gte, lt } from 'drizzle-orm';
 import { getAuthorizationURL, validateCallback, type OAuthProvider } from '../../services/auth/oauth.js';
 import {
   createSession,
   validateSession,
   revokeSession,
   revokeSessionByToken,
+  revokeAllUserSessions,
   getUserSessions,
 } from '../../services/auth/session.js';
+import { hashPassword, verifyPassword, validatePasswordStrength } from '../../services/auth/password.js';
+import { generateToken, validateToken, isTokenExpired, markTokenUsed, invalidateUserTokens, cleanupExpiredTokens } from '../../services/auth/token.js';
+import { getEmailService } from '../../services/email/index.js';
+import { verificationEmail, passwordResetEmail } from '../../services/email/templates.js';
+import { rateLimit, signupLimiter, resendLimiter, resetLimiter } from '../middleware/auth-rate-limit.js';
 import { requireAuth, type AuthEnv, getSessionCookieName } from '../middleware/auth.js';
 import { logAudit } from '../../services/audit/logger.js';
 import { randomBytes } from 'crypto';
@@ -108,7 +114,7 @@ async function checkAccountLockout(email: string): Promise<{
  */
 async function recordLoginAttempt(
   email: string,
-  provider: OAuthProvider,
+  provider: OAuthProvider | 'email',
   success: boolean,
   ipAddress?: string,
   userAgent?: string,
@@ -211,6 +217,7 @@ async function findOrCreateUser(
   }
 
   // Check if user exists by email (same email, different provider)
+  // FR-024: Block login if email exists with a different provider (no auto-linking)
   const [userByEmail] = await db
     .select()
     .from(users)
@@ -218,23 +225,10 @@ async function findOrCreateUser(
     .limit(1);
 
   if (userByEmail) {
-    // Link this provider to existing account
-    await db
-      .update(users)
-      .set({
-        externalId: oauthInfo.id,
-        provider: provider,
-        displayName: oauthInfo.name,
-        avatarUrl: oauthInfo.avatarUrl,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, userByEmail.id));
-
-    return {
-      id: userByEmail.id,
-      email: userByEmail.email,
-      roles: userByEmail.roles || [],
-    };
+    throw Object.assign(
+      new Error(`An account with this email already exists using ${userByEmail.provider} authentication.`),
+      { name: 'ProviderConflictError', existingProvider: userByEmail.provider }
+    );
   }
 
   // Create new user (default role: contributor)
@@ -271,6 +265,346 @@ async function findOrCreateUser(
     roles: newUser.roles || [],
   };
 }
+
+// --- Zod schemas for email/password auth endpoints ---
+
+const registerSchema = z.object({
+  email: z.string().email().max(255),
+  password: z.string().min(8).max(128),
+  displayName: z.string().trim().min(1).max(100),
+});
+
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
+
+const verifyEmailSchema = z.object({
+  token: z.string().min(1),
+});
+
+const resendVerificationSchema = z.object({
+  email: z.string().email(),
+});
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(8).max(128),
+});
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8).max(128),
+});
+
+// --- Cleanup: unverified accounts (7 days) + expired tokens ---
+const UNVERIFIED_ACCOUNT_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+async function cleanupUnverifiedAccounts(): Promise<number> {
+  const cutoff = new Date(Date.now() - UNVERIFIED_ACCOUNT_TTL_MS);
+  const result = await db
+    .delete(users)
+    .where(
+      and(
+        eq(users.provider, 'email'),
+        eq(users.emailVerified, false),
+        lt(users.createdAt, cutoff)
+      )
+    )
+    .returning();
+  return result.length;
+}
+
+// Scheduled cleanup alongside existing OAuth state cleanup
+setInterval(async () => {
+  try {
+    const deletedAccounts = await cleanupUnverifiedAccounts();
+    const deletedTokens = await cleanupExpiredTokens();
+    if (deletedAccounts > 0 || deletedTokens > 0) {
+      console.log('[AUTH] Cleanup:', { deletedAccounts, deletedTokens });
+    }
+  } catch (error) {
+    console.error('[AUTH] Cleanup error:', error);
+  }
+}, 60 * 60 * 1000); // Every hour
+
+// --- Email/Password Auth Endpoints ---
+
+/**
+ * T015: POST /auth/register — Create a new email/password account
+ * FR-001, FR-002, FR-003, FR-013, FR-024
+ */
+authRoutes.post(
+  '/register',
+  rateLimit(signupLimiter, (c) => c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'unknown'),
+  async (c) => {
+    const body = await c.req.json();
+    const parsed = registerSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return c.json(
+        { success: false, error: { message: 'Validation failed', details: parsed.error.flatten() } },
+        400
+      );
+    }
+
+    const { email, password, displayName } = parsed.data;
+
+    // Validate password strength (3-of-4-types rule)
+    const strength = validatePasswordStrength(password);
+    if (!strength.valid) {
+      return c.json(
+        { success: false, error: { message: 'Password does not meet strength requirements. Must be at least 8 characters with 3 of 4 types: uppercase, lowercase, number, special character.', criteria: strength.criteria } },
+        400
+      );
+    }
+
+    // Check if email already exists (FR-024: single-provider-per-email)
+    const [existingUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+
+    if (existingUser) {
+      return c.json(
+        { success: false, error: { message: 'An account with this email already exists' } },
+        409
+      );
+    }
+
+    // Hash password
+    const passwordHash = await hashPassword(password);
+
+    // Create user
+    const [newUser] = await db
+      .insert(users)
+      .values({
+        provider: 'email',
+        email,
+        displayName,
+        passwordHash,
+        emailVerified: false,
+        roles: ['contributor'],
+        isActive: true,
+      })
+      .returning();
+
+    // Generate verification token and send email
+    const token = await generateToken(newUser.id, 'verification');
+    const emailContent = verificationEmail(token);
+    const emailService = getEmailService();
+
+    try {
+      await emailService.sendMail({
+        to: email,
+        ...emailContent,
+      });
+    } catch (error) {
+      console.error('[AUTH] Failed to send verification email:', error);
+      // Don't fail the registration — user can resend later
+    }
+
+    // Audit log
+    await logAudit({
+      action: 'auth.register',
+      actorId: newUser.id,
+      actorType: 'user',
+      resourceId: newUser.id,
+      resourceType: 'user',
+      outcome: 'success',
+      metadata: { provider: 'email', email },
+    });
+
+    return c.json(
+      { success: true, data: { message: 'Account created. Please check your email to verify your account.' } },
+      201
+    );
+  }
+);
+
+/**
+ * T016: POST /auth/login — Authenticate with email and password
+ * FR-004, FR-005a/b, FR-006, FR-010
+ */
+authRoutes.post('/email-login', async (c) => {
+  const body = await c.req.json();
+  const parsed = loginSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return c.json(
+      { success: false, error: { message: 'Validation failed', details: parsed.error.flatten() } },
+      400
+    );
+  }
+
+  const { email, password } = parsed.data;
+  const ipAddress = c.req.header('x-forwarded-for') || c.req.header('x-real-ip');
+  const userAgent = c.req.header('user-agent');
+
+  // Check lockout
+  const lockoutStatus = await checkAccountLockout(email);
+  if (lockoutStatus.isLocked) {
+    const remainingMs = lockoutStatus.lockedUntil
+      ? lockoutStatus.lockedUntil.getTime() - Date.now()
+      : 0;
+    const remainingMinutes = Math.ceil(remainingMs / 60000);
+
+    return c.json(
+      {
+        success: false,
+        error: {
+          message: `Account is temporarily locked due to excessive failed login attempts. Please try again in ${remainingMinutes} minutes.`,
+          lockedUntil: lockoutStatus.lockedUntil?.toISOString(),
+          remainingMinutes,
+        },
+      },
+      423
+    );
+  }
+
+  // Find user by email + provider='email'
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(and(eq(users.email, email), eq(users.provider, 'email')))
+    .limit(1);
+
+  if (!user || !user.passwordHash) {
+    // Record failed attempt (FR-010: generic error, don't reveal user existence)
+    await recordLoginAttempt(email, 'email', false, ipAddress, userAgent, 'invalid_credentials');
+    return c.json(
+      { success: false, error: { message: 'Invalid email or password' } },
+      401
+    );
+  }
+
+  // Check if email is verified
+  if (!user.emailVerified) {
+    return c.json(
+      { success: false, error: { message: 'Please verify your email address before logging in', needsVerification: true } },
+      403
+    );
+  }
+
+  // Check if user is active
+  if (!user.isActive) {
+    return c.json(
+      { success: false, error: { message: 'Account has been deactivated' } },
+      403
+    );
+  }
+
+  // Verify password
+  const isValid = await verifyPassword(user.passwordHash, password);
+  if (!isValid) {
+    await recordLoginAttempt(email, 'email', false, ipAddress, userAgent, 'invalid_password');
+    return c.json(
+      { success: false, error: { message: 'Invalid email or password' } },
+      401
+    );
+  }
+
+  // Create session
+  const session = await createSession(user.id, 'email', userAgent, ipAddress);
+
+  // Record successful login
+  await recordLoginAttempt(email, 'email', true, ipAddress, userAgent);
+
+  // Set session cookie
+  setCookie(c, SESSION_COOKIE_NAME, session.token, SESSION_COOKIE_OPTIONS);
+
+  // Audit log
+  await logAudit({
+    action: 'auth.login',
+    actorId: user.id,
+    actorType: 'user',
+    resourceId: session.id,
+    resourceType: 'session',
+    outcome: 'success',
+    actorIp: ipAddress,
+    actorUserAgent: userAgent,
+    metadata: { provider: 'email' },
+  });
+
+  return c.json({
+    success: true,
+    data: {
+      user: {
+        id: user.id,
+        email: user.email,
+        displayName: user.displayName,
+        avatarUrl: user.avatarUrl,
+        roles: user.roles,
+        role: user.roles?.[0] || 'viewer',
+      },
+    },
+  });
+});
+
+/**
+ * T017: POST /auth/verify-email — Verify email address using token
+ * FR-003, FR-009
+ */
+authRoutes.post('/verify-email', async (c) => {
+  const body = await c.req.json();
+  const parsed = verifyEmailSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return c.json(
+      { success: false, error: { message: 'Validation failed' } },
+      400
+    );
+  }
+
+  const { token } = parsed.data;
+
+  // Check if token is expired (for specific error messaging)
+  const expired = await isTokenExpired(token, 'verification');
+  if (expired) {
+    return c.json(
+      { success: false, error: { message: 'Verification link has expired. Please request a new one.' } },
+      410
+    );
+  }
+
+  // Validate token
+  const tokenRecord = await validateToken(token, 'verification');
+  if (!tokenRecord) {
+    return c.json(
+      { success: false, error: { message: 'Invalid or already-used verification token' } },
+      400
+    );
+  }
+
+  // Mark email as verified
+  await db
+    .update(users)
+    .set({ emailVerified: true, updatedAt: new Date() })
+    .where(eq(users.id, tokenRecord.userId));
+
+  // Mark token as used
+  await markTokenUsed(tokenRecord.id);
+
+  // Audit log
+  await logAudit({
+    action: 'auth.verify_email',
+    actorId: tokenRecord.userId,
+    actorType: 'user',
+    resourceId: tokenRecord.userId,
+    resourceType: 'user',
+    outcome: 'success',
+  });
+
+  return c.json({
+    success: true,
+    data: { message: 'Email verified successfully. You can now log in.' },
+  });
+});
 
 /**
  * Health check endpoint for auth service
@@ -496,6 +830,15 @@ authRoutes.get('/callback/:provider', async (c) => {
       error instanceof Error ? error.message : 'unknown_error'
     );
 
+    // FR-024: Provider conflict — email exists with different provider
+    if (error instanceof Error && error.name === 'ProviderConflictError') {
+      const existingProvider = (error as Error & { existingProvider?: string }).existingProvider || 'another method';
+      const redirectUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      return c.redirect(
+        `${redirectUrl}/auth/callback?error=provider_conflict&existing_provider=${encodeURIComponent(existingProvider)}&message=${encodeURIComponent(error.message)}`
+      );
+    }
+
     // T040: OAuth graceful degradation
     if (error instanceof Error && error.name === 'OAuthProviderUnavailableError') {
       const redirectUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -548,6 +891,8 @@ authRoutes.get('/me', requireAuth, async (c) => {
       avatarUrl: user.avatarUrl,
       roles: user.roles,
       isActive: user.isActive,
+      provider: user.provider,
+      emailVerified: user.emailVerified,
       createdAt: user.createdAt.toISOString(),
       lastLoginAt: user.lastLoginAt?.toISOString(),
     },
@@ -665,6 +1010,317 @@ authRoutes.delete('/sessions/:sessionId', requireAuth, async (c) => {
   return c.json({
     message: 'Session revoked successfully',
     sessionId,
+  });
+});
+
+/**
+ * T030: POST /auth/forgot-password — Request a password reset link
+ * FR-007, FR-010, FR-012
+ */
+authRoutes.post(
+  '/forgot-password',
+  rateLimit(resetLimiter, (c) => {
+    try {
+      const body = c.req.raw.clone();
+      // Rate limit by IP as fallback
+      return c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'unknown';
+    } catch {
+      return 'unknown';
+    }
+  }),
+  async (c) => {
+    const body = await c.req.json();
+    const parsed = forgotPasswordSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return c.json(
+        { success: false, error: { message: 'Validation failed' } },
+        400
+      );
+    }
+
+    const { email } = parsed.data;
+
+    // Always return success to prevent account enumeration (FR-010)
+    // Only actually send email if user exists with provider='email'
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.email, email), eq(users.provider, 'email')))
+      .limit(1);
+
+    if (user) {
+      // Invalidate previous reset tokens
+      await invalidateUserTokens(user.id, 'password_reset');
+
+      // Generate new reset token (1h expiry)
+      const token = await generateToken(user.id, 'password_reset');
+      const emailContent = passwordResetEmail(token);
+      const emailService = getEmailService();
+
+      try {
+        await emailService.sendMail({
+          to: email,
+          ...emailContent,
+        });
+      } catch (error) {
+        console.error('[AUTH] Failed to send password reset email:', error);
+      }
+
+      // Audit log
+      await logAudit({
+        action: 'auth.password_reset_requested',
+        actorId: user.id,
+        actorType: 'user',
+        resourceId: user.id,
+        resourceType: 'user',
+        outcome: 'success',
+      });
+    }
+
+    return c.json({
+      success: true,
+      data: { message: 'If an account exists with this email, a password reset link has been sent.' },
+    });
+  }
+);
+
+/**
+ * T031: POST /auth/reset-password — Set a new password using a reset token
+ * FR-008, FR-014, FR-020
+ */
+authRoutes.post('/reset-password', async (c) => {
+  const body = await c.req.json();
+  const parsed = resetPasswordSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return c.json(
+      { success: false, error: { message: 'Validation failed' } },
+      400
+    );
+  }
+
+  const { token, password } = parsed.data;
+
+  // Validate password strength
+  const strength = validatePasswordStrength(password);
+  if (!strength.valid) {
+    return c.json(
+      { success: false, error: { message: 'Password does not meet strength requirements. Must be at least 8 characters with 3 of 4 types: uppercase, lowercase, number, special character.' } },
+      400
+    );
+  }
+
+  // Validate token
+  const tokenRecord = await validateToken(token, 'password_reset');
+  if (!tokenRecord) {
+    // Check if expired for specific messaging
+    const expired = await isTokenExpired(token, 'password_reset');
+    return c.json(
+      { success: false, error: { message: expired ? 'Password reset link has expired. Please request a new one.' : 'Invalid or already-used reset token' } },
+      400
+    );
+  }
+
+  // Hash new password and update user
+  const newPasswordHash = await hashPassword(password);
+  await db
+    .update(users)
+    .set({
+      passwordHash: newPasswordHash,
+      failedLoginCount: 0,
+      lockedUntil: null,
+      lastFailedLoginAt: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, tokenRecord.userId));
+
+  // Mark token as used
+  await markTokenUsed(tokenRecord.id);
+
+  // Revoke ALL sessions (FR-008)
+  await revokeAllUserSessions(tokenRecord.userId);
+
+  // Audit log
+  await logAudit({
+    action: 'auth.password_reset',
+    actorId: tokenRecord.userId,
+    actorType: 'user',
+    resourceId: tokenRecord.userId,
+    resourceType: 'user',
+    outcome: 'success',
+  });
+
+  return c.json({
+    success: true,
+    data: { message: 'Password reset successfully. You can now log in with your new password.' },
+  });
+});
+
+/**
+ * T036: POST /auth/resend-verification — Resend verification email
+ * FR-011
+ */
+authRoutes.post(
+  '/resend-verification',
+  rateLimit(resendLimiter, (c) => {
+    try {
+      return c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'unknown';
+    } catch {
+      return 'unknown';
+    }
+  }),
+  async (c) => {
+    const body = await c.req.json();
+    const parsed = resendVerificationSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return c.json(
+        { success: false, error: { message: 'Validation failed' } },
+        400
+      );
+    }
+
+    const { email } = parsed.data;
+
+    // Always return success to prevent account enumeration
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.email, email), eq(users.provider, 'email'), eq(users.emailVerified, false)))
+      .limit(1);
+
+    if (user) {
+      // Invalidate old verification tokens
+      await invalidateUserTokens(user.id, 'verification');
+
+      // Generate new token
+      const token = await generateToken(user.id, 'verification');
+      const emailContent = verificationEmail(token);
+      const emailService = getEmailService();
+
+      try {
+        await emailService.sendMail({
+          to: email,
+          ...emailContent,
+        });
+      } catch (error) {
+        console.error('[AUTH] Failed to resend verification email:', error);
+      }
+
+      // Audit log
+      await logAudit({
+        action: 'auth.resend_verification',
+        actorId: user.id,
+        actorType: 'user',
+        resourceId: user.id,
+        resourceType: 'user',
+        outcome: 'success',
+      });
+    }
+
+    return c.json({
+      success: true,
+      data: { message: 'If an unverified account exists with this email, a new verification email has been sent.' },
+    });
+  }
+);
+
+/**
+ * T037: PUT /auth/change-password — Change password while logged in
+ * FR-023
+ */
+authRoutes.put('/change-password', requireAuth, async (c) => {
+  const authUser = c.get('user');
+  const currentSessionId = c.get('sessionId');
+
+  if (!authUser) {
+    return c.json(
+      { success: false, error: { message: 'Authentication required' } },
+      401
+    );
+  }
+
+  const body = await c.req.json();
+  const parsed = changePasswordSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return c.json(
+      { success: false, error: { message: 'Validation failed' } },
+      400
+    );
+  }
+
+  const { currentPassword, newPassword } = parsed.data;
+
+  // Fetch user to check provider and password
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, authUser.id))
+    .limit(1);
+
+  if (!user) {
+    return c.json(
+      { success: false, error: { message: 'User not found' } },
+      404
+    );
+  }
+
+  // Only email users can change password
+  if (user.provider !== 'email' || !user.passwordHash) {
+    return c.json(
+      { success: false, error: { message: 'Password change is only available for email accounts' } },
+      403
+    );
+  }
+
+  // Verify current password
+  const isValid = await verifyPassword(user.passwordHash, currentPassword);
+  if (!isValid) {
+    return c.json(
+      { success: false, error: { message: 'Current password is incorrect' } },
+      403
+    );
+  }
+
+  // Validate new password strength
+  const strength = validatePasswordStrength(newPassword);
+  if (!strength.valid) {
+    return c.json(
+      { success: false, error: { message: 'New password does not meet strength requirements.' } },
+      400
+    );
+  }
+
+  // Hash and update password
+  const newPasswordHash = await hashPassword(newPassword);
+  await db
+    .update(users)
+    .set({ passwordHash: newPasswordHash, updatedAt: new Date() })
+    .where(eq(users.id, user.id));
+
+  // Revoke all OTHER sessions (FR-023: keep current session)
+  const allSessions = await getUserSessions(user.id);
+  for (const s of allSessions) {
+    if (s.id !== currentSessionId) {
+      await revokeSession(s.id);
+    }
+  }
+
+  // Audit log
+  await logAudit({
+    action: 'auth.password_changed',
+    actorId: user.id,
+    actorType: 'user',
+    resourceId: user.id,
+    resourceType: 'user',
+    outcome: 'success',
+  });
+
+  return c.json({
+    success: true,
+    data: { message: 'Password changed successfully.' },
   });
 });
 

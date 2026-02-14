@@ -3,11 +3,13 @@ import { authProviderEnum, roleEnum } from './enums.js';
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
-  externalId: text('external_id').notNull(),
+  externalId: text('external_id'),
   provider: authProviderEnum('provider').notNull(),
   email: text('email').unique().notNull(),
   displayName: text('display_name').notNull(),
   avatarUrl: text('avatar_url'),
+  passwordHash: text('password_hash'),
+  emailVerified: boolean('email_verified').default(false).notNull(),
   roles: roleEnum('roles').array().notNull().default([]),
   isActive: boolean('is_active').default(true).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

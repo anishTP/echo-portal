@@ -18,7 +18,10 @@ export function AuthCallback() {
         // Handle OAuth error
         let displayError = 'Authentication failed. Please try again.';
 
-        if (errorParam === 'provider_unavailable') {
+        if (errorParam === 'provider_conflict') {
+          const existingProvider = searchParams.get('existing_provider') || 'another method';
+          displayError = `An account with this email already exists. Please log in with ${existingProvider === 'email' ? 'your email and password' : existingProvider}.`;
+        } else if (errorParam === 'provider_unavailable') {
           displayError = decodeURIComponent(errorMessage || 'OAuth provider is temporarily unavailable. Please try again later.');
         } else if (errorParam === 'auth_failed') {
           displayError = 'Authentication failed. Please try again.';
@@ -26,9 +29,10 @@ export function AuthCallback() {
 
         setError(displayError);
 
-        // Redirect to home after 3 seconds
+        // Redirect to login after 3 seconds (or home for non-conflict errors)
+        const redirectPath = errorParam === 'provider_conflict' ? '/login' : '/';
         setTimeout(() => {
-          navigate('/', { replace: true });
+          navigate(redirectPath, { replace: true });
         }, 3000);
         return;
       }

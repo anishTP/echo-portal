@@ -90,6 +90,7 @@ export const AuthProvider = {
   GOOGLE: 'google',
   SAML: 'saml',
   API_TOKEN: 'api_token',
+  EMAIL: 'email',
 } as const;
 
 export type AuthProviderType = (typeof AuthProvider)[keyof typeof AuthProvider];

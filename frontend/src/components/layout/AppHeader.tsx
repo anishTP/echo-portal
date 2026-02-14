@@ -1,7 +1,7 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button, Spinner } from '@radix-ui/themes';
 import { useAuth } from '../../context/AuthContext';
-import { LoginButton, LogoutButton, RoleBadge } from '../auth';
+import { LogoutButton, RoleBadge } from '../auth';
 import { ThemeToggle } from './ThemeToggle';
 import { BranchSelector } from './BranchSelector';
 import { NotificationPopover } from '../notification/NotificationPopover';
@@ -10,6 +10,7 @@ export function AppHeader() {
   const { user, isAuthenticated, isLoading, loginDev, hasRole } = useAuth();
   const isDev = import.meta.env.DEV;
   const location = useLocation();
+  const navigate = useNavigate();
   const isAdmin = hasRole?.('administrator') ?? false;
 
   const isActive = (path: string) => {
@@ -111,7 +112,7 @@ export function AppHeader() {
                 <LogoutButton size="sm" variant="secondary" showIcon={false} />
               </>
             ) : (
-              /* Login Buttons */
+              /* Login */
               <div className="flex items-center gap-2">
                 {/* Theme Toggle */}
                 <ThemeToggle />
@@ -125,8 +126,13 @@ export function AppHeader() {
                     Dev Login
                   </Button>
                 )}
-                <LoginButton provider="github" size="2" />
-                <LoginButton provider="google" size="2" />
+                <Button
+                  onClick={() => navigate('/login')}
+                  variant="solid"
+                  size="2"
+                >
+                  Sign In
+                </Button>
               </div>
             )}
           </div>

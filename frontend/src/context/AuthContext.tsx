@@ -28,6 +28,13 @@ interface AuthContextType {
   session: Session | null;
   sessions: Session[];
   login: (provider: 'github' | 'google') => Promise<void>;
+  loginWithEmail: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, displayName: string) => Promise<void>;
+  verifyEmail: (token: string) => Promise<{ success: boolean; message: string }>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (token: string, password: string) => Promise<void>;
+  resendVerification: (email: string) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   loginDev: () => void;
   logout: (allSessions?: boolean) => Promise<void>;
   hasRole: (role: RoleType) => boolean;
@@ -127,6 +134,121 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Login error:', error);
       // Could show user-friendly error message here
+    }
+  }
+
+  async function loginWithEmail(email: string, password: string) {
+    const response = await fetch('/api/v1/auth/email-login', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      const error = new Error(data.error?.message || 'Login failed');
+      if (data.error?.needsVerification) {
+        Object.assign(error, { needsVerification: true });
+      }
+      throw error;
+    }
+
+    // Session cookie is set by the server, refresh user state
+    await refreshSession();
+  }
+
+  async function register(email: string, password: string, displayName: string) {
+    const response = await fetch('/api/v1/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, displayName }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error?.message || 'Registration failed');
+    }
+  }
+
+  async function verifyEmail(token: string): Promise<{ success: boolean; message: string }> {
+    const response = await fetch('/api/v1/auth/verify-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return { success: false, message: data.error?.message || 'Verification failed' };
+    }
+
+    return { success: true, message: data.data?.message || 'Email verified successfully' };
+  }
+
+  async function forgotPassword(email: string) {
+    const response = await fetch('/api/v1/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+
+    if (response.status === 429) {
+      throw new Error('Too many requests. Please try again later.');
+    }
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error?.message || 'Failed to send reset email');
+    }
+  }
+
+  async function resetPassword(token: string, password: string) {
+    const response = await fetch('/api/v1/auth/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, password }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error?.message || 'Password reset failed');
+    }
+  }
+
+  async function resendVerification(email: string) {
+    const response = await fetch('/api/v1/auth/resend-verification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+
+    if (response.status === 429) {
+      throw new Error('Too many requests. Please try again later.');
+    }
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error?.message || 'Failed to resend verification email');
+    }
+  }
+
+  async function changePassword(currentPassword: string, newPassword: string) {
+    const response = await fetch('/api/v1/auth/change-password', {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error?.message || 'Password change failed');
     }
   }
 
@@ -237,6 +359,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session,
     sessions,
     login,
+    loginWithEmail,
+    register,
+    verifyEmail,
+    forgotPassword,
+    resetPassword,
+    resendVerification,
+    changePassword,
     loginDev,
     logout,
     hasRole,

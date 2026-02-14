@@ -4,6 +4,11 @@
 export type OAuthProvider = 'github' | 'google';
 
 /**
+ * All authentication provider types (OAuth + email)
+ */
+export type AuthProviderType = OAuthProvider | 'email';
+
+/**
  * Session representation
  * Sessions use 24-hour sliding expiry (reset on each authenticated request)
  */
@@ -11,7 +16,7 @@ export interface Session {
   id: string;
   userId: string;
   token: string;
-  provider: OAuthProvider;
+  provider: AuthProviderType;
   ipAddress?: string;
   userAgent?: string;
   createdAt: string;
@@ -66,6 +71,8 @@ export interface AuthState {
     displayName: string;
     avatarUrl?: string;
     roles: string[];
+    provider?: AuthProviderType;
+    emailVerified?: boolean;
   } | null;
   session: Session | null;
   isAuthenticated: boolean;

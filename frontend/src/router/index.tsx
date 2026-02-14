@@ -15,6 +15,12 @@ const UserManagement = lazy(() => import('../pages/UserManagement'));
 const AIAdmin = lazy(() => import('../pages/AIAdmin'));
 const Notifications = lazy(() => import('../pages/Notifications'));
 const NotificationSettings = lazy(() => import('../pages/NotificationSettings'));
+const LoginPage = lazy(() => import('../pages/LoginPage'));
+const SignupPage = lazy(() => import('../pages/SignupPage'));
+const VerifyEmailPage = lazy(() => import('../pages/VerifyEmailPage'));
+const ForgotPasswordPage = lazy(() => import('../pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('../pages/ResetPasswordPage'));
+const AccountSettings = lazy(() => import('../pages/AccountSettings'));
 
 // Loading fallback
 function LoadingFallback() {
@@ -65,6 +71,27 @@ const router = createBrowserRouter([
         path: 'dashboard',
         element: <Dashboard />,
       },
+      // Email/password auth routes (010-email-password-auth)
+      {
+        path: 'login',
+        element: <LoginPage />,
+      },
+      {
+        path: 'signup',
+        element: <SignupPage />,
+      },
+      {
+        path: 'verify-email',
+        element: <VerifyEmailPage />,
+      },
+      {
+        path: 'forgot-password',
+        element: <ForgotPasswordPage />,
+      },
+      {
+        path: 'reset-password',
+        element: <ResetPasswordPage />,
+      },
       // Auth callback route (Phase 3 - US1)
       {
         path: 'auth/callback',
@@ -108,6 +135,11 @@ const router = createBrowserRouter([
       {
         path: 'settings/notifications',
         element: <NotificationSettings />,
+      },
+      // Account settings (010-email-password-auth)
+      {
+        path: 'settings/account',
+        element: <AccountSettings />,
       },
     ],
   },

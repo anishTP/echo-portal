@@ -74,8 +74,9 @@ export const UserDetailSchema = z.object({
   failedLoginCount: z.number().int().min(0).optional(),
   lastFailedLoginAt: z.string().or(z.date()).optional(),
   lockedUntil: z.string().or(z.date()).nullable().optional(),
-  provider: z.enum(['github', 'google', 'saml', 'api_token']),
-  externalId: z.string(),
+  provider: z.enum(['github', 'google', 'saml', 'api_token', 'email']),
+  externalId: z.string().nullable(),
+  emailVerified: z.boolean().optional(),
 });
 
 /**

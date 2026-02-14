@@ -14,7 +14,7 @@ export const visibilityEnum = pgEnum('visibility', ['private', 'team', 'public']
 // Canonical roles: viewer, contributor, reviewer, administrator
 export const roleEnum = pgEnum('role', ['viewer', 'contributor', 'reviewer', 'administrator']);
 
-export const authProviderEnum = pgEnum('auth_provider', ['github', 'google', 'saml', 'api_token']);
+export const authProviderEnum = pgEnum('auth_provider', ['github', 'google', 'saml', 'api_token', 'email']);
 
 export const actorTypeEnum = pgEnum('actor_type', ['user', 'system']);
 
@@ -50,6 +50,9 @@ export const contentOperationTypeEnum = pgEnum('content_operation_type', ['inher
 
 // Conflict resolution strategy
 export const conflictResolutionEnum = pgEnum('conflict_resolution', ['auto', 'ours', 'theirs', 'manual']);
+
+// Auth token type enum for 010-email-password-auth
+export const authTokenTypeEnum = pgEnum('auth_token_type', ['verification', 'password_reset']);
 
 // Note: Audit action is stored as text (not enum) for flexibility
 // Common action patterns:
