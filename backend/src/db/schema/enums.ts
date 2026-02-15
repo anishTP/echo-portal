@@ -39,6 +39,9 @@ export const convergenceStatusEnum = pgEnum('convergence_status', [
 // Content type enum for 003-content-authoring-versioning
 export const contentTypeEnum = pgEnum('content_type', ['guideline', 'asset', 'opinion']);
 
+// Content section enum for per-section navigation filtering
+export const contentSectionEnum = pgEnum('content_section', ['brand', 'product', 'experience']);
+
 // Audit outcome enum for FR-021
 export const auditOutcomeEnum = pgEnum('audit_outcome', ['success', 'failure', 'denied']);
 

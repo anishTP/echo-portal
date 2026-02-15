@@ -17,6 +17,7 @@ export interface CreateContentInput {
   branchId: string;
   title: string;
   contentType: 'guideline' | 'asset' | 'opinion';
+  section?: 'brand' | 'product' | 'experience';
   category?: string;
   tags?: string[];
   description?: string;
@@ -27,6 +28,7 @@ export interface CreateContentInput {
 
 export interface UpdateContentInput {
   title?: string;
+  section?: 'brand' | 'product' | 'experience' | null;
   category?: string | null;
   tags?: string[];
   description?: string | null;
@@ -83,6 +85,7 @@ function formatContentResponse(
     title: content.title,
     slug: content.slug,
     contentType: content.contentType as 'guideline' | 'asset' | 'opinion',
+    section: content.section as 'brand' | 'product' | 'experience' | undefined ?? undefined,
     category: content.category ?? undefined,
     tags: content.tags ?? [],
     description: content.description ?? undefined,
@@ -143,6 +146,7 @@ function formatContentSummary(
     title: content.title,
     slug: content.slug,
     contentType: content.contentType as 'guideline' | 'asset' | 'opinion',
+    section: content.section as 'brand' | 'product' | 'experience' | undefined ?? undefined,
     category: content.category ?? undefined,
     tags: content.tags ?? [],
     description: content.description ?? undefined,
@@ -214,6 +218,7 @@ export const contentService = {
           slug,
           title: input.title,
           contentType: input.contentType,
+          section: input.section,
           category: input.category,
           tags,
           description: input.description,
@@ -324,16 +329,21 @@ export const contentService = {
         })
         .returning();
 
-      const [updatedContent] = await tx
-        .update(schema.contents)
-        .set({
+      const updateSet: Record<string, unknown> = {
           currentVersionId: version.id,
           title: updatedTitle,
           category: updatedCategory,
           tags: updatedTags,
           description: input.description !== undefined ? input.description : content.description,
           updatedAt: new Date(),
-        })
+        };
+      if (input.section !== undefined) {
+        updateSet.section = input.section;
+      }
+
+      const [updatedContent] = await tx
+        .update(schema.contents)
+        .set(updateSet)
         .where(eq(schema.contents.id, content.id))
         .returning();
 
@@ -374,7 +384,7 @@ export const contentService = {
    */
   async listByBranch(
     branchId: string,
-    options: { contentType?: string; category?: string; page?: number; limit?: number }
+    options: { contentType?: string; section?: string; category?: string; page?: number; limit?: number }
   ): Promise<{ items: ContentSummary[]; total: number }> {
     const page = options.page ?? 1;
     const limit = Math.min(options.limit ?? 20, 100);
@@ -386,6 +396,9 @@ export const contentService = {
     ];
     if (options.contentType) {
       conditions.push(eq(schema.contents.contentType, options.contentType as 'guideline' | 'asset' | 'opinion'));
+    }
+    if (options.section) {
+      conditions.push(eq(schema.contents.section, options.section as 'brand' | 'product' | 'experience'));
     }
     if (options.category) {
       conditions.push(eq(schema.contents.category, options.category));
@@ -419,6 +432,7 @@ export const contentService = {
    */
   async listPublished(options: {
     contentType?: string;
+    section?: string;
     category?: string;
     page?: number;
     limit?: number;
@@ -445,6 +459,9 @@ export const contentService = {
 
     if (options.contentType) {
       conditions.push(eq(schema.contents.contentType, options.contentType as 'guideline' | 'asset' | 'opinion'));
+    }
+    if (options.section) {
+      conditions.push(eq(schema.contents.section, options.section as 'brand' | 'product' | 'experience'));
     }
     if (options.category) {
       conditions.push(eq(schema.contents.category, options.category));
@@ -477,7 +494,7 @@ export const contentService = {
    */
   async search(
     query: string,
-    options: { contentType?: string; page?: number; limit?: number }
+    options: { contentType?: string; section?: string; page?: number; limit?: number }
   ): Promise<{ items: ContentSummary[]; total: number }> {
     const page = options.page ?? 1;
     const limit = Math.min(options.limit ?? 20, 100);
@@ -494,6 +511,9 @@ export const contentService = {
     ];
     if (options.contentType) {
       conditions.push(eq(schema.contents.contentType, options.contentType as 'guideline' | 'asset' | 'opinion'));
+    }
+    if (options.section) {
+      conditions.push(eq(schema.contents.section, options.section as 'brand' | 'product' | 'experience'));
     }
 
     const whereClause = and(...conditions);

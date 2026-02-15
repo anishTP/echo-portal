@@ -107,6 +107,17 @@ export const ContentType = {
 export type ContentTypeValue = (typeof ContentType)[keyof typeof ContentType];
 
 /**
+ * Content sections (for per-section navigation filtering)
+ */
+export const ContentSection = {
+  BRAND: 'brand',
+  PRODUCT: 'product',
+  EXPERIENCE: 'experience',
+} as const;
+
+export type ContentSectionValue = (typeof ContentSection)[keyof typeof ContentSection];
+
+/**
  * Content body formats
  */
 export const BodyFormat = {

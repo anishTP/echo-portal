@@ -65,7 +65,10 @@ export default function Library() {
   const effectiveBranchId = currentBranch?.id || ((isEditMode || isReviewMode) ? branchId : undefined);
 
   // Extract filters from URL
-  const _section = searchParams.get('section');
+  const sectionParam = searchParams.get('section') || undefined;
+  const categoryParam = searchParams.get('category') || undefined;
+  // Map plural URL param (brands/products/experiences) to singular DB value (brand/product/experience)
+  const sectionFilter = sectionParam ? sectionParam.replace(/s$/, '') : undefined;
   const type = (searchParams.get('type') as ContentType) || 'all';
   const search = searchParams.get('q') || '';
 
@@ -95,6 +98,8 @@ export default function Library() {
     isLoading: isLoadingPublished,
   } = usePublishedContent({
     contentType: type === 'all' ? undefined : type,
+    section: sectionFilter,
+    category: categoryParam,
     search: search || undefined,
     limit: 100,
   });
@@ -565,7 +570,7 @@ export default function Library() {
   );
 
   const handleClearFilters = useCallback(() => {
-    updateParams({ type: null, q: null });
+    updateParams({ type: null, q: null, section: null, category: null });
   }, [updateParams]);
 
   // Navigation blocker for unsaved changes
@@ -603,7 +608,7 @@ export default function Library() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isDirty, autoSave.state.isDirty, mode]);
 
-  const hasActiveFilters = type !== 'all' || search !== '';
+  const hasActiveFilters = type !== 'all' || search !== '' || !!sectionParam || !!categoryParam;
 
   // Get markdown body for TOC
   const markdownBody = selectedContent?.currentVersion?.body || '';

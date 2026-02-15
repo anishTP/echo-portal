@@ -42,6 +42,7 @@ export const contentApi = {
   listByBranch(params: {
     branchId: string;
     contentType?: string;
+    section?: string;
     category?: string;
     page?: number;
     limit?: number;
@@ -49,6 +50,7 @@ export const contentApi = {
     const searchParams = new URLSearchParams();
     searchParams.set('branchId', params.branchId);
     if (params.contentType) searchParams.set('contentType', params.contentType);
+    if (params.section) searchParams.set('section', params.section);
     if (params.category) searchParams.set('category', params.category);
     if (params.page) searchParams.set('page', String(params.page));
     if (params.limit) searchParams.set('limit', String(params.limit));
@@ -58,6 +60,7 @@ export const contentApi = {
   /** List published public content */
   listPublished(params?: {
     contentType?: string;
+    section?: string;
     category?: string;
     search?: string;
     page?: number;
@@ -65,6 +68,7 @@ export const contentApi = {
   }): Promise<PaginatedResult<ContentSummary>> {
     const searchParams = new URLSearchParams();
     if (params?.contentType) searchParams.set('contentType', params.contentType);
+    if (params?.section) searchParams.set('section', params.section);
     if (params?.category) searchParams.set('category', params.category);
     if (params?.search) searchParams.set('q', params.search);
     if (params?.page) searchParams.set('page', String(params.page));
@@ -84,12 +88,14 @@ export const contentApi = {
   search(params: {
     q: string;
     contentType?: string;
+    section?: string;
     page?: number;
     limit?: number;
   }): Promise<PaginatedResult<ContentSummary>> {
     const searchParams = new URLSearchParams();
     searchParams.set('q', params.q);
     if (params.contentType) searchParams.set('contentType', params.contentType);
+    if (params.section) searchParams.set('section', params.section);
     if (params.page) searchParams.set('page', String(params.page));
     if (params.limit) searchParams.set('limit', String(params.limit));
     return api.getPaginated<ContentSummary>(

@@ -5,6 +5,7 @@ import { contentKeys } from './useContent';
 
 export interface PublishedContentParams {
   contentType?: string;
+  section?: string;
   category?: string;
   search?: string;
   page?: number;
@@ -15,17 +16,18 @@ export interface PublishedContentParams {
  * Fetch published content with filtering and pagination
  */
 export function usePublishedContent(params: PublishedContentParams = {}) {
-  const { contentType, category, search, page = 1, limit = 12 } = params;
+  const { contentType, section, category, search, page = 1, limit = 12 } = params;
 
   const filterKey = useMemo(
     () => ({
       contentType: contentType || undefined,
+      section: section || undefined,
       category: category || undefined,
       search: search || undefined,
       page: String(page),
       limit: String(limit),
     }),
-    [contentType, category, search, page, limit]
+    [contentType, section, category, search, page, limit]
   );
 
   return useQuery({
@@ -33,6 +35,7 @@ export function usePublishedContent(params: PublishedContentParams = {}) {
     queryFn: () =>
       contentApi.listPublished({
         contentType: contentType || undefined,
+        section: section || undefined,
         category: category || undefined,
         search: search || undefined,
         page,
@@ -57,10 +60,10 @@ export function useContentBySlug(slug: string | undefined) {
 /**
  * Derive unique categories from published content with counts
  */
-export function useCategories() {
+export function useCategories(section?: string) {
   // Fetch all published content to derive categories
   // In a real app, this might be a dedicated endpoint
-  const { data, isLoading } = usePublishedContent({ limit: 100 });
+  const { data, isLoading } = usePublishedContent({ section, limit: 100 });
 
   const items = data?.items;
 

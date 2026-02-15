@@ -95,6 +95,7 @@ contentRoutes.get('/', requireAuth, zValidator('query', listContentsQuerySchema)
 
   const result = await contentService.listByBranch(query.branchId, {
     contentType: query.contentType,
+    section: query.section,
     category: query.category,
     page: query.page,
     limit: query.limit,
@@ -119,6 +120,7 @@ contentRoutes.get(
 
     const result = await contentService.listPublished({
       contentType: query.contentType,
+      section: query.section,
       category: query.category,
       page: query.page,
       limit: query.limit,
@@ -162,6 +164,7 @@ contentRoutes.get(
 
     const result = await contentService.search(query.q, {
       contentType: query.contentType,
+      section: query.section,
       page: query.page,
       limit: query.limit,
     });

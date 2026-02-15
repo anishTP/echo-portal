@@ -7,7 +7,11 @@ export function HeaderNav() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const section = searchParams.get('section');
-  const { categories, categoryCounts, isLoading } = useCategories();
+
+  // Per-section category queries (cached by TanStack Query)
+  const brands = useCategories('brand');
+  const products = useCategories('product');
+  const experiences = useCategories('experience');
 
   const isActive = (s: string) => section === s;
 
@@ -19,8 +23,11 @@ export function HeaderNav() {
     navigate(`/library?section=${sectionName}`);
   };
 
-  const dropdownItems = (sectionName: string) => {
-    if (isLoading) {
+  const dropdownItems = (
+    sectionName: string,
+    data: { categories: string[]; categoryCounts: Record<string, number>; isLoading: boolean }
+  ) => {
+    if (data.isLoading) {
       return (
         <Flex align="center" justify="center" py="3">
           <Spinner size="2" />
@@ -28,7 +35,7 @@ export function HeaderNav() {
       );
     }
 
-    if (categories.length === 0) {
+    if (data.categories.length === 0) {
       return (
         <Flex align="center" justify="center" py="2" px="3">
           <Text size="2" style={{ color: 'var(--gray-9)' }}>No categories yet</Text>
@@ -36,7 +43,7 @@ export function HeaderNav() {
       );
     }
 
-    return categories.map((cat) => (
+    return data.categories.map((cat) => (
       <DropdownMenu.Item
         key={cat}
         onClick={() => handleCategoryClick(sectionName, cat)}
@@ -44,7 +51,7 @@ export function HeaderNav() {
         <Flex align="center" justify="between" width="100%">
           <Text size="2">{cat}</Text>
           <Text size="1" style={{ color: 'var(--gray-9)' }}>
-            {categoryCounts[cat] ?? 0}
+            {data.categoryCounts[cat] ?? 0}
           </Text>
         </Flex>
       </DropdownMenu.Item>
@@ -70,7 +77,7 @@ export function HeaderNav() {
             <Text size="2" weight="medium">All Brands</Text>
           </DropdownMenu.Item>
           <DropdownMenu.Separator />
-          {dropdownItems('brands')}
+          {dropdownItems('brands', brands)}
         </DropdownMenu.Content>
       </DropdownMenu.Root>
 
@@ -91,19 +98,30 @@ export function HeaderNav() {
             <Text size="2" weight="medium">All Products</Text>
           </DropdownMenu.Item>
           <DropdownMenu.Separator />
-          {dropdownItems('products')}
+          {dropdownItems('products', products)}
         </DropdownMenu.Content>
       </DropdownMenu.Root>
 
-      {/* Experiences link */}
-      <Button
-        variant="ghost"
-        size="3"
-        onClick={() => handleSectionClick('experiences')}
-        style={{ color: isActive('experiences') ? 'var(--accent-11)' : 'var(--gray-12)' }}
-      >
-        <Text size="3" weight="medium">Experiences</Text>
-      </Button>
+      {/* Experiences dropdown */}
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger>
+          <Button
+            variant="ghost"
+            size="3"
+            style={{ color: isActive('experiences') ? 'var(--accent-11)' : 'var(--gray-12)' }}
+          >
+            <Text size="3" weight="medium">Experiences</Text>
+            <ChevronDownIcon width="16" height="16" />
+          </Button>
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Content style={{ minWidth: '180px' }}>
+          <DropdownMenu.Item onClick={() => handleSectionClick('experiences')}>
+            <Text size="2" weight="medium">All Experiences</Text>
+          </DropdownMenu.Item>
+          <DropdownMenu.Separator />
+          {dropdownItems('experiences', experiences)}
+        </DropdownMenu.Content>
+      </DropdownMenu.Root>
     </nav>
   );
 }

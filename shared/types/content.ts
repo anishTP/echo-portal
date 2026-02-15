@@ -1,4 +1,4 @@
-import type { ContentTypeValue, VisibilityType, ActorTypeValue } from '../constants/states.js';
+import type { ContentTypeValue, ContentSectionValue, VisibilityType, ActorTypeValue } from '../constants/states.js';
 
 export interface ContentSummary {
   id: string;
@@ -6,6 +6,7 @@ export interface ContentSummary {
   title: string;
   slug: string;
   contentType: ContentTypeValue;
+  section?: ContentSectionValue;
   category?: string;
   tags: string[];
   description?: string;
@@ -67,6 +68,7 @@ export interface ContentCreateInput {
   branchId: string;
   title: string;
   contentType: ContentTypeValue;
+  section?: ContentSectionValue;
   category?: string;
   tags?: string[];
   description?: string;
@@ -77,6 +79,7 @@ export interface ContentCreateInput {
 
 export interface ContentUpdateInput {
   title?: string;
+  section?: ContentSectionValue | null;
   category?: string;
   tags?: string[];
   description?: string;

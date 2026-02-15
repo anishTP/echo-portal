@@ -116,6 +116,7 @@ export const contentInheritanceService = {
               slug: content.slug,
               title: content.title,
               contentType: content.contentType,
+              section: content.section,
               category: content.category,
               tags: content.tags,
               description: content.description,

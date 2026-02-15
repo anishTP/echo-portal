@@ -9,7 +9,7 @@ import {
   index,
   jsonb,
 } from 'drizzle-orm/pg-core';
-import { contentTypeEnum, visibilityEnum, actorTypeEnum, mergeStateEnum, contentOperationTypeEnum, conflictResolutionEnum } from './enums.js';
+import { contentTypeEnum, contentSectionEnum, visibilityEnum, actorTypeEnum, mergeStateEnum, contentOperationTypeEnum, conflictResolutionEnum } from './enums.js';
 import { users } from './users.js';
 import { branches } from './branches.js';
 
@@ -26,6 +26,7 @@ export const contents = pgTable(
     title: text('title').notNull(),
     contentType: contentTypeEnum('content_type').notNull(),
     category: text('category'),
+    section: contentSectionEnum('section'),
     tags: text('tags').array().default([]),
     description: text('description'),
     currentVersionId: uuid('current_version_id'),
@@ -54,6 +55,7 @@ export const contents = pgTable(
     index('contents_created_by_idx').on(table.createdBy),
     index('contents_source_content_id_idx').on(table.sourceContentId),
     index('contents_branch_type_idx').on(table.branchId, table.contentType),
+    index('contents_section_idx').on(table.section),
   ]
 );
 
