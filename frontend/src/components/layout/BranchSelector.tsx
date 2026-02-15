@@ -147,7 +147,7 @@ export function BranchSelector() {
         </Button>
       </DropdownMenu.Trigger>
 
-      <DropdownMenu.Content align="end" style={{ minWidth: '220px' }}>
+      <DropdownMenu.Content align="start" style={{ minWidth: '220px' }}>
         {/* Published (Main) option */}
         <DropdownMenu.Item onClick={handleSelectPublished}>
           <Flex align="center" justify="between" width="100%">

@@ -65,6 +65,7 @@ export default function Library() {
   const effectiveBranchId = currentBranch?.id || ((isEditMode || isReviewMode) ? branchId : undefined);
 
   // Extract filters from URL
+  const _section = searchParams.get('section');
   const type = (searchParams.get('type') as ContentType) || 'all';
   const search = searchParams.get('q') || '';
 
