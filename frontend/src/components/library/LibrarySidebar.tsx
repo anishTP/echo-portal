@@ -1,6 +1,7 @@
 import { useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { MagnifyingGlassIcon, Pencil1Icon, PlusIcon } from '@radix-ui/react-icons';
+import { ContextMenu } from '@radix-ui/themes';
 import type { ContentSummary, BranchStateType, ContentComparisonStats } from '@echo-portal/shared';
 import { NavSection } from './NavSection';
 import { LifecycleStatus } from '../branch/LifecycleStatus';
@@ -69,6 +70,16 @@ export interface LibrarySidebarProps {
   onAddCategoryNeedsBranch?: () => void;
   /** Persistent category names to show even when they have no content */
   persistentCategories?: string[];
+  /** Callback when admin renames a category */
+  onRenameCategory?: (oldName: string, newName: string) => void;
+  /** Callback when admin deletes a category */
+  onDeleteCategory?: (name: string) => void;
+  /** Callback when user renames a content item */
+  onRenameContent?: (contentId: string, newTitle: string) => void;
+  /** Callback when user deletes a content item */
+  onDeleteContent?: (contentId: string) => void;
+  /** Whether the current user can manage content (admin or contributor) */
+  canManageContent?: boolean;
 }
 
 // Git branch icon for branch mode indicator
@@ -126,6 +137,11 @@ export function LibrarySidebar({
   onAddCategory,
   onAddCategoryNeedsBranch,
   persistentCategories = [],
+  onRenameCategory,
+  onDeleteCategory,
+  onRenameContent,
+  onDeleteContent,
+  canManageContent = false,
 }: LibrarySidebarProps) {
   const location = useLocation();
 
@@ -236,6 +252,51 @@ export function LibrarySidebar({
     [handleAddCategorySubmit]
   );
 
+  // Rename category inline input state
+  const [renamingCategory, setRenamingCategory] = useState<string | null>(null);
+  const [renameCategoryValue, setRenameCategoryValue] = useState('');
+  const renameCategoryInputRef = useRef<HTMLInputElement>(null);
+
+  // Rename content inline input state
+  const [renamingContentId, setRenamingContentId] = useState<string | null>(null);
+  const [renameContentValue, setRenameContentValue] = useState('');
+  const renameContentInputRef = useRef<HTMLInputElement>(null);
+
+  // Whether content context menu should appear
+  const canManageContentItems = canManageContent && branchMode && branchState === 'draft';
+
+  useEffect(() => {
+    if (renamingCategory && renameCategoryInputRef.current) {
+      renameCategoryInputRef.current.focus();
+      renameCategoryInputRef.current.select();
+    }
+  }, [renamingCategory]);
+
+  useEffect(() => {
+    if (renamingContentId && renameContentInputRef.current) {
+      renameContentInputRef.current.focus();
+      renameContentInputRef.current.select();
+    }
+  }, [renamingContentId]);
+
+  const handleRenameCategorySubmit = useCallback(() => {
+    const newName = renameCategoryValue.trim();
+    if (newName && renamingCategory && newName !== renamingCategory) {
+      onRenameCategory?.(renamingCategory, newName);
+    }
+    setRenamingCategory(null);
+    setRenameCategoryValue('');
+  }, [renameCategoryValue, renamingCategory, onRenameCategory]);
+
+  const handleRenameContentSubmit = useCallback(() => {
+    const newTitle = renameContentValue.trim();
+    if (newTitle && renamingContentId) {
+      onRenameContent?.(renamingContentId, newTitle);
+    }
+    setRenamingContentId(null);
+    setRenameContentValue('');
+  }, [renameContentValue, renamingContentId, onRenameContent]);
+
   return (
     <nav className={styles.sidebar} aria-label="Library navigation">
       {/* Branch Mode Indicator */}
@@ -329,23 +390,62 @@ export function LibrarySidebar({
 
       {/* Content Navigation by Category */}
       <div className={styles.navSections}>
-        {groupedItems.map(([category, categoryItems]) => (
-          <NavSection
-            key={category}
-            title={category}
-            items={[]} // We'll use custom children instead
-            defaultOpen={true}
-            onAdd={canAddContent ? () => onAddContent!(category) : undefined}
-          >
-            <ul className={styles.contentList}>
-              {categoryItems.map((item) => {
-                // Determine if this item is active based on mode
-                const isActive = branchMode
-                  ? selectedContentId === item.id
-                  : selectedSlug === item.slug || location.pathname === `/library/${item.slug}`;
+        {groupedItems.map(([category, categoryItems]) => {
+          const isRenamingThisCategory = renamingCategory === category;
 
-                return (
-                  <li key={item.id}>
+          const categoryNavSection = (
+            <NavSection
+              key={category}
+              title={category}
+              items={[]}
+              defaultOpen={true}
+              onAdd={canAddContent ? () => onAddContent!(category) : undefined}
+              titleElement={isRenamingThisCategory ? (
+                <input
+                  ref={renameCategoryInputRef}
+                  type="text"
+                  className={styles.renameInput}
+                  value={renameCategoryValue}
+                  onChange={(e) => setRenameCategoryValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleRenameCategorySubmit();
+                    else if (e.key === 'Escape') {
+                      setRenamingCategory(null);
+                      setRenameCategoryValue('');
+                    }
+                  }}
+                  onBlur={handleRenameCategorySubmit}
+                  placeholder="Category name..."
+                />
+              ) : undefined}
+            >
+              <ul className={styles.contentList}>
+                {categoryItems.map((item) => {
+                  const isActive = branchMode
+                    ? selectedContentId === item.id
+                    : selectedSlug === item.slug || location.pathname === `/library/${item.slug}`;
+
+                  const isRenaming = renamingContentId === item.id;
+
+                  const contentInner = isRenaming ? (
+                    <div className={styles.contentItem}>
+                      <input
+                        ref={renameContentInputRef}
+                        type="text"
+                        className={styles.renameInput}
+                        value={renameContentValue}
+                        onChange={(e) => setRenameContentValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleRenameContentSubmit();
+                          else if (e.key === 'Escape') {
+                            setRenamingContentId(null);
+                            setRenameContentValue('');
+                          }
+                        }}
+                        onBlur={handleRenameContentSubmit}
+                      />
+                    </div>
+                  ) : (
                     <Link
                       to={branchMode ? '#' : `/library/${item.slug}`}
                       className={styles.contentItem}
@@ -353,7 +453,6 @@ export function LibrarySidebar({
                       data-edited={branchMode && item.hasEdits}
                       onClick={(e) => handleContentClick(e, item)}
                     >
-                      {/* Edited indicator for branch mode */}
                       {branchMode && item.hasEdits && (
                         <Pencil1Icon className={styles.editedIcon} width={12} height={12} />
                       )}
@@ -375,12 +474,74 @@ export function LibrarySidebar({
                         );
                       })()}
                     </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </NavSection>
-        ))}
+                  );
+
+                  // Wrap content item in context menu if user can manage content
+                  if (canManageContentItems && !isRenaming) {
+                    return (
+                      <li key={item.id}>
+                        <ContextMenu.Root>
+                          <ContextMenu.Trigger>
+                            <div>{contentInner}</div>
+                          </ContextMenu.Trigger>
+                          <ContextMenu.Content>
+                            <ContextMenu.Item
+                              onSelect={() => {
+                                setRenamingContentId(item.id);
+                                setRenameContentValue(item.title);
+                              }}
+                            >
+                              Rename
+                            </ContextMenu.Item>
+                            <ContextMenu.Separator />
+                            <ContextMenu.Item
+                              color="red"
+                              onSelect={() => onDeleteContent?.(item.id)}
+                            >
+                              Delete
+                            </ContextMenu.Item>
+                          </ContextMenu.Content>
+                        </ContextMenu.Root>
+                      </li>
+                    );
+                  }
+
+                  return <li key={item.id}>{contentInner}</li>;
+                })}
+              </ul>
+            </NavSection>
+          );
+
+          // Wrap category section in context menu if admin
+          if (isAdmin && category !== 'Uncategorized' && !isRenamingThisCategory) {
+            return (
+              <ContextMenu.Root key={category}>
+                <ContextMenu.Trigger>
+                  <div>{categoryNavSection}</div>
+                </ContextMenu.Trigger>
+                <ContextMenu.Content>
+                  <ContextMenu.Item
+                    onSelect={() => {
+                      setRenamingCategory(category);
+                      setRenameCategoryValue(category);
+                    }}
+                  >
+                    Rename
+                  </ContextMenu.Item>
+                  <ContextMenu.Separator />
+                  <ContextMenu.Item
+                    color="red"
+                    onSelect={() => onDeleteCategory?.(category)}
+                  >
+                    Delete
+                  </ContextMenu.Item>
+                </ContextMenu.Content>
+              </ContextMenu.Root>
+            );
+          }
+
+          return categoryNavSection;
+        })}
 
         {/* Empty state when no items */}
         {groupedItems.length === 0 && !hasActiveFilters && (

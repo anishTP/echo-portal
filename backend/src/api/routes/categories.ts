@@ -80,6 +80,59 @@ categoryRoutes.post(
   }
 );
 
+// PATCH /categories/:id — Rename a category (admin only)
+categoryRoutes.patch(
+  '/:id',
+  requireAuth,
+  requireRoles('administrator'),
+  zValidator('param', z.object({ id: uuidSchema })),
+  zValidator(
+    'json',
+    z.object({
+      name: z.string().min(1).max(200),
+    })
+  ),
+  async (c) => {
+    const { id } = c.req.valid('param');
+    const { name } = c.req.valid('json');
+
+    const existing = await db
+      .select()
+      .from(categories)
+      .where(eq(categories.id, id))
+      .limit(1);
+
+    if (existing.length === 0) {
+      return c.json(
+        { error: { code: 'NOT_FOUND', message: 'Category not found' } },
+        404
+      );
+    }
+
+    // Check for duplicate name within same section
+    const duplicate = await db
+      .select()
+      .from(categories)
+      .where(and(eq(categories.section, existing[0].section), eq(categories.name, name)))
+      .limit(1);
+
+    if (duplicate.length > 0 && duplicate[0].id !== id) {
+      return c.json(
+        { error: { code: 'DUPLICATE', message: `Category "${name}" already exists in section "${existing[0].section}"` } },
+        409
+      );
+    }
+
+    const [updated] = await db
+      .update(categories)
+      .set({ name })
+      .where(eq(categories.id, id))
+      .returning();
+
+    return success(c, updated);
+  }
+);
+
 // DELETE /categories/:id — Delete a category (admin only)
 categoryRoutes.delete(
   '/:id',

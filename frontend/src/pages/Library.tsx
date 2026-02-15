@@ -15,10 +15,11 @@ import { ReviewModeHeader } from '../components/library/ReviewModeHeader';
 import { ReviewDiffView } from '../components/library/ReviewDiffView';
 import { BranchCreateDialog } from '../components/editor/BranchCreateDialog';
 import { CreateContentDialog } from '../components/library/CreateContentDialog';
-import { usePublishedContent, useContentBySlug, useCreateCategory, usePersistentCategories } from '../hooks/usePublishedContent';
+import { usePublishedContent, useContentBySlug, useCreateCategory, useUpdateCategory, useDeleteCategory, usePersistentCategories } from '../hooks/usePublishedContent';
 import { useEditBranch } from '../hooks/useEditBranch';
 import { useBranch } from '../hooks/useBranch';
 import { useContent, useContentList, useCreateContent, useDeleteContent, contentKeys } from '../hooks/useContent';
+import { contentApi } from '../services/content-api';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { useDraftSync } from '../hooks/useDraftSync';
 import { useContentComparison, useContentComparisonStats } from '../hooks/useContentComparison';
@@ -83,6 +84,15 @@ export default function Library() {
   const [createError, setCreateError] = useState<string | null>(null);
   const createContent = useCreateContent();
   const createCategoryMutation = useCreateCategory();
+  const updateCategoryMutation = useUpdateCategory();
+  const deleteCategoryMutation = useDeleteCategory();
+
+  // Delete confirmation dialog state
+  const [deleteCategoryTarget, setDeleteCategoryTarget] = useState<string | null>(null);
+  const [deleteContentTarget, setDeleteContentTarget] = useState<string | null>(null);
+
+  // Sidebar content delete mutation (separate from edit-mode delete)
+  const sidebarDeleteContent = useDeleteContent(currentBranch?.id || branchId);
 
   // Edit state
   const [currentDraft, setCurrentDraft] = useState<DraftContent | null>(null);
@@ -435,6 +445,76 @@ export default function Library() {
   const handleAddCategoryNeedsBranch = useCallback(() => {
     setShowBranchRequiredDialog(true);
   }, []);
+
+  // Handle category rename from sidebar context menu
+  const handleRenameCategory = useCallback(
+    (oldName: string, newName: string) => {
+      if (!persistentCategoryData) return;
+      const cat = persistentCategoryData.find((c) => c.name === oldName);
+      if (cat) {
+        updateCategoryMutation.mutate({ id: cat.id, name: newName });
+      }
+    },
+    [persistentCategoryData, updateCategoryMutation]
+  );
+
+  // Handle category delete from sidebar context menu (shows confirmation)
+  const handleDeleteCategory = useCallback((name: string) => {
+    setDeleteCategoryTarget(name);
+  }, []);
+
+  // Confirm category deletion
+  const confirmDeleteCategory = useCallback(() => {
+    if (!deleteCategoryTarget || !persistentCategoryData) return;
+    const cat = persistentCategoryData.find((c) => c.name === deleteCategoryTarget);
+    if (cat) {
+      deleteCategoryMutation.mutate(cat.id);
+    }
+    setDeleteCategoryTarget(null);
+  }, [deleteCategoryTarget, persistentCategoryData, deleteCategoryMutation]);
+
+  // Handle content rename from sidebar context menu
+  const handleRenameContent = useCallback(
+    async (contentId: string, newTitle: string) => {
+      try {
+        const content = await contentApi.getById(contentId);
+        await contentApi.update(contentId, {
+          title: newTitle,
+          body: content.currentVersion?.body || '',
+          changeDescription: `Renamed to "${newTitle}"`,
+        });
+        // Invalidate to refresh sidebar
+        const targetBranchId = currentBranch?.id || branchId;
+        if (targetBranchId) {
+          queryClient.invalidateQueries({ queryKey: [...contentKeys.lists(), targetBranchId] });
+        }
+        queryClient.invalidateQueries({ queryKey: contentKeys.detail(contentId) });
+      } catch {
+        // Silently fail — user sees the old title remain
+      }
+    },
+    [currentBranch?.id, branchId, queryClient]
+  );
+
+  // Handle content delete from sidebar context menu (shows confirmation)
+  const handleDeleteContentFromSidebar = useCallback((contentId: string) => {
+    setDeleteContentTarget(contentId);
+  }, []);
+
+  // Confirm content deletion from sidebar
+  const confirmDeleteContent = useCallback(async () => {
+    if (!deleteContentTarget) return;
+    try {
+      await sidebarDeleteContent.mutateAsync(deleteContentTarget);
+      // If deleted content was selected, clear selection
+      if (selectedBranchContentId === deleteContentTarget) {
+        setSelectedBranchContentId(null);
+      }
+    } catch {
+      // Silently fail
+    }
+    setDeleteContentTarget(null);
+  }, [deleteContentTarget, sidebarDeleteContent, selectedBranchContentId]);
 
   // Handle content creation confirmation
   const handleCreateConfirm = useCallback(
@@ -848,6 +928,11 @@ export default function Library() {
           onAddCategory={handleAddCategory}
           onAddCategoryNeedsBranch={handleAddCategoryNeedsBranch}
           persistentCategories={persistentCategoryNames}
+          onRenameCategory={handleRenameCategory}
+          onDeleteCategory={handleDeleteCategory}
+          onRenameContent={handleRenameContent}
+          onDeleteContent={handleDeleteContentFromSidebar}
+          canManageContent={hasRole('administrator') || hasRole('contributor')}
         />
       }
       rightSidebar={
@@ -989,6 +1074,42 @@ export default function Library() {
               <Flex justify="end" mt="4">
                 <AlertDialog.Action>
                   <RadixButton>OK</RadixButton>
+                </AlertDialog.Action>
+              </Flex>
+            </AlertDialog.Content>
+          </AlertDialog.Root>
+
+          {/* Delete category confirmation dialog */}
+          <AlertDialog.Root open={!!deleteCategoryTarget} onOpenChange={(open) => { if (!open) setDeleteCategoryTarget(null); }}>
+            <AlertDialog.Content maxWidth="420px">
+              <AlertDialog.Title>Delete category?</AlertDialog.Title>
+              <AlertDialog.Description size="2">
+                This will permanently delete the &ldquo;{deleteCategoryTarget}&rdquo; category. Content items in this category will become uncategorized.
+              </AlertDialog.Description>
+              <Flex justify="end" gap="3" mt="4">
+                <AlertDialog.Cancel>
+                  <RadixButton variant="soft" color="gray">Cancel</RadixButton>
+                </AlertDialog.Cancel>
+                <AlertDialog.Action>
+                  <RadixButton color="red" onClick={confirmDeleteCategory}>Delete</RadixButton>
+                </AlertDialog.Action>
+              </Flex>
+            </AlertDialog.Content>
+          </AlertDialog.Root>
+
+          {/* Delete content confirmation dialog */}
+          <AlertDialog.Root open={!!deleteContentTarget} onOpenChange={(open) => { if (!open) setDeleteContentTarget(null); }}>
+            <AlertDialog.Content maxWidth="420px">
+              <AlertDialog.Title>Delete content?</AlertDialog.Title>
+              <AlertDialog.Description size="2">
+                This will permanently delete this content item from the branch. This action cannot be undone.
+              </AlertDialog.Description>
+              <Flex justify="end" gap="3" mt="4">
+                <AlertDialog.Cancel>
+                  <RadixButton variant="soft" color="gray">Cancel</RadixButton>
+                </AlertDialog.Cancel>
+                <AlertDialog.Action>
+                  <RadixButton color="red" onClick={confirmDeleteContent}>Delete</RadixButton>
                 </AlertDialog.Action>
               </Flex>
             </AlertDialog.Content>

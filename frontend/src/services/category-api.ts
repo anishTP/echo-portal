@@ -26,6 +26,10 @@ export const categoryApi = {
     return api.post<CategoryDTO>('/categories', input);
   },
 
+  update(id: string, input: { name: string }): Promise<CategoryDTO> {
+    return api.patch<CategoryDTO>(`/categories/${id}`, input);
+  },
+
   delete(id: string): Promise<void> {
     return api.delete<void>(`/categories/${id}`);
   },

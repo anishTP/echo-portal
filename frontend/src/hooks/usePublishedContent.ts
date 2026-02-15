@@ -132,6 +132,21 @@ export function useCreateCategory() {
 }
 
 /**
+ * Mutation to update (rename) a persistent category
+ */
+export function useUpdateCategory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) =>
+      categoryApi.update(id, { name }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: categoryKeys.all });
+    },
+  });
+}
+
+/**
  * Mutation to delete a persistent category
  */
 export function useDeleteCategory() {

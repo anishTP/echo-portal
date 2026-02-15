@@ -31,6 +31,8 @@ export interface NavSectionProps {
   children?: ReactNode;
   /** Callback when add button is clicked (shows button when defined) */
   onAdd?: () => void;
+  /** Custom element to replace the title (e.g. an inline rename input) */
+  titleElement?: ReactNode;
 }
 
 /**
@@ -47,6 +49,7 @@ export function NavSection({
   onItemClick,
   children,
   onAdd,
+  titleElement,
 }: NavSectionProps) {
   const handleItemClick = (item: NavItem) => {
     item.onClick?.();
@@ -56,11 +59,17 @@ export function NavSection({
   return (
     <Collapsible.Root className={styles.section} defaultOpen={defaultOpen}>
       <div className={styles.triggerRow}>
-        <Collapsible.Trigger className={styles.trigger}>
-          <span>{title}</span>
-          <ChevronRightIcon className={styles.chevron} width={14} height={14} />
-        </Collapsible.Trigger>
-        {onAdd && (
+        {titleElement ? (
+          <div className={styles.trigger} style={{ cursor: 'default' }}>
+            {titleElement}
+          </div>
+        ) : (
+          <Collapsible.Trigger className={styles.trigger}>
+            <span>{title}</span>
+            <ChevronRightIcon className={styles.chevron} width={14} height={14} />
+          </Collapsible.Trigger>
+        )}
+        {!titleElement && onAdd && (
           <button
             type="button"
             className={styles.addButton}
