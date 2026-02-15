@@ -883,13 +883,18 @@ authRoutes.get('/me', requireAuth, async (c) => {
     );
   }
 
+  // Use database roles, falling back to auth middleware roles if DB roles are empty
+  const effectiveRoles = user.roles && user.roles.length > 0
+    ? user.roles
+    : authUser.roles;
+
   return c.json({
     user: {
       id: user.id,
       email: user.email,
       displayName: user.displayName,
       avatarUrl: user.avatarUrl,
-      roles: user.roles,
+      roles: effectiveRoles,
       isActive: user.isActive,
       provider: user.provider,
       emailVerified: user.emailVerified,

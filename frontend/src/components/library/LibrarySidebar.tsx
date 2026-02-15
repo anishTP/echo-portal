@@ -262,8 +262,8 @@ export function LibrarySidebar({
   const [renameContentValue, setRenameContentValue] = useState('');
   const renameContentInputRef = useRef<HTMLInputElement>(null);
 
-  // Whether content context menu should appear
-  const canManageContentItems = canManageContent && branchMode && branchState === 'draft';
+  // Whether content context menu should appear (role-based OR branch owner)
+  const canManageContentItems = (canManageContent || isOwner) && branchMode && branchState === 'draft';
 
   useEffect(() => {
     if (renamingCategory && renameCategoryInputRef.current) {
