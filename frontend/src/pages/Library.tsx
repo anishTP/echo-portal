@@ -14,10 +14,11 @@ import { EditModeHeader } from '../components/library/EditModeHeader';
 import { ReviewModeHeader } from '../components/library/ReviewModeHeader';
 import { ReviewDiffView } from '../components/library/ReviewDiffView';
 import { BranchCreateDialog } from '../components/editor/BranchCreateDialog';
+import { CreateContentDialog } from '../components/library/CreateContentDialog';
 import { usePublishedContent, useContentBySlug } from '../hooks/usePublishedContent';
 import { useEditBranch } from '../hooks/useEditBranch';
 import { useBranch } from '../hooks/useBranch';
-import { useContent, useContentList, useDeleteContent, contentKeys } from '../hooks/useContent';
+import { useContent, useContentList, useCreateContent, useDeleteContent, contentKeys } from '../hooks/useContent';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { useDraftSync } from '../hooks/useDraftSync';
 import { useContentComparison, useContentComparisonStats } from '../hooks/useContentComparison';
@@ -74,6 +75,12 @@ export default function Library() {
 
   // Dialog state for branch creation
   const [showBranchDialog, setShowBranchDialog] = useState(false);
+
+  // Dialog state for content creation in branch mode
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [createCategory, setCreateCategory] = useState('');
+  const [createError, setCreateError] = useState<string | null>(null);
+  const createContent = useCreateContent();
 
   // Edit state
   const [currentDraft, setCurrentDraft] = useState<DraftContent | null>(null);
@@ -388,6 +395,40 @@ export default function Library() {
       }
     },
     [selectedContent, createEditBranch, enterEditMode]
+  );
+
+  // Handle add content button click in sidebar category
+  const handleAddContent = useCallback((category: string) => {
+    setCreateCategory(category);
+    setCreateError(null);
+    setShowCreateDialog(true);
+  }, []);
+
+  // Handle content creation confirmation
+  const handleCreateConfirm = useCallback(
+    async (title: string, contentType: 'guideline' | 'asset' | 'opinion') => {
+      const targetBranchId = currentBranch?.id || branchId;
+      if (!targetBranchId) return;
+
+      setCreateError(null);
+      try {
+        const result = await createContent.mutateAsync({
+          branchId: targetBranchId,
+          title,
+          contentType,
+          section: sectionFilter as 'brand' | 'product' | 'experience' | undefined,
+          category: createCategory !== 'Uncategorized' ? createCategory : undefined,
+          body: ' ',
+          changeDescription: 'Initial content creation',
+        });
+        setShowCreateDialog(false);
+        // Enter edit mode for the new content
+        enterEditMode(targetBranchId, result.id);
+      } catch (err) {
+        setCreateError(err instanceof Error ? err.message : 'Failed to create content');
+      }
+    },
+    [currentBranch?.id, branchId, createContent, createCategory, sectionFilter, enterEditMode]
   );
 
   // Handle content selection in branch mode
@@ -773,6 +814,7 @@ export default function Library() {
           reviewStats={isReviewMode ? comparisonStats : undefined}
           hasFeedbackToView={hasFeedbackToView}
           onViewFeedback={hasFeedbackToView ? enterFeedbackMode : undefined}
+          onAddContent={handleAddContent}
         />
       }
       rightSidebar={
@@ -893,6 +935,16 @@ export default function Library() {
               error={branchError?.message}
             />
           )}
+
+          {/* Content creation dialog (branch mode) */}
+          <CreateContentDialog
+            open={showCreateDialog}
+            onOpenChange={setShowCreateDialog}
+            category={createCategory}
+            onConfirm={handleCreateConfirm}
+            isLoading={createContent.isPending}
+            error={createError ?? undefined}
+          />
         </>
       )}
     </DocumentationLayout>

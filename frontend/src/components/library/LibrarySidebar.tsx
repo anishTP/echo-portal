@@ -59,6 +59,8 @@ export interface LibrarySidebarProps {
   hasFeedbackToView?: boolean;
   /** Callback to view feedback from a completed review */
   onViewFeedback?: () => void;
+  /** Callback when user clicks '+' to add content in a category (branch mode only) */
+  onAddContent?: (category: string) => void;
 }
 
 // Git branch icon for branch mode indicator
@@ -111,6 +113,7 @@ export function LibrarySidebar({
   reviewStats,
   hasFeedbackToView = false,
   onViewFeedback,
+  onAddContent,
 }: LibrarySidebarProps) {
   const location = useLocation();
 
@@ -132,6 +135,9 @@ export function LibrarySidebar({
 
   // Show feedback button for draft branches that have completed review feedback
   const showFeedbackButton = branchMode && branchState === 'draft' && hasFeedbackToView;
+
+  // Show add content button in draft branches
+  const canAddContent = branchMode && branchState === 'draft' && !!onAddContent;
 
   // Group items by category
   const groupedItems = useMemo(() => {
@@ -275,6 +281,7 @@ export function LibrarySidebar({
             title={category}
             items={[]} // We'll use custom children instead
             defaultOpen={true}
+            onAdd={canAddContent ? () => onAddContent!(category) : undefined}
           >
             <ul className={styles.contentList}>
               {categoryItems.map((item) => {

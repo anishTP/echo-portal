@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
 import * as Collapsible from '@radix-ui/react-collapsible';
-import { ChevronRightIcon } from '@radix-ui/react-icons';
+import { ChevronRightIcon, PlusIcon } from '@radix-ui/react-icons';
 import styles from './NavSection.module.css';
 
 export interface NavItem {
@@ -29,6 +29,8 @@ export interface NavSectionProps {
   onItemClick?: (item: NavItem) => void;
   /** Custom content instead of items */
   children?: ReactNode;
+  /** Callback when add button is clicked (shows button when defined) */
+  onAdd?: () => void;
 }
 
 /**
@@ -44,6 +46,7 @@ export function NavSection({
   defaultOpen = true,
   onItemClick,
   children,
+  onAdd,
 }: NavSectionProps) {
   const handleItemClick = (item: NavItem) => {
     item.onClick?.();
@@ -52,10 +55,26 @@ export function NavSection({
 
   return (
     <Collapsible.Root className={styles.section} defaultOpen={defaultOpen}>
-      <Collapsible.Trigger className={styles.trigger}>
-        <span>{title}</span>
-        <ChevronRightIcon className={styles.chevron} width={14} height={14} />
-      </Collapsible.Trigger>
+      <div className={styles.triggerRow}>
+        <Collapsible.Trigger className={styles.trigger}>
+          <span>{title}</span>
+          <ChevronRightIcon className={styles.chevron} width={14} height={14} />
+        </Collapsible.Trigger>
+        {onAdd && (
+          <button
+            type="button"
+            className={styles.addButton}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAdd();
+            }}
+            aria-label={`Add content to ${title}`}
+            title={`Add content to ${title}`}
+          >
+            <PlusIcon width={14} height={14} />
+          </button>
+        )}
+      </div>
 
       <Collapsible.Content className={styles.content}>
         {children ? (

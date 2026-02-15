@@ -5,12 +5,19 @@
   margin-bottom: var(--space-2);
 }
 
+/* Trigger row: holds trigger + optional add button */
+.triggerRow {
+  display: flex;
+  align-items: center;
+}
+
 /* Section Header/Trigger */
 .trigger {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   padding: var(--space-2) var(--space-2);
   background: transparent;
   border: none;
@@ -37,6 +44,39 @@
 
 .trigger[data-state="open"] {
   color: var(--gray-12);
+}
+
+/* Add button in trigger row */
+.addButton {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-right: var(--space-1);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-2);
+  color: var(--gray-9);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.triggerRow:hover .addButton {
+  opacity: 1;
+}
+
+.addButton:hover {
+  background: var(--accent-3);
+  color: var(--accent-11);
+}
+
+.addButton:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--focus-8);
+  outline-offset: -2px;
 }
 
 /* Chevron icon */
