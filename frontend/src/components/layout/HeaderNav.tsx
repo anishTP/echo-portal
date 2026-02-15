@@ -52,17 +52,17 @@ export function HeaderNav() {
   };
 
   return (
-    <nav className="flex items-center gap-1">
+    <nav className="flex items-center gap-6">
       {/* Brands dropdown */}
       <DropdownMenu.Root>
         <DropdownMenu.Trigger>
           <Button
             variant="ghost"
-            size="2"
-            style={{ color: isActive('brands') ? 'var(--accent-11)' : 'var(--gray-11)' }}
+            size="3"
+            style={{ color: isActive('brands') ? 'var(--accent-11)' : 'var(--gray-12)' }}
           >
-            <Text size="2" weight="medium">Brands</Text>
-            <ChevronDownIcon />
+            <Text size="3" weight="medium">Brands</Text>
+            <ChevronDownIcon width="16" height="16" />
           </Button>
         </DropdownMenu.Trigger>
         <DropdownMenu.Content style={{ minWidth: '180px' }}>
@@ -79,11 +79,11 @@ export function HeaderNav() {
         <DropdownMenu.Trigger>
           <Button
             variant="ghost"
-            size="2"
-            style={{ color: isActive('products') ? 'var(--accent-11)' : 'var(--gray-11)' }}
+            size="3"
+            style={{ color: isActive('products') ? 'var(--accent-11)' : 'var(--gray-12)' }}
           >
-            <Text size="2" weight="medium">Products</Text>
-            <ChevronDownIcon />
+            <Text size="3" weight="medium">Products</Text>
+            <ChevronDownIcon width="16" height="16" />
           </Button>
         </DropdownMenu.Trigger>
         <DropdownMenu.Content style={{ minWidth: '180px' }}>
@@ -98,11 +98,11 @@ export function HeaderNav() {
       {/* Experiences link */}
       <Button
         variant="ghost"
-        size="2"
+        size="3"
         onClick={() => handleSectionClick('experiences')}
-        style={{ color: isActive('experiences') ? 'var(--accent-11)' : 'var(--gray-11)' }}
+        style={{ color: isActive('experiences') ? 'var(--accent-11)' : 'var(--gray-12)' }}
       >
-        <Text size="2" weight="medium">Experiences</Text>
+        <Text size="3" weight="medium">Experiences</Text>
       </Button>
     </nav>
   );

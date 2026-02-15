@@ -1,10 +1,9 @@
-import { DropdownMenu, Button } from '@radix-ui/themes';
+import { DropdownMenu, IconButton } from '@radix-ui/themes';
 import { useTheme } from '@/hooks/useTheme';
 
 const SunIcon = () => (
   <svg
-    width="16"
-    height="16"
+    className="h-5 w-5"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
@@ -26,8 +25,7 @@ const SunIcon = () => (
 
 const MoonIcon = () => (
   <svg
-    width="16"
-    height="16"
+    className="h-5 w-5"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
@@ -41,8 +39,7 @@ const MoonIcon = () => (
 
 const MonitorIcon = () => (
   <svg
-    width="16"
-    height="16"
+    className="h-5 w-5"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
@@ -67,9 +64,9 @@ export function ThemeToggle() {
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger>
-        <Button variant="ghost" size="2" aria-label="Toggle theme">
+        <IconButton variant="ghost" size="2" aria-label="Toggle theme">
           {getCurrentIcon()}
-        </Button>
+        </IconButton>
       </DropdownMenu.Trigger>
       <DropdownMenu.Content align="end">
         <DropdownMenu.Item onClick={() => setTheme('light')}>
