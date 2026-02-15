@@ -610,11 +610,10 @@ export class BranchService {
         branchId: id,
         fromState: BranchState.REVIEW,
         toState: BranchState.DRAFT,
-        event: 'return_to_draft',
         actorId,
         actorType: ActorType.USER,
         reason: 'All reviewers removed',
-        metadata: {},
+        metadata: { event: 'return_to_draft' },
         createdAt: new Date(),
       });
     }

@@ -139,7 +139,6 @@ export function notifyReviewCommentAdded(
         resourceId: reviewId,
         actorId,
       },
-      { reviewId }
     )
     .catch((err) => console.error('[NotificationTriggers] review_comment_added failed:', err));
 }
@@ -161,7 +160,6 @@ export function notifyReviewCommentReply(
         resourceId: reviewId,
         actorId,
       },
-      { reviewId }
     )
     .catch((err) => console.error('[NotificationTriggers] review_comment_reply failed:', err));
 }

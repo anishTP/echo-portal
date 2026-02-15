@@ -53,10 +53,10 @@ export class ComparisonService {
     // Add hunk IDs for comment anchoring
     const filesWithHunkIds: FileDiff[] = diff.files.map((file) => ({
       ...file,
-      hunks: file.hunks.map((hunk, index) => ({
-        ...hunk,
-        id: this.generateHunkId(file.path, index, hunk),
-      })),
+      hunks: file.hunks.map((hunk, index) => {
+        const { id: _id, ...rest } = hunk;
+        return { ...rest, id: this.generateHunkId(file.path, index, hunk as DiffHunk) };
+      }),
     }));
 
     // Check for base divergence

@@ -591,7 +591,7 @@ branchRoutes.post(
     const { id } = c.req.valid('param');
 
     // Check if user has publisher or admin role
-    const hasPublishRole = user.roles?.includes('publisher') || user.roles?.includes('administrator');
+    const hasPublishRole = user.roles?.includes('administrator');
     if (!hasPublishRole) {
       throw new ForbiddenError('Only publishers or administrators can publish branches');
     }

@@ -156,7 +156,7 @@ export const notificationService = {
       .set({ isRead: true, readAt: new Date() })
       .where(and(eq(schema.notifications.userId, userId), eq(schema.notifications.isRead, false)));
 
-    const count = result.rowCount ?? 0;
+    const count = (result as unknown as { rowCount: number }).rowCount ?? 0;
 
     if (count > 0) {
       await auditLogger.log({

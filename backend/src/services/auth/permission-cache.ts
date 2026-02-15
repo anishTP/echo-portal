@@ -79,7 +79,7 @@ export class PermissionCache {
     }
 
     this.misses++;
-    const result = canEditBranch(context);
+    const result = canEditBranch(context, context.branchState || '');
     this.cache.set(key, { result, timestamp: Date.now() });
     return result;
   }

@@ -26,9 +26,9 @@ export async function permissionCacheMiddleware(c: Context, next: Next) {
     // Log cache stats for monitoring (optional, can be removed in production)
     const stats = cache.getStats();
     if (stats.hits + stats.misses > 0) {
-      c.req.header('X-Permission-Cache-Hits', stats.hits.toString());
-      c.req.header('X-Permission-Cache-Misses', stats.misses.toString());
-      c.req.header('X-Permission-Cache-Hit-Rate', (stats.hitRate * 100).toFixed(1));
+      c.header('X-Permission-Cache-Hits', stats.hits.toString());
+      c.header('X-Permission-Cache-Misses', stats.misses.toString());
+      c.header('X-Permission-Cache-Hit-Rate', (stats.hitRate * 100).toFixed(1));
     }
 
     // Clear cache
