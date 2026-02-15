@@ -1,6 +1,6 @@
 import { useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { MagnifyingGlassIcon, Cross2Icon, Pencil1Icon, PlusIcon } from '@radix-ui/react-icons';
+import { MagnifyingGlassIcon, Pencil1Icon, PlusIcon } from '@radix-ui/react-icons';
 import type { ContentSummary, BranchStateType, ContentComparisonStats } from '@echo-portal/shared';
 import { NavSection } from './NavSection';
 import { LifecycleStatus } from '../branch/LifecycleStatus';
@@ -33,8 +33,6 @@ export interface LibrarySidebarProps {
   selectedContentId?: string;
   /** Handler for content selection in branch mode */
   onSelectContent?: (content: ContentSummary) => void;
-  /** Handler to clear all filters */
-  onClearFilters?: () => void;
   /** Whether any filters are active */
   hasActiveFilters?: boolean;
   /** Whether we're in branch mode */
@@ -110,7 +108,6 @@ export function LibrarySidebar({
   selectedSlug,
   selectedContentId,
   onSelectContent,
-  onClearFilters,
   hasActiveFilters = false,
   branchMode = false,
   branchName,
@@ -448,18 +445,6 @@ export function LibrarySidebar({
           </div>
         )}
       </div>
-
-      {/* Clear Filters */}
-      {hasActiveFilters && (
-        <button
-          type="button"
-          className={styles.clearFilters}
-          onClick={onClearFilters}
-        >
-          <Cross2Icon width={12} height={12} />
-          Clear filters
-        </button>
-      )}
     </nav>
   );
 }

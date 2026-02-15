@@ -642,9 +642,6 @@ export default function Library() {
     [updateParams]
   );
 
-  const handleClearFilters = useCallback(() => {
-    updateParams({ type: null, q: null, section: null, category: null });
-  }, [updateParams]);
 
   // Navigation blocker for unsaved changes
   const blocker = useBlocker(
@@ -816,7 +813,6 @@ export default function Library() {
           selectedSlug={showBranchContent ? undefined : slug}
           selectedContentId={showBranchContent ? (contentIdParam || selectedBranchContentId) ?? undefined : undefined}
           onSelectContent={showBranchContent ? handleSelectBranchContent : undefined}
-          onClearFilters={handleClearFilters}
           hasActiveFilters={hasActiveFilters}
           branchMode={showBranchContent}
           branchName={currentBranch?.name || activeBranch?.name}

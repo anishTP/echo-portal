@@ -160,32 +160,6 @@
   gap: var(--space-1);
 }
 
-/* Clear filters link */
-.clearFilters {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-2);
-  margin-top: var(--space-2);
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-2);
-  font-size: var(--font-size-1);
-  color: var(--gray-10);
-  cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease;
-}
-
-.clearFilters:hover {
-  color: var(--gray-12);
-  background: var(--gray-3);
-}
-
-.clearFilters:focus-visible {
-  outline: 2px solid var(--focus-8);
-  outline-offset: -2px;
-}
-
 /* Content list in nav sections */
 .contentList {
   list-style: none;
