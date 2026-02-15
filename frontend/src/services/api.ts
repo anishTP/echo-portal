@@ -134,6 +134,13 @@ export const api = {
       body: body ? JSON.stringify(body) : undefined,
     }),
 
+  put: <T>(endpoint: string, body?: unknown, options?: RequestInit) =>
+    apiFetch<T>(endpoint, {
+      ...options,
+      method: 'PUT',
+      body: body ? JSON.stringify(body) : undefined,
+    }),
+
   patch: <T>(endpoint: string, body?: unknown, options?: RequestInit) =>
     apiFetch<T>(endpoint, {
       ...options,

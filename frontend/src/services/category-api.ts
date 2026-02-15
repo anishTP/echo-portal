@@ -30,6 +30,10 @@ export const categoryApi = {
     return api.patch<CategoryDTO>(`/categories/${id}`, input);
   },
 
+  rename(input: { section: string; oldName: string; newName: string }): Promise<{ section: string; oldName: string; newName: string }> {
+    return api.post<{ section: string; oldName: string; newName: string }>('/categories/rename', input);
+  },
+
   delete(id: string): Promise<void> {
     return api.delete<void>(`/categories/${id}`);
   },

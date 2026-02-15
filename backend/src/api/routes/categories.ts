@@ -8,6 +8,7 @@ import { uuidSchema } from '../schemas/common.js';
 import { success, created, noContent } from '../utils/responses.js';
 import { db } from '../../db/index.js';
 import { categories } from '../../db/schema/categories.js';
+import { contents } from '../../db/schema/contents.js';
 
 const categoryRoutes = new Hono<AuthEnv>();
 
@@ -123,13 +124,93 @@ categoryRoutes.patch(
       );
     }
 
-    const [updated] = await db
-      .update(categories)
-      .set({ name })
-      .where(eq(categories.id, id))
-      .returning();
+    const oldName = existing[0].name;
+    const section = existing[0].section;
+
+    // Update the category name and all content items referencing the old name
+    const [updated] = await db.transaction(async (tx) => {
+      const [cat] = await tx
+        .update(categories)
+        .set({ name })
+        .where(eq(categories.id, id))
+        .returning();
+
+      // Also update all content items that reference the old category name in the same section
+      if (oldName !== name) {
+        await tx
+          .update(contents)
+          .set({ category: name })
+          .where(and(eq(contents.category, oldName), eq(contents.section, section)));
+      }
+
+      return [cat];
+    });
 
     return success(c, updated);
+  }
+);
+
+// POST /categories/rename — Rename a category by name (admin only)
+// Handles both persistent categories and content-derived categories
+categoryRoutes.post(
+  '/rename',
+  requireAuth,
+  requireRoles('administrator'),
+  zValidator(
+    'json',
+    z.object({
+      section: contentSectionSchema,
+      oldName: z.string().min(1).max(200),
+      newName: z.string().min(1).max(200),
+    })
+  ),
+  async (c) => {
+    const { section, oldName, newName } = c.req.valid('json');
+
+    if (oldName === newName) {
+      return c.json(
+        { error: { code: 'NO_CHANGE', message: 'Old and new names are identical' } },
+        400
+      );
+    }
+
+    // Check if a persistent category with the new name already exists
+    const duplicate = await db
+      .select()
+      .from(categories)
+      .where(and(eq(categories.section, section), eq(categories.name, newName)))
+      .limit(1);
+
+    if (duplicate.length > 0) {
+      return c.json(
+        { error: { code: 'DUPLICATE', message: `Category "${newName}" already exists in section "${section}"` } },
+        409
+      );
+    }
+
+    await db.transaction(async (tx) => {
+      // If a persistent category exists with the old name, rename it
+      const existing = await tx
+        .select()
+        .from(categories)
+        .where(and(eq(categories.section, section), eq(categories.name, oldName)))
+        .limit(1);
+
+      if (existing.length > 0) {
+        await tx
+          .update(categories)
+          .set({ name: newName })
+          .where(eq(categories.id, existing[0].id));
+      }
+
+      // Update all content items that reference the old category name in this section
+      await tx
+        .update(contents)
+        .set({ category: newName })
+        .where(and(eq(contents.category, oldName), eq(contents.section, section)));
+    });
+
+    return success(c, { section, oldName, newName });
   }
 );
 

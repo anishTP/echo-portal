@@ -132,7 +132,7 @@ export function useCreateCategory() {
 }
 
 /**
- * Mutation to update (rename) a persistent category
+ * Mutation to update (rename) a persistent category by ID
  */
 export function useUpdateCategory() {
   const queryClient = useQueryClient();
@@ -142,6 +142,23 @@ export function useUpdateCategory() {
       categoryApi.update(id, { name }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: categoryKeys.all });
+      queryClient.invalidateQueries({ queryKey: contentKeys.all });
+    },
+  });
+}
+
+/**
+ * Mutation to rename a category by name (works for both persistent and content-derived categories)
+ */
+export function useRenameCategory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: { section: string; oldName: string; newName: string }) =>
+      categoryApi.rename(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: categoryKeys.all });
+      queryClient.invalidateQueries({ queryKey: contentKeys.all });
     },
   });
 }

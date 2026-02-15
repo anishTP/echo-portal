@@ -27,10 +27,7 @@ export const contentApi = {
 
   /** Update content (creates new version) */
   update(contentId: string, input: ContentUpdateInput): Promise<ContentDetail> {
-    return api.post<ContentDetail>(`/contents/${contentId}`, {
-      ...input,
-      _method: 'PUT',
-    });
+    return api.put<ContentDetail>(`/contents/${contentId}`, input);
   },
 
   /** Delete (archive) content */

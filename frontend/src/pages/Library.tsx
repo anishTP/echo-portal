@@ -15,7 +15,7 @@ import { ReviewModeHeader } from '../components/library/ReviewModeHeader';
 import { ReviewDiffView } from '../components/library/ReviewDiffView';
 import { BranchCreateDialog } from '../components/editor/BranchCreateDialog';
 import { CreateContentDialog } from '../components/library/CreateContentDialog';
-import { usePublishedContent, useContentBySlug, useCreateCategory, useUpdateCategory, useDeleteCategory, usePersistentCategories } from '../hooks/usePublishedContent';
+import { usePublishedContent, useContentBySlug, useCreateCategory, useUpdateCategory, useRenameCategory, useDeleteCategory, usePersistentCategories } from '../hooks/usePublishedContent';
 import { useEditBranch } from '../hooks/useEditBranch';
 import { useBranch } from '../hooks/useBranch';
 import { useContent, useContentList, useCreateContent, useDeleteContent, contentKeys } from '../hooks/useContent';
@@ -85,6 +85,7 @@ export default function Library() {
   const createContent = useCreateContent();
   const createCategoryMutation = useCreateCategory();
   const updateCategoryMutation = useUpdateCategory();
+  const renameCategoryMutation = useRenameCategory();
   const deleteCategoryMutation = useDeleteCategory();
 
   // Delete confirmation dialog state
@@ -449,13 +450,10 @@ export default function Library() {
   // Handle category rename from sidebar context menu
   const handleRenameCategory = useCallback(
     (oldName: string, newName: string) => {
-      if (!persistentCategoryData) return;
-      const cat = persistentCategoryData.find((c) => c.name === oldName);
-      if (cat) {
-        updateCategoryMutation.mutate({ id: cat.id, name: newName });
-      }
+      if (!sectionFilter) return;
+      renameCategoryMutation.mutate({ section: sectionFilter, oldName, newName });
     },
-    [persistentCategoryData, updateCategoryMutation]
+    [sectionFilter, renameCategoryMutation]
   );
 
   // Handle category delete from sidebar context menu (shows confirmation)
