@@ -1,6 +1,6 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { MagnifyingGlassIcon, Cross2Icon, Pencil1Icon } from '@radix-ui/react-icons';
+import { MagnifyingGlassIcon, Cross2Icon, Pencil1Icon, PlusIcon } from '@radix-ui/react-icons';
 import type { ContentSummary, BranchStateType, ContentComparisonStats } from '@echo-portal/shared';
 import { NavSection } from './NavSection';
 import { LifecycleStatus } from '../branch/LifecycleStatus';
@@ -61,6 +61,16 @@ export interface LibrarySidebarProps {
   onViewFeedback?: () => void;
   /** Callback when user clicks '+' to add content in a category (branch mode only) */
   onAddContent?: (category: string) => void;
+  /** Whether the current user is an admin (for category management) */
+  isAdmin?: boolean;
+  /** Current section filter (for add category context) */
+  currentSection?: string;
+  /** Callback when admin creates a new category */
+  onAddCategory?: (name: string) => void;
+  /** Callback when admin tries to add category but is not in a draft branch */
+  onAddCategoryNeedsBranch?: () => void;
+  /** Persistent category names to show even when they have no content */
+  persistentCategories?: string[];
 }
 
 // Git branch icon for branch mode indicator
@@ -114,6 +124,11 @@ export function LibrarySidebar({
   hasFeedbackToView = false,
   onViewFeedback,
   onAddContent,
+  isAdmin = false,
+  currentSection,
+  onAddCategory,
+  onAddCategoryNeedsBranch,
+  persistentCategories = [],
 }: LibrarySidebarProps) {
   const location = useLocation();
 
@@ -139,9 +154,16 @@ export function LibrarySidebar({
   // Show add content button in draft branches
   const canAddContent = branchMode && branchState === 'draft' && !!onAddContent;
 
-  // Group items by category
+  // Group items by category, including persistent (empty) categories
   const groupedItems = useMemo(() => {
     const groups: Record<string, ContentSummary[]> = {};
+
+    // Seed with persistent categories so they appear even when empty
+    persistentCategories.forEach((name) => {
+      if (!groups[name]) {
+        groups[name] = [];
+      }
+    });
 
     items.forEach((item) => {
       const category = item.category || 'Uncategorized';
@@ -153,7 +175,7 @@ export function LibrarySidebar({
 
     // Sort categories alphabetically
     return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
-  }, [items]);
+  }, [items, persistentCategories]);
 
   const handleSearchInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -180,6 +202,41 @@ export function LibrarySidebar({
       }
     },
     [branchMode, onSelectContent]
+  );
+
+  // Add Category inline input state
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const addCategoryInputRef = useRef<HTMLInputElement>(null);
+
+  const canAddCategoryDirectly = isAdmin && !!currentSection && !!onAddCategory && branchMode && branchState === 'draft';
+  const canPromptForBranch = isAdmin && !!currentSection && !branchMode && !!onAddCategoryNeedsBranch;
+
+  useEffect(() => {
+    if (isAddingCategory && addCategoryInputRef.current) {
+      addCategoryInputRef.current.focus();
+    }
+  }, [isAddingCategory]);
+
+  const handleAddCategorySubmit = useCallback(() => {
+    const name = newCategoryName.trim();
+    if (name && onAddCategory) {
+      onAddCategory(name);
+      setNewCategoryName('');
+      setIsAddingCategory(false);
+    }
+  }, [newCategoryName, onAddCategory]);
+
+  const handleAddCategoryKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        handleAddCategorySubmit();
+      } else if (e.key === 'Escape') {
+        setNewCategoryName('');
+        setIsAddingCategory(false);
+      }
+    },
+    [handleAddCategorySubmit]
   );
 
   return (
@@ -338,6 +395,56 @@ export function LibrarySidebar({
         {groupedItems.length === 0 && hasActiveFilters && (
           <div className={styles.emptyNav}>
             <p>No content matches your filters.</p>
+          </div>
+        )}
+
+        {/* Add Category (admin-only, draft branch) */}
+        {canAddCategoryDirectly && (
+          <div className={styles.addCategorySection}>
+            {isAddingCategory ? (
+              <div className={styles.addCategoryRow}>
+                <input
+                  ref={addCategoryInputRef}
+                  type="text"
+                  className={styles.addCategoryInput}
+                  placeholder="Category name..."
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  onKeyDown={handleAddCategoryKeyDown}
+                  onBlur={() => {
+                    // Small delay to allow click on confirm button
+                    setTimeout(() => {
+                      if (!newCategoryName.trim()) {
+                        setIsAddingCategory(false);
+                      }
+                    }, 150);
+                  }}
+                />
+              </div>
+            ) : (
+              <button
+                type="button"
+                className={styles.addCategoryButton}
+                onClick={() => setIsAddingCategory(true)}
+              >
+                <PlusIcon width={12} height={12} />
+                Add Category
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Add Category prompt (admin-only, not in branch mode) */}
+        {canPromptForBranch && (
+          <div className={styles.addCategorySection}>
+            <button
+              type="button"
+              className={styles.addCategoryButton}
+              onClick={onAddCategoryNeedsBranch}
+            >
+              <PlusIcon width={12} height={12} />
+              Add Category
+            </button>
           </div>
         )}
       </div>

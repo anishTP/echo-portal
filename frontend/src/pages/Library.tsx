@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { useSearchParams, useParams, useNavigate, useBlocker } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { animate as animateEl } from 'animejs';
@@ -15,7 +15,7 @@ import { ReviewModeHeader } from '../components/library/ReviewModeHeader';
 import { ReviewDiffView } from '../components/library/ReviewDiffView';
 import { BranchCreateDialog } from '../components/editor/BranchCreateDialog';
 import { CreateContentDialog } from '../components/library/CreateContentDialog';
-import { usePublishedContent, useContentBySlug } from '../hooks/usePublishedContent';
+import { usePublishedContent, useContentBySlug, useCreateCategory, usePersistentCategories } from '../hooks/usePublishedContent';
 import { useEditBranch } from '../hooks/useEditBranch';
 import { useBranch } from '../hooks/useBranch';
 import { useContent, useContentList, useCreateContent, useDeleteContent, contentKeys } from '../hooks/useContent';
@@ -27,6 +27,7 @@ import { useBranchComments } from '../hooks/useBranchComments';
 import { useBranchStore } from '../stores/branchStore';
 import { useAIStore } from '../stores/aiStore';
 import { AIChatPanel } from '../components/ai/AIChatPanel';
+import { AlertDialog, Button as RadixButton, Flex } from '@radix-ui/themes';
 import { useAuth } from '../context/AuthContext';
 import type { ContentSummary } from '@echo-portal/shared';
 import type { TextSelection } from '../hooks/useTextSelection';
@@ -38,7 +39,7 @@ export default function Library() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, hasRole } = useAuth();
 
   // Get current branch from store (set by BranchSelector)
   const currentBranch = useBranchStore((s) => s.currentBranch);
@@ -69,7 +70,7 @@ export default function Library() {
   const sectionParam = searchParams.get('section') || undefined;
   const categoryParam = searchParams.get('category') || undefined;
   // Map plural URL param (brands/products/experiences) to singular DB value (brand/product/experience)
-  const sectionFilter = sectionParam ? sectionParam.replace(/s$/, '') : undefined;
+  const sectionFromParam = sectionParam ? sectionParam.replace(/s$/, '') : undefined;
   const type = (searchParams.get('type') as ContentType) || 'all';
   const search = searchParams.get('q') || '';
 
@@ -81,6 +82,7 @@ export default function Library() {
   const [createCategory, setCreateCategory] = useState('');
   const [createError, setCreateError] = useState<string | null>(null);
   const createContent = useCreateContent();
+  const createCategoryMutation = useCreateCategory();
 
   // Edit state
   const [currentDraft, setCurrentDraft] = useState<DraftContent | null>(null);
@@ -98,6 +100,26 @@ export default function Library() {
   // Undo/redo availability for EditModeHeader buttons
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+
+  // Fetch selected content by slug early so we can derive section from it
+  const {
+    data: publishedSelectedContent,
+    isLoading: isLoadingPublishedContent,
+    isError: isPublishedContentError,
+    refetch: refetchPublishedContent,
+  } = useContentBySlug(isInBranchMode ? undefined : slug);
+
+  // Derive effective section: from URL param, or from currently viewed content's section.
+  // When navigating to /library/{slug}, the section param is lost, but the content
+  // itself knows which section it belongs to — use that to scope the sidebar.
+  const sectionFilter = sectionFromParam || publishedSelectedContent?.section || undefined;
+
+  // Fetch persistent categories for the current section (for sidebar display)
+  const { data: persistentCategoryData } = usePersistentCategories(sectionFilter);
+  const persistentCategoryNames = useMemo(
+    () => (persistentCategoryData ?? []).map((c) => c.name),
+    [persistentCategoryData]
+  );
 
   // Fetch published content for sidebar (when NOT in branch mode)
   const {
@@ -117,6 +139,8 @@ export default function Library() {
     isLoading: isLoadingBranchList,
   } = useContentList(effectiveBranchId, {
     contentType: type === 'all' ? undefined : type,
+    section: sectionFilter,
+    category: categoryParam,
   });
 
   // Determine which content list to use
@@ -128,14 +152,6 @@ export default function Library() {
   const items: ContentSummary[] = showBranchContent
     ? (branchContentList?.items ?? [])
     : (publishedContent?.items ?? []);
-
-  // Fetch selected content by slug (published version - when NOT in branch mode)
-  const {
-    data: publishedSelectedContent,
-    isLoading: isLoadingPublishedContent,
-    isError: isPublishedContentError,
-    refetch: refetchPublishedContent,
-  } = useContentBySlug(isInBranchMode ? undefined : slug);
 
   // Fetch selected content by ID (branch version - when in branch mode)
   const {
@@ -402,6 +418,22 @@ export default function Library() {
     setCreateCategory(category);
     setCreateError(null);
     setShowCreateDialog(true);
+  }, []);
+
+  // Handle add category from sidebar (admin only)
+  const handleAddCategory = useCallback(
+    (name: string) => {
+      if (!sectionFilter) return;
+      createCategoryMutation.mutate({ name, section: sectionFilter });
+    },
+    [sectionFilter, createCategoryMutation]
+  );
+
+  // Dialog state for branch-required prompt (category creation outside branch mode)
+  const [showBranchRequiredDialog, setShowBranchRequiredDialog] = useState(false);
+
+  const handleAddCategoryNeedsBranch = useCallback(() => {
+    setShowBranchRequiredDialog(true);
   }, []);
 
   // Handle content creation confirmation
@@ -815,6 +847,11 @@ export default function Library() {
           hasFeedbackToView={hasFeedbackToView}
           onViewFeedback={hasFeedbackToView ? enterFeedbackMode : undefined}
           onAddContent={handleAddContent}
+          isAdmin={hasRole('administrator')}
+          currentSection={sectionFilter}
+          onAddCategory={handleAddCategory}
+          onAddCategoryNeedsBranch={handleAddCategoryNeedsBranch}
+          persistentCategories={persistentCategoryNames}
         />
       }
       rightSidebar={
@@ -945,6 +982,21 @@ export default function Library() {
             isLoading={createContent.isPending}
             error={createError ?? undefined}
           />
+
+          {/* Branch required dialog (category creation outside branch mode) */}
+          <AlertDialog.Root open={showBranchRequiredDialog} onOpenChange={setShowBranchRequiredDialog}>
+            <AlertDialog.Content maxWidth="420px">
+              <AlertDialog.Title>Draft branch required</AlertDialog.Title>
+              <AlertDialog.Description size="2">
+                Categories can only be added in a draft branch. Use the branch selector to create or switch to a draft branch, then try again.
+              </AlertDialog.Description>
+              <Flex justify="end" mt="4">
+                <AlertDialog.Action>
+                  <RadixButton>OK</RadixButton>
+                </AlertDialog.Action>
+              </Flex>
+            </AlertDialog.Content>
+          </AlertDialog.Root>
         </>
       )}
     </DocumentationLayout>
