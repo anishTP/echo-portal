@@ -1,6 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { contentApi } from '../services/content-api';
+import { categoryApi, type CreateCategoryInput } from '../services/category-api';
 import { contentKeys } from './useContent';
 
 export interface PublishedContentParams {
@@ -11,6 +12,11 @@ export interface PublishedContentParams {
   page?: number;
   limit?: number;
 }
+
+export const categoryKeys = {
+  all: ['categories'] as const,
+  list: (section?: string) => [...categoryKeys.all, 'list', section] as const,
+};
 
 /**
  * Fetch published content with filtering and pagination
@@ -58,28 +64,84 @@ export function useContentBySlug(slug: string | undefined) {
 }
 
 /**
- * Derive unique categories from published content with counts
+ * Fetch persistent categories from the API
+ */
+export function usePersistentCategories(section?: string) {
+  return useQuery({
+    queryKey: categoryKeys.list(section),
+    queryFn: () => categoryApi.list(section),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * Derive unique categories from published content with counts,
+ * merged with persistent (admin-created) categories
  */
 export function useCategories(section?: string) {
   // Fetch all published content to derive categories
-  // In a real app, this might be a dedicated endpoint
-  const { data, isLoading } = usePublishedContent({ section, limit: 100 });
+  const { data, isLoading: isLoadingContent } = usePublishedContent({ section, limit: 100 });
+
+  // Fetch persistent categories from the API
+  const { data: persistentCategories, isLoading: isLoadingPersistent } = usePersistentCategories(section);
 
   const items = data?.items;
 
   const { categories, categoryCounts } = useMemo(() => {
-    if (!items) return { categories: [], categoryCounts: {} };
-
     const countMap: Record<string, number> = {};
-    items.forEach((item) => {
-      if (item.category) {
-        countMap[item.category] = (countMap[item.category] || 0) + 1;
-      }
-    });
+
+    // Count categories from content items
+    if (items) {
+      items.forEach((item) => {
+        if (item.category) {
+          countMap[item.category] = (countMap[item.category] || 0) + 1;
+        }
+      });
+    }
+
+    // Merge persistent categories (even if count=0)
+    if (persistentCategories) {
+      persistentCategories.forEach((cat) => {
+        if (!(cat.name in countMap)) {
+          countMap[cat.name] = 0;
+        }
+      });
+    }
 
     const sortedCategories = Object.keys(countMap).sort();
     return { categories: sortedCategories, categoryCounts: countMap };
-  }, [items]);
+  }, [items, persistentCategories]);
 
-  return { categories, categoryCounts, isLoading };
+  return { categories, categoryCounts, isLoading: isLoadingContent || isLoadingPersistent };
+}
+
+/**
+ * Mutation to create a persistent category
+ */
+export function useCreateCategory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreateCategoryInput) => categoryApi.create(input),
+    onSuccess: (_data, variables) => {
+      // Invalidate the category list for this section and all
+      queryClient.invalidateQueries({ queryKey: categoryKeys.list(variables.section) });
+      queryClient.invalidateQueries({ queryKey: categoryKeys.list(undefined) });
+    },
+  });
+}
+
+/**
+ * Mutation to delete a persistent category
+ */
+export function useDeleteCategory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => categoryApi.delete(id),
+    onSuccess: () => {
+      // Invalidate all category lists
+      queryClient.invalidateQueries({ queryKey: categoryKeys.all });
+    },
+  });
 }

@@ -41,7 +41,7 @@ export function useContent(id: string | undefined) {
  */
 export function useContentList(
   branchId: string | undefined,
-  params?: { contentType?: string; category?: string; page?: number; limit?: number }
+  params?: { contentType?: string; section?: string; category?: string; page?: number; limit?: number }
 ) {
   const setBranchContents = useContentStore((s) => s.setBranchContents);
 
