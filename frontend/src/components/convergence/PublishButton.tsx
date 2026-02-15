@@ -11,7 +11,7 @@ interface PublishButtonProps {
 }
 
 export function PublishButton({
-  branchId,
+  branchId: _branchId,
   branchName,
   canPublish,
   isApproved,

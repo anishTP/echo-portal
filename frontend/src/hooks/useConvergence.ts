@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   convergenceService,
-  type ConvergenceResponse,
 } from '../services/convergenceService';
 import { useUIStore } from '../stores/index';
 import { branchKeys } from './useBranch';

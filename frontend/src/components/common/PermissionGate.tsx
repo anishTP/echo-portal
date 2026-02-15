@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import type { RoleType } from '@echo-portal/shared';
 import { useAuth } from '../../context/AuthContext';
 
 interface PermissionGateProps {
@@ -68,7 +69,7 @@ export function PermissionGate({
   // Role-based check
   if (requiredRole) {
     const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
-    const hasRole = roles.some((role) => user.roles?.includes(role));
+    const hasRole = roles.some((role) => user.roles?.includes(role as RoleType));
 
     if (!hasRole) {
       return showFallback && fallback ? <>{fallback}</> : null;
@@ -94,17 +95,17 @@ export function usePermissions() {
   const hasRole = (role: string | string[]): boolean => {
     if (!user) return false;
     const roles = Array.isArray(role) ? role : [role];
-    return roles.some((r) => user.roles?.includes(r));
+    return roles.some((r) => user.roles?.includes(r as RoleType));
   };
 
   const hasAnyRole = (roles: string[]): boolean => {
     if (!user) return false;
-    return roles.some((role) => user.roles?.includes(role));
+    return roles.some((role) => user.roles?.includes(role as RoleType));
   };
 
   const hasAllRoles = (roles: string[]): boolean => {
     if (!user) return false;
-    return roles.every((role) => user.roles?.includes(role));
+    return roles.every((role) => user.roles?.includes(role as RoleType));
   };
 
   const isAdmin = (): boolean => {

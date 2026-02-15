@@ -242,7 +242,6 @@ export function useRemoveReviewer() {
 export function usePublishBranch() {
   const queryClient = useQueryClient();
   const addNotification = useUIStore((s) => s.addNotification);
-  const updateBranchInLists = useBranchStore((s) => s.updateBranchInLists);
 
   return useMutation({
     mutationFn: (id: string) => branchService.publish(id),

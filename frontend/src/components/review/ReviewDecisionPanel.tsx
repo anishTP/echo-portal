@@ -26,9 +26,6 @@ export function ReviewDecisionPanel({
   const [showApprovalForm, setShowApprovalForm] = useState(false);
 
   const isReviewer = review.reviewerId === currentUserId;
-  const canDecide =
-    isReviewer &&
-    (review.status === 'pending' || review.status === 'in_progress');
   const hasDecided = review.status === 'completed';
 
   // If user is not the reviewer or review is not actionable

@@ -43,6 +43,7 @@ export interface ReviewResponse {
   comments: ReviewComment[];
   createdAt: string;
   updatedAt: string;
+  reason?: string;
   completedAt: string | null;
   permissions: {
     canAddComment: boolean;
@@ -68,6 +69,8 @@ export interface ReviewStats {
   approved: number;
   changesRequested: number;
   cancelled: number;
+  approvedCount: number;
+  totalReviewers: number;
 }
 
 export interface PaginatedResponse<T> {

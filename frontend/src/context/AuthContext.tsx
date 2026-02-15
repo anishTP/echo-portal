@@ -49,7 +49,7 @@ const DEV_USER: AuthUser = {
   id: '00000000-0000-0000-0000-000000000001',
   email: 'dev@example.com',
   displayName: 'Dev User',
-  roles: ['contributor', 'reviewer', 'publisher', 'administrator'],
+  roles: ['contributor', 'reviewer', 'administrator'],
   role: 'administrator',
 };
 

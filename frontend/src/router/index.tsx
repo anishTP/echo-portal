@@ -5,7 +5,6 @@ import { AppHeader } from '../components/layout';
 
 // Lazy load pages for code splitting
 const Library = lazy(() => import('../pages/Library'));
-const ContentView = lazy(() => import('../pages/ContentView'));
 const Dashboard = lazy(() => import('../pages/Dashboard'));
 const BranchWorkspace = lazy(() => import('../pages/BranchWorkspace'));
 const PublishConfirm = lazy(() => import('../pages/PublishConfirm'));

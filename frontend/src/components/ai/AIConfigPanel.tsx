@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, Button, Badge, TextField, Text, Callout, Heading, Flex, Switch, Box, Separator, Select } from '@radix-ui/themes';
 import { api } from '../../services/api.js';
-import { aiApi } from '../../services/ai-api.js';
 import {
   AI_DEFAULTS,
   COMPLIANCE_CATEGORIES,

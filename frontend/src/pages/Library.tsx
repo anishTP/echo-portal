@@ -15,7 +15,7 @@ import { ReviewModeHeader } from '../components/library/ReviewModeHeader';
 import { ReviewDiffView } from '../components/library/ReviewDiffView';
 import { BranchCreateDialog } from '../components/editor/BranchCreateDialog';
 import { CreateContentDialog } from '../components/library/CreateContentDialog';
-import { usePublishedContent, useContentBySlug, useCreateCategory, useUpdateCategory, useRenameCategory, useDeleteCategory, usePersistentCategories } from '../hooks/usePublishedContent';
+import { usePublishedContent, useContentBySlug, useCreateCategory, useRenameCategory, useDeleteCategory, usePersistentCategories } from '../hooks/usePublishedContent';
 import { useEditBranch } from '../hooks/useEditBranch';
 import { useBranch } from '../hooks/useBranch';
 import { useContent, useContentList, useCreateContent, useDeleteContent, contentKeys } from '../hooks/useContent';
@@ -84,7 +84,6 @@ export default function Library() {
   const [createError, setCreateError] = useState<string | null>(null);
   const createContent = useCreateContent();
   const createCategoryMutation = useCreateCategory();
-  const updateCategoryMutation = useUpdateCategory();
   const renameCategoryMutation = useRenameCategory();
   const deleteCategoryMutation = useDeleteCategory();
 
@@ -199,11 +198,6 @@ export default function Library() {
     (r) => r.reviewerId === user?.id && (r.status === 'pending' || r.status === 'in_progress')
   ) ?? null;
 
-  // Find any active review on the branch (for author to reply to reviewer comments)
-  const activeReviewOnBranch = branchReviews?.find(
-    (r) => r.status === 'pending' || r.status === 'in_progress'
-  ) ?? null;
-
   // Find the most recent review with feedback (for showing comments to author after changes requested)
   // This allows authors to see the comments from completed reviews
   const reviewWithFeedback = branchReviews?.find(
@@ -211,8 +205,6 @@ export default function Library() {
   ) ?? null;
 
   // Use active review if available, otherwise any active review on branch, otherwise review with feedback
-  const reviewForComments = activeReview ?? activeReviewOnBranch ?? reviewWithFeedback;
-
   // Check if there's feedback to view (for drafts after changes_requested)
   // Only show when branch is in DRAFT state (not after resubmission when it goes to REVIEW)
   const branchInDraftState = activeBranch?.state === 'draft' || currentBranch?.state === 'draft';

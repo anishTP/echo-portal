@@ -1,12 +1,12 @@
+import type { AuthProviderType } from '../constants/states.js';
+
 /**
  * OAuth provider types
  */
 export type OAuthProvider = 'github' | 'google';
 
-/**
- * All authentication provider types (OAuth + email)
- */
-export type AuthProviderType = OAuthProvider | 'email';
+// Re-export for convenience (canonical definition is in constants/states.ts)
+export type { AuthProviderType };
 
 /**
  * Session representation

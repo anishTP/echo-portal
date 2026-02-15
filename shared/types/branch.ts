@@ -17,6 +17,7 @@ export interface Branch {
   createdAt: string;
   updatedAt: string;
   submittedAt?: string;
+  requiredApprovals?: number;
   approvedAt?: string;
   publishedAt?: string;
   archivedAt?: string;

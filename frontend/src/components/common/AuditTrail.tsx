@@ -239,12 +239,12 @@ export const AuditTrail = memo(function AuditTrail({
                   {/* Metadata */}
                   {entry.metadata && Object.keys(entry.metadata).length > 0 && (
                     <div className="mt-1 text-xs text-gray-500">
-                      {entry.metadata.fromState && entry.metadata.toState && (
+                      {!!entry.metadata.fromState && !!entry.metadata.toState && (
                         <span>
                           {String(entry.metadata.fromState)} → {String(entry.metadata.toState)}
                         </span>
                       )}
-                      {entry.metadata.reason && (
+                      {!!entry.metadata.reason && (
                         <span className="ml-2 italic">
                           "{String(entry.metadata.reason)}"
                         </span>

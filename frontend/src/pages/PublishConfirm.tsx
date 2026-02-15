@@ -9,7 +9,6 @@ import {
   useLatestConvergence,
 } from '../hooks/useConvergence';
 import {
-  ConvergenceStatus,
   ConvergenceStatusDetail,
 } from '../components/convergence/ConvergenceStatus';
 import { ConflictDisplay } from '../components/convergence/ConflictDisplay';
