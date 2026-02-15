@@ -64,6 +64,6 @@ describe('AIInlinePreview', () => {
 
   it('displays character count comparison', () => {
     render(<AIInlinePreview {...defaultProps} />);
-    expect(screen.getByText(/Original: 13 → AI: 25 chars/)).toBeInTheDocument();
+    expect(screen.getByText(/13 → 25 chars/)).toBeInTheDocument();
   });
 });

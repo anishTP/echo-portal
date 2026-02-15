@@ -70,6 +70,19 @@ vi.mock('../../src/services/workflow/transitions', () => ({
   },
 }));
 
+// Mock content services used by checkBranchHasContent helper in the route
+vi.mock('../../src/services/content/content-service', () => ({
+  contentService: {
+    listByBranch: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+  },
+}));
+
+vi.mock('../../src/services/content/content-inheritance-service', () => ({
+  contentInheritanceService: {
+    computeBranchDiff: vi.fn().mockResolvedValue({ hasChanges: false, added: [], modified: [], removed: [] }),
+  },
+}));
+
 // Mock branch service so approval-threshold route handler
 // bypasses the branchService.update() draft-only / ownership checks
 vi.mock('../../src/services/branch/branch-service', () => {

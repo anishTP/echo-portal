@@ -49,6 +49,9 @@ vi.mock('../../src/db', () => {
       sessions: {
         findFirst: vi.fn(),
       },
+      reviews: {
+        findFirst: vi.fn().mockResolvedValue(null),
+      },
     },
   };
 
@@ -60,6 +63,28 @@ vi.mock('../../src/db', () => {
     _setCurrentAuthUser: (user: any) => { _currentAuthUser = user; },
   };
 });
+
+// Mock content merge service
+vi.mock('../../src/services/content/content-merge-service', () => ({
+  contentMergeService: {
+    mergeContentIntoMain: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
+// Mock content service
+vi.mock('../../src/services/content/content-service', () => ({
+  contentService: {
+    markPublished: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
+// Mock notification triggers
+vi.mock('../../src/services/notification/notification-triggers', () => ({
+  notifyContentPublished: vi.fn(),
+  notifyCollaboratorAdded: vi.fn(),
+  notifyCollaboratorRemoved: vi.fn(),
+  notifyBranchArchived: vi.fn(),
+}));
 
 // Mock transition service
 // Note: vi.mock is hoisted, so we cannot reference imports like BranchState here.

@@ -35,6 +35,9 @@ vi.mock('../../src/db', () => {
       sessions: {
         findFirst: vi.fn(),
       },
+      reviews: {
+        findFirst: vi.fn().mockResolvedValue(null),
+      },
     },
   };
 
@@ -45,6 +48,19 @@ vi.mock('../../src/db', () => {
     mockSessions,
   };
 });
+
+// Mock content services used by checkBranchHasContent helper in the route
+vi.mock('../../src/services/content/content-service', () => ({
+  contentService: {
+    listByBranch: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+  },
+}));
+
+vi.mock('../../src/services/content/content-inheritance-service', () => ({
+  contentInheritanceService: {
+    computeBranchDiff: vi.fn().mockResolvedValue({ hasChanges: false, added: [], modified: [], removed: [] }),
+  },
+}));
 
 import { db, mockBranches, mockUsers, mockSessions } from '../../src/db';
 import { validateSession } from '../../src/services/auth/session';

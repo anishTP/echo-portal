@@ -76,6 +76,42 @@ vi.mock('../../src/services/workflow/transitions', () => ({
   },
 }));
 
+// Mock content services used by checkBranchHasContent helper in the route
+vi.mock('../../src/services/content/content-service', () => ({
+  contentService: {
+    listByBranch: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+    markPublished: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
+vi.mock('../../src/services/content/content-inheritance-service', () => ({
+  contentInheritanceService: {
+    computeBranchDiff: vi.fn().mockResolvedValue({ hasChanges: false, added: [], modified: [], removed: [] }),
+  },
+}));
+
+// Mock review service used by GET /:id route
+vi.mock('../../src/services/review/review-service', () => ({
+  reviewService: {
+    getByBranch: vi.fn().mockResolvedValue([]),
+  },
+}));
+
+// Mock content merge service used by publish route
+vi.mock('../../src/services/content/content-merge-service', () => ({
+  contentMergeService: {
+    mergeContentIntoMain: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
+// Mock notification triggers
+vi.mock('../../src/services/notification/notification-triggers', () => ({
+  notifyContentPublished: vi.fn(),
+  notifyCollaboratorAdded: vi.fn(),
+  notifyCollaboratorRemoved: vi.fn(),
+  notifyBranchArchived: vi.fn(),
+}));
+
 // Mock branch service to control getById/update/delete/addReviewers behavior
 // Uses real AppError classes so the error handler returns proper status codes.
 vi.mock('../../src/services/branch/branch-service', async () => {
@@ -146,6 +182,7 @@ vi.mock('../../src/services/branch/branch-service', async () => {
       getByReviewer: vi.fn(),
       removeReviewer: vi.fn(),
       updateHeadCommit: vi.fn(),
+      getMainBranch: vi.fn().mockResolvedValue(null),
     },
     _mockBranchServiceState,
   };

@@ -317,7 +317,7 @@ describe('AI Routes — Integration', () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.conversation).toBeNull();
+      expect(json.data.conversation).toBeNull();
     });
 
     it('returns active conversation with requests', async () => {
@@ -345,9 +345,9 @@ describe('AI Routes — Integration', () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.conversation.id).toBe('conv-1');
-      expect(json.conversation.turnCount).toBe(2);
-      expect(json.conversation.requests).toHaveLength(1);
+      expect(json.data.conversation.id).toBe('conv-1');
+      expect(json.data.conversation.turnCount).toBe(2);
+      expect(json.data.conversation.requests).toHaveLength(1);
     });
 
     it('returns 400 when branchId is missing', async () => {

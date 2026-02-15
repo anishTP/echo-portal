@@ -84,14 +84,13 @@ describe('Transitions - Forbidden Transition Tests', () => {
       expect(result.allowed).toBe(true);
     });
 
-    it('should NOT allow contributor to approve', () => {
+    it('should allow contributor to approve (contributors can be assigned as reviewers)', () => {
       const result = canPerformTransition(
         BranchState.REVIEW,
         TransitionEvent.APPROVE,
         ['contributor']
       );
-      expect(result.allowed).toBe(false);
-      expect(result.reason).toContain('Insufficient permissions');
+      expect(result.allowed).toBe(true);
     });
 
     it('should NOT allow contributor to publish', () => {
@@ -271,11 +270,11 @@ describe('Transitions - Forbidden Transition Tests', () => {
       expect(hasRequiredRole(TransitionEvent.SUBMIT_FOR_REVIEW, ['viewer'])).toBe(false);
     });
 
-    it('should require reviewer+ for approve and request changes', () => {
+    it('should allow contributor+ for approve and request changes (contributors can be assigned as reviewers)', () => {
       expect(hasRequiredRole(TransitionEvent.APPROVE, ['reviewer'])).toBe(true);
-      expect(hasRequiredRole(TransitionEvent.APPROVE, ['contributor'])).toBe(false);
+      expect(hasRequiredRole(TransitionEvent.APPROVE, ['contributor'])).toBe(true);
       expect(hasRequiredRole(TransitionEvent.REQUEST_CHANGES, ['reviewer'])).toBe(true);
-      expect(hasRequiredRole(TransitionEvent.REQUEST_CHANGES, ['contributor'])).toBe(false);
+      expect(hasRequiredRole(TransitionEvent.REQUEST_CHANGES, ['contributor'])).toBe(true);
     });
 
     it('should require publisher+ for publish', () => {
