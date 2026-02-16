@@ -321,8 +321,15 @@ describe('LibrarySidebar', () => {
   // ---------- Category Context Menu (Admin) ----------
 
   describe('Category context menu (admin)', () => {
-    it('should render context menus on category headers for admin users', () => {
-      renderSidebar({ isAdmin: true });
+    const adminDraftProps: Partial<LibrarySidebarProps> = {
+      isAdmin: true,
+      branchMode: true,
+      branchState: 'draft',
+      branchName: 'test',
+    };
+
+    it('should render context menus on category headers for admin in draft branch', () => {
+      renderSidebar(adminDraftProps);
       const contextMenus = screen.getAllByTestId('context-menu-root');
       // Categories 'Case Study' and 'Tutorial' should have context menus
       expect(contextMenus.length).toBeGreaterThanOrEqual(2);
@@ -330,7 +337,7 @@ describe('LibrarySidebar', () => {
 
     it('should not render context menus on Uncategorized', () => {
       const items = [{ ...mockItems[0], category: undefined }];
-      renderSidebar({ isAdmin: true, items: items as any });
+      renderSidebar({ ...adminDraftProps, items: items as any });
       // Uncategorized should not have a context menu
       const contextMenuContents = screen.queryAllByTestId('context-menu-content');
       const hasUncategorizedMenu = contextMenuContents.some(
@@ -341,14 +348,20 @@ describe('LibrarySidebar', () => {
     });
 
     it('should not render category context menus for non-admin users', () => {
-      renderSidebar({ isAdmin: false });
+      renderSidebar({ isAdmin: false, branchMode: true, branchState: 'draft', branchName: 'test' });
       // No context menus should exist on categories
       const contextMenuContents = screen.queryAllByRole('menu');
       expect(contextMenuContents.length).toBe(0);
     });
 
-    it('should show Rename and Delete options in category context menu', () => {
+    it('should not render category context menus in published mode', () => {
       renderSidebar({ isAdmin: true });
+      const contextMenuContents = screen.queryAllByRole('menu');
+      expect(contextMenuContents.length).toBe(0);
+    });
+
+    it('should show Rename and Delete options in category context menu', () => {
+      renderSidebar(adminDraftProps);
       const menuItems = screen.getAllByRole('menuitem');
       const menuTexts = menuItems.map((el) => el.textContent);
       expect(menuTexts).toContain('Rename');
@@ -356,7 +369,7 @@ describe('LibrarySidebar', () => {
     });
 
     it('should enter rename mode when Rename is clicked', () => {
-      renderSidebar({ isAdmin: true });
+      renderSidebar(adminDraftProps);
       // Click the Rename button for the first category
       const renameButtons = screen.getAllByRole('menuitem').filter((el) => el.textContent === 'Rename');
       fireEvent.click(renameButtons[0]);
@@ -367,7 +380,7 @@ describe('LibrarySidebar', () => {
 
     it('should call onRenameCategory when rename is submitted via Enter', () => {
       const onRenameCategory = vi.fn();
-      renderSidebar({ isAdmin: true, onRenameCategory });
+      renderSidebar({ ...adminDraftProps, onRenameCategory });
 
       // Enter rename mode
       const renameButtons = screen.getAllByRole('menuitem').filter((el) => el.textContent === 'Rename');
@@ -382,7 +395,7 @@ describe('LibrarySidebar', () => {
 
     it('should cancel rename on Escape', () => {
       const onRenameCategory = vi.fn();
-      renderSidebar({ isAdmin: true, onRenameCategory });
+      renderSidebar({ ...adminDraftProps, onRenameCategory });
 
       const renameButtons = screen.getAllByRole('menuitem').filter((el) => el.textContent === 'Rename');
       fireEvent.click(renameButtons[0]);
@@ -398,7 +411,7 @@ describe('LibrarySidebar', () => {
 
     it('should call onDeleteCategory when Delete is clicked', () => {
       const onDeleteCategory = vi.fn();
-      renderSidebar({ isAdmin: true, onDeleteCategory });
+      renderSidebar({ ...adminDraftProps, onDeleteCategory });
 
       const deleteButtons = screen.getAllByRole('menuitem').filter((el) => el.textContent === 'Delete');
       fireEvent.click(deleteButtons[0]);
@@ -565,13 +578,17 @@ describe('LibrarySidebar', () => {
   // ---------- Category Reorder (Move Up/Down) ----------
 
   describe('Category reorder', () => {
+    const reorderBaseProps: Partial<LibrarySidebarProps> = {
+      isAdmin: true,
+      branchMode: true,
+      branchState: 'draft',
+      branchName: 'test',
+      currentSection: 'brand',
+      onReorderCategory: vi.fn(),
+    };
+
     it('should show Move Up and Move Down options in context menu for admin with 2+ categories', () => {
-      // mockItems have "Case Study" and "Tutorial" categories — no persistent records needed
-      renderSidebar({
-        isAdmin: true,
-        currentSection: 'brand',
-        onReorderCategory: vi.fn(),
-      });
+      renderSidebar(reorderBaseProps);
       const menuItems = screen.getAllByRole('menuitem');
       const menuTexts = menuItems.map((el) => el.textContent);
       expect(menuTexts).toContain('Move Up');
@@ -580,12 +597,7 @@ describe('LibrarySidebar', () => {
 
     it('should not show Move Up/Down when there is only one category', () => {
       const singleCategoryItems = [mockItems[0]]; // Only "Case Study"
-      renderSidebar({
-        isAdmin: true,
-        currentSection: 'brand',
-        items: singleCategoryItems,
-        onReorderCategory: vi.fn(),
-      });
+      renderSidebar({ ...reorderBaseProps, items: singleCategoryItems });
       const menuItems = screen.getAllByRole('menuitem');
       const menuTexts = menuItems.map((el) => el.textContent);
       expect(menuTexts).not.toContain('Move Up');
@@ -594,13 +606,8 @@ describe('LibrarySidebar', () => {
 
     it('should call onReorderCategory with swapped names when Move Down is clicked', () => {
       const onReorderCategory = vi.fn();
-      renderSidebar({
-        isAdmin: true,
-        currentSection: 'brand',
-        onReorderCategory,
-      });
+      renderSidebar({ ...reorderBaseProps, onReorderCategory });
 
-      // Find the "Move Down" button for the first category ("Case Study")
       const moveDownButtons = screen.getAllByRole('menuitem').filter((el) => el.textContent === 'Move Down');
       fireEvent.click(moveDownButtons[0]);
 
@@ -609,13 +616,8 @@ describe('LibrarySidebar', () => {
 
     it('should call onReorderCategory with swapped names when Move Up is clicked on second category', () => {
       const onReorderCategory = vi.fn();
-      renderSidebar({
-        isAdmin: true,
-        currentSection: 'brand',
-        onReorderCategory,
-      });
+      renderSidebar({ ...reorderBaseProps, onReorderCategory });
 
-      // Find the "Move Up" button for the second category ("Tutorial")
       const moveUpButtons = screen.getAllByRole('menuitem').filter((el) => el.textContent === 'Move Up');
       // moveUpButtons[0] is Case Study's (disabled, first), moveUpButtons[1] is Tutorial's
       fireEvent.click(moveUpButtons[1]);

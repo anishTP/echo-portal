@@ -530,8 +530,8 @@ export function LibrarySidebar({
             </NavSection>
           );
 
-          // Wrap category section in context menu if admin
-          if (isAdmin && category !== 'Uncategorized' && !isRenamingThisCategory) {
+          // Wrap category section in context menu if admin in draft branch
+          if (isAdmin && category !== 'Uncategorized' && !isRenamingThisCategory && branchMode && branchState === 'draft') {
             // Compute reorder position among all non-Uncategorized categories
             const allCategoryNames = groupedItems
               .map(([name]) => name)
