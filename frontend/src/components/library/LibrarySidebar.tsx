@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { MagnifyingGlassIcon, Pencil1Icon, PlusIcon } from '@radix-ui/react-icons';
 import { ContextMenu } from '@radix-ui/themes';
 import type { ContentSummary, BranchStateType, ContentComparisonStats } from '@echo-portal/shared';
+import type { CategoryDTO } from '../../services/category-api';
 import { NavSection } from './NavSection';
 import { LifecycleStatus } from '../branch/LifecycleStatus';
 import { SubmitForReviewButton } from '../branch/SubmitForReviewButton';
@@ -68,12 +69,14 @@ export interface LibrarySidebarProps {
   onAddCategory?: (name: string) => void;
   /** Callback when admin tries to add category but is not in a draft branch */
   onAddCategoryNeedsBranch?: () => void;
-  /** Persistent category names to show even when they have no content */
-  persistentCategories?: string[];
+  /** Persistent categories (full DTOs with id, name, displayOrder) */
+  persistentCategories?: CategoryDTO[];
   /** Callback when admin renames a category */
   onRenameCategory?: (oldName: string, newName: string) => void;
   /** Callback when admin deletes a category */
   onDeleteCategory?: (name: string) => void;
+  /** Callback when admin reorders categories within a section (passes ordered category names) */
+  onReorderCategory?: (section: string, orderedNames: string[]) => void;
   /** Callback when user renames a content item */
   onRenameContent?: (contentId: string, newTitle: string) => void;
   /** Callback when user deletes a content item */
@@ -139,6 +142,7 @@ export function LibrarySidebar({
   persistentCategories = [],
   onRenameCategory,
   onDeleteCategory,
+  onReorderCategory,
   onRenameContent,
   onDeleteContent,
   canManageContent = false,
@@ -167,14 +171,21 @@ export function LibrarySidebar({
   // Show add content button in draft branches
   const canAddContent = branchMode && branchState === 'draft' && !!onAddContent;
 
+  // Build a lookup from persistent category name to its DTO (for displayOrder and id)
+  const persistentCategoryMap = useMemo(() => {
+    const map = new Map<string, CategoryDTO>();
+    persistentCategories.forEach((cat) => map.set(cat.name, cat));
+    return map;
+  }, [persistentCategories]);
+
   // Group items by category, including persistent (empty) categories
   const groupedItems = useMemo(() => {
     const groups: Record<string, ContentSummary[]> = {};
 
     // Seed with persistent categories so they appear even when empty
-    persistentCategories.forEach((name) => {
-      if (!groups[name]) {
-        groups[name] = [];
+    persistentCategories.forEach((cat) => {
+      if (!groups[cat.name]) {
+        groups[cat.name] = [];
       }
     });
 
@@ -186,9 +197,16 @@ export function LibrarySidebar({
       groups[category].push(item);
     });
 
-    // Sort categories alphabetically
-    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
-  }, [items, persistentCategories]);
+    // Sort: persistent categories by displayOrder first, then non-persistent alphabetically
+    return Object.entries(groups).sort(([a], [b]) => {
+      const catA = persistentCategoryMap.get(a);
+      const catB = persistentCategoryMap.get(b);
+      if (catA && catB) return catA.displayOrder - catB.displayOrder;
+      if (catA) return -1; // persistent before non-persistent
+      if (catB) return 1;
+      return a.localeCompare(b); // both non-persistent: alphabetical
+    });
+  }, [items, persistentCategories, persistentCategoryMap]);
 
   const handleSearchInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -514,6 +532,15 @@ export function LibrarySidebar({
 
           // Wrap category section in context menu if admin
           if (isAdmin && category !== 'Uncategorized' && !isRenamingThisCategory) {
+            // Compute reorder position among all non-Uncategorized categories
+            const allCategoryNames = groupedItems
+              .map(([name]) => name)
+              .filter((name) => name !== 'Uncategorized');
+            const posInAll = allCategoryNames.indexOf(category);
+            const isFirst = posInAll === 0;
+            const isLast = posInAll === allCategoryNames.length - 1;
+            const canReorder = !!onReorderCategory && !!currentSection && allCategoryNames.length > 1;
+
             return (
               <ContextMenu.Root key={category}>
                 <ContextMenu.Trigger>
@@ -528,6 +555,35 @@ export function LibrarySidebar({
                   >
                     Rename
                   </ContextMenu.Item>
+                  {canReorder && (
+                    <>
+                      <ContextMenu.Separator />
+                      <ContextMenu.Item
+                        disabled={isFirst}
+                        onSelect={() => {
+                          if (isFirst) return;
+                          const names = [...allCategoryNames];
+                          // Swap with previous
+                          [names[posInAll - 1], names[posInAll]] = [names[posInAll], names[posInAll - 1]];
+                          onReorderCategory!(currentSection!, names);
+                        }}
+                      >
+                        Move Up
+                      </ContextMenu.Item>
+                      <ContextMenu.Item
+                        disabled={isLast}
+                        onSelect={() => {
+                          if (isLast) return;
+                          const names = [...allCategoryNames];
+                          // Swap with next
+                          [names[posInAll], names[posInAll + 1]] = [names[posInAll + 1], names[posInAll]];
+                          onReorderCategory!(currentSection!, names);
+                        }}
+                      >
+                        Move Down
+                      </ContextMenu.Item>
+                    </>
+                  )}
                   <ContextMenu.Separator />
                   <ContextMenu.Item
                     color="red"

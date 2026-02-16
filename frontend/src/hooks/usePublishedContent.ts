@@ -164,6 +164,21 @@ export function useRenameCategory() {
 }
 
 /**
+ * Mutation to reorder categories within a section
+ */
+export function useReorderCategories() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ section, order }: { section: string; order: string[] }) =>
+      categoryApi.reorder(section, order),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: categoryKeys.all });
+    },
+  });
+}
+
+/**
  * Mutation to delete a persistent category
  */
 export function useDeleteCategory() {

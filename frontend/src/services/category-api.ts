@@ -34,6 +34,10 @@ export const categoryApi = {
     return api.post<{ section: string; oldName: string; newName: string }>('/categories/rename', input);
   },
 
+  reorder(section: string, order: string[]): Promise<void> {
+    return api.put<void>('/categories/reorder', { section, order });
+  },
+
   delete(id: string): Promise<void> {
     return api.delete<void>(`/categories/${id}`);
   },

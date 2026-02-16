@@ -15,7 +15,7 @@ import { ReviewModeHeader } from '../components/library/ReviewModeHeader';
 import { ReviewDiffView } from '../components/library/ReviewDiffView';
 import { BranchCreateDialog } from '../components/editor/BranchCreateDialog';
 import { CreateContentDialog } from '../components/library/CreateContentDialog';
-import { usePublishedContent, useContentBySlug, useCreateCategory, useRenameCategory, useDeleteCategory, usePersistentCategories } from '../hooks/usePublishedContent';
+import { usePublishedContent, useContentBySlug, useCreateCategory, useRenameCategory, useDeleteCategory, useReorderCategories, usePersistentCategories } from '../hooks/usePublishedContent';
 import { useEditBranch } from '../hooks/useEditBranch';
 import { useBranch } from '../hooks/useBranch';
 import { useContent, useContentList, useCreateContent, useDeleteContent, contentKeys } from '../hooks/useContent';
@@ -86,6 +86,7 @@ export default function Library() {
   const createCategoryMutation = useCreateCategory();
   const renameCategoryMutation = useRenameCategory();
   const deleteCategoryMutation = useDeleteCategory();
+  const reorderCategoriesMutation = useReorderCategories();
 
   // Delete confirmation dialog state
   const [deleteCategoryTarget, setDeleteCategoryTarget] = useState<string | null>(null);
@@ -126,8 +127,8 @@ export default function Library() {
 
   // Fetch persistent categories for the current section (for sidebar display)
   const { data: persistentCategoryData } = usePersistentCategories(sectionFilter);
-  const persistentCategoryNames = useMemo(
-    () => (persistentCategoryData ?? []).map((c) => c.name),
+  const persistentCategoryList = useMemo(
+    () => persistentCategoryData ?? [],
     [persistentCategoryData]
   );
 
@@ -453,15 +454,23 @@ export default function Library() {
     setDeleteCategoryTarget(name);
   }, []);
 
+  // Handle category reorder from sidebar context menu
+  const handleReorderCategory = useCallback(
+    (section: string, orderedNames: string[]) => {
+      reorderCategoriesMutation.mutate({ section, order: orderedNames });
+    },
+    [reorderCategoriesMutation]
+  );
+
   // Confirm category deletion
   const confirmDeleteCategory = useCallback(() => {
-    if (!deleteCategoryTarget || !persistentCategoryData) return;
-    const cat = persistentCategoryData.find((c) => c.name === deleteCategoryTarget);
+    if (!deleteCategoryTarget || !persistentCategoryList.length) return;
+    const cat = persistentCategoryList.find((c) => c.name === deleteCategoryTarget);
     if (cat) {
       deleteCategoryMutation.mutate(cat.id);
     }
     setDeleteCategoryTarget(null);
-  }, [deleteCategoryTarget, persistentCategoryData, deleteCategoryMutation]);
+  }, [deleteCategoryTarget, persistentCategoryList, deleteCategoryMutation]);
 
   // Handle content rename from sidebar context menu
   const handleRenameContent = useCallback(
@@ -917,9 +926,10 @@ export default function Library() {
           currentSection={sectionFilter}
           onAddCategory={handleAddCategory}
           onAddCategoryNeedsBranch={handleAddCategoryNeedsBranch}
-          persistentCategories={persistentCategoryNames}
+          persistentCategories={persistentCategoryList}
           onRenameCategory={handleRenameCategory}
           onDeleteCategory={handleDeleteCategory}
+          onReorderCategory={handleReorderCategory}
           onRenameContent={handleRenameContent}
           onDeleteContent={handleDeleteContentFromSidebar}
           canManageContent={hasRole('administrator') || hasRole('contributor')}

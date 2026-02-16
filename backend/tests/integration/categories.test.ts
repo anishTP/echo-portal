@@ -108,6 +108,14 @@ function selectChainOrdered(result: any[]) {
   };
 }
 
+function selectChainWhere(result: any[]) {
+  return {
+    from: vi.fn().mockReturnValue({
+      where: vi.fn().mockResolvedValue(result),
+    }),
+  };
+}
+
 function setupAdminAuth() {
   (validateSession as any).mockResolvedValue({
     userId: UUID_ADMIN,
@@ -666,6 +674,152 @@ describe('Category API Integration Tests', () => {
           section: 'invalid',
           oldName: 'Old',
           newName: 'New',
+        }),
+      });
+
+      expect(res.status).toBe(400);
+    });
+  });
+
+  // ---------- PUT /api/v1/categories/reorder ----------
+
+  describe('PUT /api/v1/categories/reorder', () => {
+    it('should reorder existing persistent categories by name', async () => {
+      setupAdminAuth();
+      // Fetch section categories
+      (db.select as any).mockReturnValueOnce(selectChainWhere([mockCategory1, mockCategory2]));
+      // Transaction
+      const mockTx = {
+        update: vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue(undefined),
+          }),
+        }),
+        insert: vi.fn().mockReturnValue({
+          values: vi.fn().mockResolvedValue(undefined),
+        }),
+      };
+      (db.transaction as any).mockImplementation(async (cb: any) => cb(mockTx));
+
+      const res = await app.request('/api/v1/categories/reorder', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: 'echo_session=valid-token',
+        },
+        body: JSON.stringify({
+          section: 'brand',
+          order: ['Tutorial', 'Case Study'],
+        }),
+      });
+
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.data.section).toBe('brand');
+      expect(body.data.order).toEqual(['Tutorial', 'Case Study']);
+      // Should update displayOrder for each existing category
+      expect(mockTx.update).toHaveBeenCalledTimes(2);
+      expect(mockTx.insert).not.toHaveBeenCalled();
+    });
+
+    it('should auto-create persistent records for content-derived categories', async () => {
+      setupAdminAuth();
+      // Fetch section categories — only mockCategory1 exists as persistent
+      (db.select as any).mockReturnValueOnce(selectChainWhere([mockCategory1]));
+      // Transaction
+      const mockTx = {
+        update: vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue(undefined),
+          }),
+        }),
+        insert: vi.fn().mockReturnValue({
+          values: vi.fn().mockResolvedValue(undefined),
+        }),
+      };
+      (db.transaction as any).mockImplementation(async (cb: any) => cb(mockTx));
+
+      const res = await app.request('/api/v1/categories/reorder', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: 'echo_session=valid-token',
+        },
+        body: JSON.stringify({
+          section: 'brand',
+          order: ['New Category', 'Case Study'],
+        }),
+      });
+
+      expect(res.status).toBe(200);
+      // "Case Study" is persistent → update, "New Category" is not → insert
+      expect(mockTx.update).toHaveBeenCalledTimes(1);
+      expect(mockTx.insert).toHaveBeenCalledTimes(1);
+    });
+
+    it('should require authentication', async () => {
+      setupUnauthenticated();
+
+      const res = await app.request('/api/v1/categories/reorder', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          section: 'brand',
+          order: ['Case Study'],
+        }),
+      });
+
+      expect(res.status).toBe(401);
+    });
+
+    it('should require admin role', async () => {
+      setupContributorAuth();
+
+      const res = await app.request('/api/v1/categories/reorder', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: 'echo_session=valid-token',
+        },
+        body: JSON.stringify({
+          section: 'brand',
+          order: ['Case Study'],
+        }),
+      });
+
+      expect(res.status).toBe(403);
+    });
+
+    it('should reject invalid section', async () => {
+      setupAdminAuth();
+
+      const res = await app.request('/api/v1/categories/reorder', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: 'echo_session=valid-token',
+        },
+        body: JSON.stringify({
+          section: 'invalid',
+          order: ['Case Study'],
+        }),
+      });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should reject empty order array', async () => {
+      setupAdminAuth();
+
+      const res = await app.request('/api/v1/categories/reorder', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: 'echo_session=valid-token',
+        },
+        body: JSON.stringify({
+          section: 'brand',
+          order: [],
         }),
       });
 

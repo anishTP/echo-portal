@@ -81,6 +81,62 @@ categoryRoutes.post(
   }
 );
 
+// PUT /categories/reorder — Reorder categories within a section (admin only)
+// Accepts category names (not IDs) so both persistent and content-derived categories can be reordered.
+// Auto-creates persistent records for content-derived categories that don't have one yet.
+categoryRoutes.put(
+  '/reorder',
+  requireAuth,
+  requireRoles('administrator'),
+  zValidator(
+    'json',
+    z.object({
+      section: contentSectionSchema,
+      order: z.array(z.string().min(1).max(200)).min(1),
+    })
+  ),
+  async (c) => {
+    const user = c.get('user')!;
+    const { section, order } = c.req.valid('json');
+
+    // Fetch existing persistent categories in this section
+    const sectionCategories = await db
+      .select()
+      .from(categories)
+      .where(eq(categories.section, section));
+
+    const existingByName = new Map(sectionCategories.map((cat) => [cat.name, cat]));
+
+    // Update or create persistent records for each category in order
+    await db.transaction(async (tx) => {
+      for (let i = 0; i < order.length; i++) {
+        const name = order[i];
+        const existing = existingByName.get(name);
+
+        if (existing) {
+          // Update displayOrder on existing persistent record
+          await tx
+            .update(categories)
+            .set({ displayOrder: i })
+            .where(eq(categories.id, existing.id));
+        } else {
+          // Auto-create persistent record for content-derived category
+          await tx
+            .insert(categories)
+            .values({
+              name,
+              section,
+              displayOrder: i,
+              createdBy: user.id,
+            });
+        }
+      }
+    });
+
+    return success(c, { section, order });
+  }
+);
+
 // PATCH /categories/:id — Rename a category (admin only)
 categoryRoutes.patch(
   '/:id',

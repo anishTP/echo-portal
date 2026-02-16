@@ -65,6 +65,7 @@ vi.mock('../../../src/components/branch/SubmitForReviewButton', () => ({
 }));
 
 import { LibrarySidebar, type LibrarySidebarProps } from '../../../src/components/library/LibrarySidebar';
+import type { CategoryDTO } from '../../../src/services/category-api';
 
 beforeAll(() => {
   Element.prototype.scrollIntoView = vi.fn();
@@ -118,6 +119,18 @@ const mockItems = [
     createdBy: 'user-1',
   },
 ];
+
+function makeCategoryDTO(name: string, displayOrder: number, id?: string): CategoryDTO {
+  return {
+    id: id || `00000000-0000-4000-a000-${String(displayOrder).padStart(12, '0')}`,
+    name,
+    section: 'brand',
+    displayOrder,
+    createdBy: 'user-1',
+    createdAt: '2026-01-01',
+    updatedAt: '2026-01-01',
+  };
+}
 
 function renderSidebar(overrides: Partial<LibrarySidebarProps> = {}) {
   const defaultProps: LibrarySidebarProps = {
@@ -173,21 +186,36 @@ describe('LibrarySidebar', () => {
     });
 
     it('should show persistent categories even when they have no content', () => {
-      renderSidebar({ persistentCategories: ['Empty Category'] });
+      renderSidebar({ persistentCategories: [makeCategoryDTO('Empty Category', 0)] });
       expect(screen.getByText('Empty Category')).toBeInTheDocument();
     });
 
-    it('should sort categories alphabetically', () => {
-      renderSidebar({ persistentCategories: ['Zebra', 'Alpha'] });
+    it('should sort persistent categories by displayOrder, not alphabetically', () => {
+      renderSidebar({
+        persistentCategories: [
+          makeCategoryDTO('Zebra', 0),
+          makeCategoryDTO('Alpha', 1),
+        ],
+      });
       const allText = screen.getByRole('navigation').textContent || '';
+      const zebraIndex = allText.indexOf('Zebra');
       const alphaIndex = allText.indexOf('Alpha');
+      // Zebra has displayOrder=0, Alpha has displayOrder=1 — Zebra should come first
+      expect(zebraIndex).toBeLessThan(alphaIndex);
+    });
+
+    it('should sort persistent categories before non-persistent ones', () => {
+      // mockItems have "Case Study" and "Tutorial" as content-derived categories
+      // "Zeta" is persistent but should appear before non-persistent categories
+      renderSidebar({
+        persistentCategories: [makeCategoryDTO('Zeta', 0)],
+      });
+      const allText = screen.getByRole('navigation').textContent || '';
+      const zetaIndex = allText.indexOf('Zeta');
       const caseStudyIndex = allText.indexOf('Case Study');
       const tutorialIndex = allText.indexOf('Tutorial');
-      const zebraIndex = allText.indexOf('Zebra');
-
-      expect(alphaIndex).toBeLessThan(caseStudyIndex);
-      expect(caseStudyIndex).toBeLessThan(tutorialIndex);
-      expect(tutorialIndex).toBeLessThan(zebraIndex);
+      expect(zetaIndex).toBeLessThan(caseStudyIndex);
+      expect(zetaIndex).toBeLessThan(tutorialIndex);
     });
   });
 
@@ -531,6 +559,68 @@ describe('LibrarySidebar', () => {
       const btn = screen.getByText('Add Category');
       fireEvent.click(btn);
       expect(onAddCategoryNeedsBranch).toHaveBeenCalled();
+    });
+  });
+
+  // ---------- Category Reorder (Move Up/Down) ----------
+
+  describe('Category reorder', () => {
+    it('should show Move Up and Move Down options in context menu for admin with 2+ categories', () => {
+      // mockItems have "Case Study" and "Tutorial" categories — no persistent records needed
+      renderSidebar({
+        isAdmin: true,
+        currentSection: 'brand',
+        onReorderCategory: vi.fn(),
+      });
+      const menuItems = screen.getAllByRole('menuitem');
+      const menuTexts = menuItems.map((el) => el.textContent);
+      expect(menuTexts).toContain('Move Up');
+      expect(menuTexts).toContain('Move Down');
+    });
+
+    it('should not show Move Up/Down when there is only one category', () => {
+      const singleCategoryItems = [mockItems[0]]; // Only "Case Study"
+      renderSidebar({
+        isAdmin: true,
+        currentSection: 'brand',
+        items: singleCategoryItems,
+        onReorderCategory: vi.fn(),
+      });
+      const menuItems = screen.getAllByRole('menuitem');
+      const menuTexts = menuItems.map((el) => el.textContent);
+      expect(menuTexts).not.toContain('Move Up');
+      expect(menuTexts).not.toContain('Move Down');
+    });
+
+    it('should call onReorderCategory with swapped names when Move Down is clicked', () => {
+      const onReorderCategory = vi.fn();
+      renderSidebar({
+        isAdmin: true,
+        currentSection: 'brand',
+        onReorderCategory,
+      });
+
+      // Find the "Move Down" button for the first category ("Case Study")
+      const moveDownButtons = screen.getAllByRole('menuitem').filter((el) => el.textContent === 'Move Down');
+      fireEvent.click(moveDownButtons[0]);
+
+      expect(onReorderCategory).toHaveBeenCalledWith('brand', ['Tutorial', 'Case Study']);
+    });
+
+    it('should call onReorderCategory with swapped names when Move Up is clicked on second category', () => {
+      const onReorderCategory = vi.fn();
+      renderSidebar({
+        isAdmin: true,
+        currentSection: 'brand',
+        onReorderCategory,
+      });
+
+      // Find the "Move Up" button for the second category ("Tutorial")
+      const moveUpButtons = screen.getAllByRole('menuitem').filter((el) => el.textContent === 'Move Up');
+      // moveUpButtons[0] is Case Study's (disabled, first), moveUpButtons[1] is Tutorial's
+      fireEvent.click(moveUpButtons[1]);
+
+      expect(onReorderCategory).toHaveBeenCalledWith('brand', ['Tutorial', 'Case Study']);
     });
   });
 
