@@ -1,0 +1,18 @@
+.footer {
+  background: var(--gray-2);
+  padding: var(--space-7) var(--space-6);
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.footerLink {
+  color: var(--gray-11);
+  text-decoration: none;
+}
+
+.footerLink:hover {
+  color: var(--gray-12);
+  text-decoration: underline;
+}
