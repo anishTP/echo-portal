@@ -196,12 +196,19 @@ async function migrateOrphanedContent(sql, mainBranchId) {
 
     // Copy the version if available
     if (content.body) {
+      const metadataSnapshot = JSON.stringify({
+        title: content.title || '',
+        ...(content.category ? { category: content.category } : {}),
+        tags: content.tags || [],
+      });
+
       const [newVersion] = await sql`
-        INSERT INTO content_versions (content_id, body, body_format, change_description, author_id, author_type, byte_size, checksum)
+        INSERT INTO content_versions (content_id, body, body_format, metadata_snapshot, change_description, author_id, author_type, byte_size, checksum)
         VALUES (
           ${newContent.id},
           ${content.body},
           ${content.body_format || 'markdown'},
+          ${metadataSnapshot}::jsonb,
           'Migrated from published branch',
           ${content.created_by},
           'user',
