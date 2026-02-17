@@ -141,10 +141,11 @@ async function ensureMainBranch(sql) {
       )
     `;
     console.log('[seed] Main branch created');
-
-    // Migrate any orphaned published content to the new main branch
-    await migrateOrphanedContent(sql, MAIN_BRANCH_ID);
   }
+
+  // Always run orphaned content migration (idempotent — skips existing slugs)
+  const mainBranchId = existingBranch?.id || MAIN_BRANCH_ID;
+  await migrateOrphanedContent(sql, mainBranchId);
 }
 
 /**
@@ -169,9 +170,40 @@ async function migrateOrphanedContent(sql, mainBranchId) {
   for (const content of orphaned) {
     // Check if already exists in main by slug
     const [existing] = await sql`
-      SELECT id FROM contents WHERE branch_id = ${mainBranchId} AND slug = ${content.slug}
+      SELECT id, current_version_id FROM contents WHERE branch_id = ${mainBranchId} AND slug = ${content.slug}
     `;
-    if (existing) continue;
+    if (existing && existing.current_version_id) continue;
+
+    // If it exists but has no version (partial from failed migration), fix it
+    if (existing && !existing.current_version_id && content.body) {
+      const metadataSnapshot = JSON.stringify({
+        title: content.title || '',
+        ...(content.category ? { category: content.category } : {}),
+        tags: content.tags || [],
+      });
+      const [newVersion] = await sql`
+        INSERT INTO content_versions (content_id, body, body_format, metadata_snapshot, change_description, author_id, author_type, byte_size, checksum)
+        VALUES (
+          ${existing.id},
+          ${content.body},
+          ${content.body_format || 'markdown'},
+          ${metadataSnapshot}::jsonb,
+          'Migrated from published branch',
+          ${content.created_by},
+          'user',
+          ${content.byte_size || 0},
+          ${content.checksum || ''}
+        )
+        RETURNING id
+      `;
+      await sql`
+        UPDATE contents
+        SET current_version_id = ${newVersion.id}, published_version_id = ${newVersion.id}
+        WHERE id = ${existing.id}
+      `;
+      console.log(`[seed]   Fixed partial: ${content.slug} (${content.title})`);
+      continue;
+    }
 
     // Create content in main branch
     const [newContent] = await sql`
