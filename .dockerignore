@@ -1,0 +1,17 @@
+node_modules
+*/node_modules
+*/dist
+.git
+.beads
+.claude
+.env
+.env.*
+!.env.example
+*.log
+*.md
+!pnpm-workspace.yaml
+backend/tests
+frontend/tests
+frontend/e2e
+.vscode
+.idea

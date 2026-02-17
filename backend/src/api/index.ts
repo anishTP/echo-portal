@@ -124,4 +124,16 @@ api.route('/categories', categoryRoutes);
 
 app.route('/api/v1', api);
 
+// --- Static file serving for production (frontend SPA) ---
+if (process.env.NODE_ENV === 'production') {
+  const { serveStatic } = await import('@hono/node-server/serve-static');
+  const frontendDir = process.env.FRONTEND_DIR || '../frontend/dist';
+
+  // Serve static assets (JS, CSS, images, etc.)
+  app.use('/*', serveStatic({ root: frontendDir }));
+
+  // SPA fallback: serve index.html for any non-API, non-file route
+  app.get('*', serveStatic({ root: frontendDir, path: 'index.html' }));
+}
+
 export default app;
