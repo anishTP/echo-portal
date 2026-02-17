@@ -8,3 +8,4 @@ export { NotificationTableRow } from './NotificationTableRow';
 export { NotificationTable } from './NotificationTable';
 export { NotificationsPanel } from './NotificationsPanel';
 export { AccountSettingsPanel } from './AccountSettingsPanel';
+export { AdminPanel } from './AdminPanel';

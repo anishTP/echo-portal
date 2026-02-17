@@ -5,8 +5,9 @@ import { ProfileSidebar } from '../components/profile/ProfileSidebar';
 import { DashboardPanel } from '../components/profile/DashboardPanel';
 import { NotificationsPanel } from '../components/profile/NotificationsPanel';
 import { AccountSettingsPanel } from '../components/profile/AccountSettingsPanel';
+import { AdminPanel } from '../components/profile/AdminPanel';
 
-type ProfileTab = 'dashboard' | 'notifications' | 'settings';
+type ProfileTab = 'dashboard' | 'notifications' | 'settings' | 'admin';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -26,6 +27,7 @@ export default function ProfilePage() {
         {tab === 'dashboard' && <DashboardPanel />}
         {tab === 'notifications' && <NotificationsPanel />}
         {tab === 'settings' && <AccountSettingsPanel />}
+        {tab === 'admin' && <AdminPanel />}
       </div>
     </Flex>
   );

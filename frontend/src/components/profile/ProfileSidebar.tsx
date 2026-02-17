@@ -1,18 +1,35 @@
+import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Flex, Text } from '@radix-ui/themes';
-import { GearIcon, BellIcon, DashboardIcon } from '@radix-ui/react-icons';
+import { GearIcon, BellIcon, DashboardIcon, LockClosedIcon } from '@radix-ui/react-icons';
+import { useAuth } from '../../context/AuthContext';
 
-type ProfileTab = 'dashboard' | 'notifications' | 'settings';
+type ProfileTab = 'dashboard' | 'notifications' | 'settings' | 'admin';
 
-const navItems: { tab: ProfileTab; label: string; icon: typeof GearIcon }[] = [
+interface NavItem {
+  tab: ProfileTab;
+  label: string;
+  icon: typeof GearIcon;
+  adminOnly?: boolean;
+}
+
+const navItems: NavItem[] = [
   { tab: 'settings', label: 'Profile', icon: GearIcon },
   { tab: 'notifications', label: 'Notifications', icon: BellIcon },
   { tab: 'dashboard', label: 'Dashboard', icon: DashboardIcon },
+  { tab: 'admin', label: 'Admin', icon: LockClosedIcon, adminOnly: true },
 ];
 
 export function ProfileSidebar() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { hasRole } = useAuth();
   const activeTab = (searchParams.get('tab') as ProfileTab) || 'dashboard';
+  const isAdmin = hasRole?.('administrator') ?? false;
+
+  const visibleItems = useMemo(
+    () => navItems.filter((item) => !item.adminOnly || isAdmin),
+    [isAdmin]
+  );
 
   const handleTabClick = (tab: ProfileTab) => {
     setSearchParams({ tab });
@@ -31,7 +48,7 @@ export function ProfileSidebar() {
         borderRight: '1px solid var(--gray-5)',
       }}
     >
-      {navItems.map(({ tab, label, icon: Icon }) => {
+      {visibleItems.map(({ tab, label, icon: Icon }) => {
         const isActive = activeTab === tab;
         return (
           <button

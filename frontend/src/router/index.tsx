@@ -11,7 +11,6 @@ const BranchWorkspace = lazy(() => import('../pages/BranchWorkspace'));
 const PublishConfirm = lazy(() => import('../pages/PublishConfirm'));
 const AuthCallback = lazy(() => import('../pages/AuthCallback'));
 const AuditLog = lazy(() => import('../pages/AuditLog'));
-const AdminSettings = lazy(() => import('../pages/AdminSettings'));
 const LoginPage = lazy(() => import('../pages/LoginPage'));
 const SignupPage = lazy(() => import('../pages/SignupPage'));
 const VerifyEmailPage = lazy(() => import('../pages/VerifyEmailPage'));
@@ -131,10 +130,10 @@ const router = createBrowserRouter([
         path: 'audit',
         element: <AuditLog />,
       },
-      // Admin settings — unified user management + AI admin
+      // Redirect old admin route to unified profile
       {
         path: 'admin',
-        element: <AdminSettings />,
+        element: <Navigate to="/profile?tab=admin" replace />,
       },
     ],
   },

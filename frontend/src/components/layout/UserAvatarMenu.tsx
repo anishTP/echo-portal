@@ -66,7 +66,7 @@ export function UserAvatarMenu() {
         </DropdownMenu.Item>
 
         {isAdmin && (
-          <DropdownMenu.Item onClick={() => navigate('/admin')}>
+          <DropdownMenu.Item onClick={() => navigate('/profile?tab=admin')}>
             Admin
           </DropdownMenu.Item>
         )}
