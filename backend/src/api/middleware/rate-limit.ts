@@ -1,6 +1,6 @@
 import type { Context, Next } from 'hono';
-import { db } from '../../db';
-import { loginAttempts, users } from '../../db/schema';
+import { db } from '../../db/index.js';
+import { loginAttempts, users } from '../../db/schema/index.js';
 import { eq, and, gte } from 'drizzle-orm';
 
 /**

@@ -1,7 +1,7 @@
 import { createMiddleware } from 'hono/factory';
 import type { Context, Next } from 'hono';
 import type { RoleType } from '@echo-portal/shared';
-import { validateSession } from '../../services/auth/session';
+import { validateSession } from '../../services/auth/session.js';
 import { getCookie } from 'hono/cookie';
 import { PermissionDenials } from '../utils/errors.js';
 import { db } from '../../db/index.js';

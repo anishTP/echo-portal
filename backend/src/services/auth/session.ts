@@ -1,6 +1,6 @@
 import { eq, and, lt, gt, desc } from 'drizzle-orm';
-import { db } from '../../db';
-import { sessions, users } from '../../db/schema';
+import { db } from '../../db/index.js';
+import { sessions, users } from '../../db/schema/index.js';
 import type { Session as SharedSession, RoleType } from '@echo-portal/shared';
 import { randomBytes } from 'crypto';
 

@@ -1,6 +1,6 @@
-import { getGitHubAuthorizationURL, validateGitHubCallback } from './providers/github';
-import { getGoogleAuthorizationURL, validateGoogleCallback } from './providers/google';
-import type { OAuthUserInfo } from './config';
+import { getGitHubAuthorizationURL, validateGitHubCallback } from './providers/github.js';
+import { getGoogleAuthorizationURL, validateGoogleCallback } from './providers/google.js';
+import type { OAuthUserInfo } from './config.js';
 
 export type OAuthProvider = 'github' | 'google';
 

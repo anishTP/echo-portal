@@ -1,13 +1,13 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { db } from '../../db';
-import { users } from '../../db/schema';
+import { db } from '../../db/index.js';
+import { users } from '../../db/schema/index.js';
 import { eq, sql, desc } from 'drizzle-orm';
 import { requireAuth, type AuthEnv } from '../middleware/auth.js';
 import { success } from '../utils/responses.js';
 import { NotFoundError, ForbiddenError, BadRequestError, PermissionDenials } from '../utils/errors.js';
-import { auditLogger } from '../../services/audit';
+import { auditLogger } from '../../services/audit/index.js';
 import { notifyRoleChanged } from '../../services/notification/notification-triggers.js';
 import type { RoleType } from '@echo-portal/shared';
 
