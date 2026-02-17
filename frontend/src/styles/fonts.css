@@ -1,0 +1,10 @@
+/* PP Neue Montreal — Variable font, full weight range */
+
+@font-face {
+  font-family: 'PP Neue Montreal';
+  src: url('../fonts/PPNeueMontreal-Variable.woff2') format('woff2'),
+       url('../fonts/PPNeueMontreal-Variable.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
