@@ -239,9 +239,9 @@ body {
  * so they override Radix Themes' .radix-themes block.
  *
  * Weight mapping:
- *   regular (body text)     → 500 (Medium)
- *   medium  (emphasized)    → 600 (SemiBold)
- *   bold    (headings, etc) → 700 (Bold)
+ *   regular (body text)     → 400 (Regular)
+ *   medium  (emphasized)    → 500 (Medium)
+ *   bold    (headings, etc) → 600 (SemiBold)
  *
  * To revert to system fonts, remove this block and the fonts.css import.
  */
@@ -249,7 +249,7 @@ body {
   --default-font-family: 'PP Neue Montreal', -apple-system, BlinkMacSystemFont,
     'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue',
     sans-serif;
-  --font-weight-regular: 500;
-  --font-weight-medium: 600;
-  --font-weight-bold: 700;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 600;
 }

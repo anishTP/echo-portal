@@ -64,7 +64,7 @@ export const BranchTableRow = memo(function BranchTableRow({
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: 11,
-              fontWeight: 600,
+              fontWeight: 500,
               flexShrink: 0,
             }}
           >

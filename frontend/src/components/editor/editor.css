@@ -21,7 +21,7 @@
 /* Typography within editor */
 .inline-editor .milkdown h1 {
   font-size: var(--font-size-6);
-  font-weight: 600;
+  font-weight: 500;
   margin-top: var(--space-5);
   margin-bottom: var(--space-3);
   line-height: 1.3;
@@ -29,7 +29,7 @@
 
 .inline-editor .milkdown h2 {
   font-size: var(--font-size-5);
-  font-weight: 600;
+  font-weight: 500;
   margin-top: var(--space-4);
   margin-bottom: var(--space-2);
   line-height: 1.4;
@@ -37,7 +37,7 @@
 
 .inline-editor .milkdown h3 {
   font-size: var(--font-size-4);
-  font-weight: 600;
+  font-weight: 500;
   margin-top: var(--space-4);
   margin-bottom: var(--space-2);
   line-height: 1.4;
@@ -117,7 +117,7 @@
 
 .inline-editor .milkdown th {
   background: var(--gray-2);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 /* Task list styling */
@@ -335,7 +335,7 @@
 
 .media-error-placeholder .media-error-message {
   font-size: var(--font-size-2);
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .media-error-placeholder .media-error-url {

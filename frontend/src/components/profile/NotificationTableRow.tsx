@@ -119,7 +119,7 @@ export const NotificationTableRow = memo(function NotificationTableRow({
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: 10,
-              fontWeight: 600,
+              fontWeight: 500,
               flexShrink: 0,
             }}
             title={notification.actorName}

@@ -98,7 +98,7 @@ export function SlashCommandInput({
       `display:inline;` +
       `font-family:var(--font-mono,ui-monospace,monospace);` +
       `font-size:0.75rem;` +
-      `font-weight:600;` +
+      `font-weight:500;` +
       `padding:1px 6px;` +
       `border-radius:4px;` +
       `background:var(--accent-a3,rgba(0,100,255,0.1));` +
