@@ -23,7 +23,16 @@ function parseHeadings(markdown: string): TocItem[] {
     const match = line.match(/^(#{1,6})\s+(.+)$/);
     if (match) {
       const level = match[1].length;
-      const text = match[2].trim();
+      // Strip inline markdown: bold, italic, code, links, images
+      const text = match[2]
+        .replace(/\*\*(.+?)\*\*/g, '$1')
+        .replace(/__(.+?)__/g, '$1')
+        .replace(/\*(.+?)\*/g, '$1')
+        .replace(/_(.+?)_/g, '$1')
+        .replace(/`(.+?)`/g, '$1')
+        .replace(/!\[.*?\]\(.*?\)/g, '')
+        .replace(/\[(.+?)\]\(.*?\)/g, '$1')
+        .trim();
       // Generate id from text (lowercase, replace spaces with hyphens)
       const id = text
         .toLowerCase()
