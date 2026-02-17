@@ -82,8 +82,143 @@ async function migrate() {
     } else {
       console.log(`[migrate] Applied ${count} migration(s)`);
     }
+
+    // Seed: ensure system user and main branch exist (required for publishing)
+    await ensureMainBranch(sql);
   } finally {
     await sql.end();
+  }
+}
+
+/**
+ * Ensure the system user and main branch exist.
+ * These are required for the publish/convergence flow to work.
+ */
+async function ensureMainBranch(sql) {
+  const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
+  const MAIN_BRANCH_ID = '00000000-0000-0000-0000-000000000100';
+
+  // Create system user if missing
+  const [existingUser] = await sql`SELECT id FROM users WHERE id = ${SYSTEM_USER_ID}`;
+  if (!existingUser) {
+    await sql`
+      INSERT INTO users (id, external_id, provider, email, display_name, roles, is_active)
+      VALUES (
+        ${SYSTEM_USER_ID},
+        'system',
+        'github',
+        'system@echo-portal.internal',
+        'System',
+        ARRAY['administrator']::role[],
+        true
+      )
+    `;
+    console.log('[seed] System user created');
+  }
+
+  // Create main branch if missing
+  const [existingBranch] = await sql`SELECT id FROM branches WHERE slug = 'main'`;
+  if (!existingBranch) {
+    await sql`
+      INSERT INTO branches (id, name, slug, git_ref, base_ref, base_commit, head_commit, state, visibility, owner_id, reviewers, collaborators, assigned_reviewers, required_approvals, description, labels)
+      VALUES (
+        ${MAIN_BRANCH_ID},
+        'Main',
+        'main',
+        'refs/heads/main',
+        'main',
+        'initial',
+        'initial',
+        'published',
+        'public',
+        ${SYSTEM_USER_ID},
+        '{}',
+        '{}',
+        '{}',
+        1,
+        'Canonical published content',
+        ARRAY['system']
+      )
+    `;
+    console.log('[seed] Main branch created');
+
+    // Migrate any orphaned published content to the new main branch
+    await migrateOrphanedContent(sql, MAIN_BRANCH_ID);
+  }
+}
+
+/**
+ * One-time fix: Copy published content from user branches to main.
+ * This handles content that was published before the main branch existed.
+ */
+async function migrateOrphanedContent(sql, mainBranchId) {
+  // Find published content not on the main branch
+  const orphaned = await sql`
+    SELECT c.*, cv.body, cv.body_format, cv.byte_size, cv.checksum, cv.change_description
+    FROM contents c
+    LEFT JOIN content_versions cv ON cv.id = c.current_version_id
+    WHERE c.is_published = true
+      AND c.branch_id != ${mainBranchId}
+      AND c.archived_at IS NULL
+  `;
+
+  if (orphaned.length === 0) return;
+
+  console.log(`[seed] Migrating ${orphaned.length} orphaned published content to main branch...`);
+
+  for (const content of orphaned) {
+    // Check if already exists in main by slug
+    const [existing] = await sql`
+      SELECT id FROM contents WHERE branch_id = ${mainBranchId} AND slug = ${content.slug}
+    `;
+    if (existing) continue;
+
+    // Create content in main branch
+    const [newContent] = await sql`
+      INSERT INTO contents (branch_id, slug, title, content_type, section, category, tags, description, visibility, is_published, published_at, published_by, created_by)
+      VALUES (
+        ${mainBranchId},
+        ${content.slug},
+        ${content.title},
+        ${content.content_type},
+        ${content.section},
+        ${content.category},
+        ${content.tags},
+        ${content.description},
+        'public',
+        true,
+        ${content.published_at || new Date()},
+        ${content.published_by || content.created_by},
+        ${content.created_by}
+      )
+      RETURNING id
+    `;
+
+    // Copy the version if available
+    if (content.body) {
+      const [newVersion] = await sql`
+        INSERT INTO content_versions (content_id, body, body_format, change_description, author_id, author_type, byte_size, checksum)
+        VALUES (
+          ${newContent.id},
+          ${content.body},
+          ${content.body_format || 'markdown'},
+          'Migrated from published branch',
+          ${content.created_by},
+          'user',
+          ${content.byte_size || 0},
+          ${content.checksum || ''}
+        )
+        RETURNING id
+      `;
+
+      await sql`
+        UPDATE contents
+        SET current_version_id = ${newVersion.id}, published_version_id = ${newVersion.id}
+        WHERE id = ${newContent.id}
+      `;
+    }
+
+    console.log(`[seed]   Migrated: ${content.slug} (${content.title})`);
   }
 }
 
