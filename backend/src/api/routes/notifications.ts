@@ -177,7 +177,7 @@ notificationRoutes.get('/admin/metrics', requireAuth, async (c) => {
         count: sql<number>`count(*)`,
       })
       .from(schema.notifications)
-      .where(sql`${schema.notifications.createdAt} >= ${since}`)
+      .where(sql`${schema.notifications.createdAt} >= ${since.toISOString()}`)
       .groupBy(schema.notifications.type);
 
     const byType: Record<string, number> = {};
