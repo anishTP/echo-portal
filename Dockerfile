@@ -57,7 +57,7 @@ RUN mkdir -p /app/data/repo
 
 ENV NODE_ENV=production
 ENV PORT=8080
-ENV FRONTEND_DIR=../frontend/dist
+ENV FRONTEND_DIR=./frontend/dist
 ENV GIT_REPO_PATH=/app/data/repo
 
 EXPOSE 8080
