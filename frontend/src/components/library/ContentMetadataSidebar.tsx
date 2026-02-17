@@ -37,7 +37,15 @@ function extractHeadings(markdown: string): TocHeading[] {
 
   while ((match = headingRegex.exec(markdown)) !== null) {
     const level = match[1].length;
-    const text = match[2].trim();
+    const text = match[2]
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/__(.+?)__/g, '$1')
+      .replace(/\*(.+?)\*/g, '$1')
+      .replace(/_(.+?)_/g, '$1')
+      .replace(/`(.+?)`/g, '$1')
+      .replace(/!\[.*?\]\(.*?\)/g, '')
+      .replace(/\[(.+?)\]\(.*?\)/g, '$1')
+      .trim();
     const id = text
       .toLowerCase()
       .replace(/[^\w\s-]/g, '')
