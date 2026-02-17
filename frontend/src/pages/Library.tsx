@@ -262,11 +262,17 @@ export default function Library() {
 
   // Auto-select first item when content list loads
   useEffect(() => {
-    if (isInBranchMode) {
-      // Branch mode: auto-select first branch content item
-      if (!selectedBranchContentId && branchContentList?.items && branchContentList.items.length > 0 && !isLoadingBranchList) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional state sync on data load
-        setSelectedBranchContentId(branchContentList.items[0].id);
+    if (isInBranchMode || isReviewMode) {
+      // Branch/review mode: auto-select first content item
+      if (!selectedBranchContentId && !isLoadingBranchList) {
+        // In review mode, prefer first file from content comparison
+        if (isReviewMode && contentComparison?.files && contentComparison.files.length > 0 && contentComparison.files[0].contentId) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional state sync on data load
+          setSelectedBranchContentId(contentComparison.files[0].contentId);
+        } else if (branchContentList?.items && branchContentList.items.length > 0) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional state sync on data load
+          setSelectedBranchContentId(branchContentList.items[0].id);
+        }
       }
     } else {
       // Published mode: auto-navigate to first item by slug
@@ -277,10 +283,12 @@ export default function Library() {
     }
   }, [
     isInBranchMode,
+    isReviewMode,
     slug,
     selectedBranchContentId,
     publishedContent?.items,
     branchContentList?.items,
+    contentComparison?.files,
     isLoadingPublished,
     isLoadingBranchList,
     navigate,
@@ -302,7 +310,7 @@ export default function Library() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional state reset on branch change
     setSelectedBranchContentId(null);
-  }, [currentBranch?.id]);
+  }, [currentBranch?.id, branchId]);
 
   // Initialize draft content when entering edit mode or when editModeContent loads
   useEffect(() => {

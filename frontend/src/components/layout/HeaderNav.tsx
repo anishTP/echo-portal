@@ -53,9 +53,6 @@ export function HeaderNav() {
     navigate(`/library?section=${sectionName}&category=${encodeURIComponent(category)}`);
   };
 
-  const handleSectionClick = (sectionName: string) => {
-    navigate(`/library?section=${sectionName}`);
-  };
 
   const dropdownItems = (
     sectionName: string,
@@ -107,10 +104,6 @@ export function HeaderNav() {
           </Button>
         </DropdownMenu.Trigger>
         <DropdownMenu.Content style={{ minWidth: '180px' }}>
-          <DropdownMenu.Item onClick={() => handleSectionClick('brands')}>
-            <Text size="2" weight="medium">All Brands</Text>
-          </DropdownMenu.Item>
-          <DropdownMenu.Separator />
           {dropdownItems('brands', brands)}
           {isAdmin && (
             <>
@@ -139,10 +132,6 @@ export function HeaderNav() {
           </Button>
         </DropdownMenu.Trigger>
         <DropdownMenu.Content style={{ minWidth: '180px' }}>
-          <DropdownMenu.Item onClick={() => handleSectionClick('products')}>
-            <Text size="2" weight="medium">All Products</Text>
-          </DropdownMenu.Item>
-          <DropdownMenu.Separator />
           {dropdownItems('products', products)}
           {isAdmin && (
             <>
@@ -171,10 +160,6 @@ export function HeaderNav() {
           </Button>
         </DropdownMenu.Trigger>
         <DropdownMenu.Content style={{ minWidth: '180px' }}>
-          <DropdownMenu.Item onClick={() => handleSectionClick('experiences')}>
-            <Text size="2" weight="medium">All Experiences</Text>
-          </DropdownMenu.Item>
-          <DropdownMenu.Separator />
           {dropdownItems('experiences', experiences)}
           {isAdmin && (
             <>
