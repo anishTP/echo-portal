@@ -614,31 +614,6 @@ export default function Library() {
     [currentDraft, autoSave]
   );
 
-  // Handle save draft - merges body from editor with metadata from sidebar
-  const handleSaveDraft = useCallback(async () => {
-    if (inlineEditViewRef.current && currentDraft) {
-      // Cancel any pending debounced saves from InlineEditView to prevent race conditions
-      inlineEditViewRef.current.cancelPendingSave();
-
-      const editorContent = inlineEditViewRef.current.getContent();
-      const mergedContent: DraftContent = {
-        title: currentDraft.title,
-        body: editorContent.body,
-        metadata: currentDraft.metadata,
-      };
-      await autoSave.saveNow(mergedContent);
-      await draftSync.sync();
-
-      if (contentIdParam) {
-        await queryClient.invalidateQueries({ queryKey: contentKeys.detail(contentIdParam) });
-      }
-      if (branchId) {
-        // Use prefix ['contents', 'list', branchId] to match any filter variations
-        await queryClient.invalidateQueries({ queryKey: [...contentKeys.lists(), branchId] });
-      }
-    }
-  }, [currentDraft, autoSave, draftSync, contentIdParam, branchId, queryClient]);
-
   // Handle done editing - exits immediately for concurrent animations, saves in background
   const handleDoneEditing = useCallback(() => {
     const currentBranchId = branchId;
@@ -967,7 +942,7 @@ export default function Library() {
             saveStatus={autoSave.state.status}
             onDone={handleDoneEditing}
             onCancel={handleCancel}
-            onSaveDraft={handleSaveDraft}
+
             onDelete={handleDeleteContent}
             isSaving={autoSave.state.status === 'saving'}
             isDeleting={deleteMutation.isPending}

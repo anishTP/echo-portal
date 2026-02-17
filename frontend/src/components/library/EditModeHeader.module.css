@@ -11,7 +11,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-3);
   max-width: 100%;
+  overflow: hidden;
 }
 
 .info {
@@ -20,6 +22,7 @@
   gap: var(--space-4);
   min-width: 0;
   flex: 1;
+  overflow: hidden;
 }
 
 .branchBadge {
@@ -30,13 +33,17 @@
   background: var(--accent-3);
   border-radius: var(--radius-2);
   color: var(--accent-11);
-  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 .actions {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   flex-shrink: 0;
 }
 

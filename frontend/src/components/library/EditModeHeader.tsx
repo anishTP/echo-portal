@@ -7,7 +7,6 @@ import {
   Cross2Icon,
   ExclamationTriangleIcon,
   TrashIcon,
-  DownloadIcon,
   MagicWandIcon,
   ResetIcon,
 } from '@radix-ui/react-icons';
@@ -28,8 +27,6 @@ export interface EditModeHeaderProps {
   onDone: () => void;
   /** Callback to exit without saving */
   onCancel: () => void;
-  /** Callback to save draft */
-  onSaveDraft?: () => void;
   /** Callback to delete content */
   onDelete?: () => void;
   /** Whether save is in progress */
@@ -63,7 +60,6 @@ export function EditModeHeader({
   saveStatus,
   onDone,
   onCancel,
-  onSaveDraft,
   onDelete,
   isSaving = false,
   isDeleting = false,
@@ -176,18 +172,6 @@ export function EditModeHeader({
             >
               <TrashIcon />
               Delete
-            </Button>
-          )}
-
-          {onSaveDraft && (
-            <Button
-              variant="soft"
-              size="2"
-              onClick={onSaveDraft}
-              disabled={isSaving || !hasUnsavedChanges}
-            >
-              <DownloadIcon />
-              Save Draft
             </Button>
           )}
 
