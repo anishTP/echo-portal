@@ -97,7 +97,7 @@ export function NotificationList({
 
   const handleShowAll = useCallback(() => {
     onClose?.();
-    navigate('/notifications');
+    navigate('/profile?tab=notifications');
   }, [navigate, onClose]);
 
   if (isLoading) {

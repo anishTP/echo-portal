@@ -13,7 +13,7 @@ export function NotificationPopover() {
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
-        <div>
+        <div className="flex items-center">
           <NotificationBell onClick={() => setOpen((prev) => !prev)} />
         </div>
       </Popover.Trigger>

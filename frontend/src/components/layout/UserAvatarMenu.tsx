@@ -61,7 +61,7 @@ export function UserAvatarMenu() {
 
         <DropdownMenu.Separator />
 
-        <DropdownMenu.Item onClick={() => navigate('/dashboard')}>
+        <DropdownMenu.Item onClick={() => navigate('/profile?tab=dashboard')}>
           Dashboard
         </DropdownMenu.Item>
 
@@ -71,12 +71,8 @@ export function UserAvatarMenu() {
           </DropdownMenu.Item>
         )}
 
-        <DropdownMenu.Item onClick={() => navigate('/settings/account')}>
-          Account Settings
-        </DropdownMenu.Item>
-
-        <DropdownMenu.Item onClick={() => navigate('/settings/notifications')}>
-          Notification Settings
+        <DropdownMenu.Item onClick={() => navigate('/profile?tab=settings')}>
+          Profile
         </DropdownMenu.Item>
 
         <DropdownMenu.Separator />

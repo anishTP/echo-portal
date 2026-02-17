@@ -1,4 +1,4 @@
-import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Outlet, Navigate } from 'react-router-dom';
 import { Suspense, lazy } from 'react';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 import { AppHeader } from '../components/layout';
@@ -6,20 +6,17 @@ import { AppHeader } from '../components/layout';
 // Lazy load pages for code splitting
 const LandingPage = lazy(() => import('../pages/LandingPage'));
 const Library = lazy(() => import('../pages/Library'));
-const Dashboard = lazy(() => import('../pages/Dashboard'));
+const ProfilePage = lazy(() => import('../pages/ProfilePage'));
 const BranchWorkspace = lazy(() => import('../pages/BranchWorkspace'));
 const PublishConfirm = lazy(() => import('../pages/PublishConfirm'));
 const AuthCallback = lazy(() => import('../pages/AuthCallback'));
 const AuditLog = lazy(() => import('../pages/AuditLog'));
 const AdminSettings = lazy(() => import('../pages/AdminSettings'));
-const Notifications = lazy(() => import('../pages/Notifications'));
-const NotificationSettings = lazy(() => import('../pages/NotificationSettings'));
 const LoginPage = lazy(() => import('../pages/LoginPage'));
 const SignupPage = lazy(() => import('../pages/SignupPage'));
 const VerifyEmailPage = lazy(() => import('../pages/VerifyEmailPage'));
 const ForgotPasswordPage = lazy(() => import('../pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('../pages/ResetPasswordPage'));
-const AccountSettings = lazy(() => import('../pages/AccountSettings'));
 
 // Loading fallback
 function LoadingFallback() {
@@ -66,9 +63,27 @@ const router = createBrowserRouter([
         path: 'library/:slug',
         element: <Library />,
       },
+      // Unified profile page
+      {
+        path: 'profile',
+        element: <ProfilePage />,
+      },
+      // Redirects from old routes to unified profile
       {
         path: 'dashboard',
-        element: <Dashboard />,
+        element: <Navigate to="/profile?tab=dashboard" replace />,
+      },
+      {
+        path: 'notifications',
+        element: <Navigate to="/profile?tab=notifications" replace />,
+      },
+      {
+        path: 'settings/notifications',
+        element: <Navigate to="/profile?tab=settings" replace />,
+      },
+      {
+        path: 'settings/account',
+        element: <Navigate to="/profile?tab=settings" replace />,
       },
       // Email/password auth routes (010-email-password-auth)
       {
@@ -120,20 +135,6 @@ const router = createBrowserRouter([
       {
         path: 'admin',
         element: <AdminSettings />,
-      },
-      // Notification routes (009-notification-alerts)
-      {
-        path: 'notifications',
-        element: <Notifications />,
-      },
-      {
-        path: 'settings/notifications',
-        element: <NotificationSettings />,
-      },
-      // Account settings (010-email-password-auth)
-      {
-        path: 'settings/account',
-        element: <AccountSettings />,
       },
     ],
   },

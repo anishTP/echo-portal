@@ -11,7 +11,7 @@ export const NotificationBell = memo(function NotificationBell({ onClick }: Noti
   const count = data?.count ?? 0;
 
   return (
-    <div className="relative">
+    <div className="relative flex items-center">
       <IconButton
         variant="ghost"
         size="2"

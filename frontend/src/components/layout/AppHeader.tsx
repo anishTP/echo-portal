@@ -45,11 +45,11 @@ export function AppHeader() {
           {isLoading ? (
             <Spinner size="2" />
           ) : isAuthenticated ? (
-            <>
+            <div className="flex items-center gap-5">
               <NotificationPopover />
               <ThemeToggle />
               <UserAvatarMenu />
-            </>
+            </div>
           ) : (
             <>
               <ThemeToggle />
