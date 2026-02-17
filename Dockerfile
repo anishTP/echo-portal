@@ -36,9 +36,8 @@ COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY shared/package.json shared/
 COPY backend/package.json backend/
 
-# Install production dependencies + drizzle-kit for migrations
-RUN pnpm install --frozen-lockfile --prod \
-    && cd backend && pnpm add drizzle-kit
+# Install production dependencies only
+RUN pnpm install --frozen-lockfile --prod
 
 # Copy built shared package
 COPY --from=builder /app/shared/dist/ shared/dist/
@@ -49,10 +48,9 @@ COPY --from=builder /app/backend/dist/ backend/dist/
 # Copy built frontend (served as static files by backend)
 COPY --from=builder /app/frontend/dist/ frontend/dist/
 
-# Copy Drizzle migrations and config
+# Copy Drizzle migrations and migration runner
 COPY --from=builder /app/backend/drizzle/ backend/drizzle/
-COPY --from=builder /app/backend/drizzle.config.ts backend/
-COPY --from=builder /app/backend/src/db/schema/ backend/src/db/schema/
+COPY --from=builder /app/backend/migrate.mjs backend/
 
 # Create data directory for git repos
 RUN mkdir -p /app/data/repo

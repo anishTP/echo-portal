@@ -2,8 +2,7 @@
 set -e
 
 echo "Running database migrations..."
-cd /app/backend && npx drizzle-kit migrate
-cd /app
+node /app/backend/migrate.mjs
 
 echo "Starting server..."
 exec node backend/dist/index.js
