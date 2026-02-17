@@ -75,8 +75,8 @@ export default function PublishConfirm() {
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-gray-900">Branch not found</h2>
-          <Link to="/dashboard" className="mt-4 text-blue-600 hover:text-blue-800">
-            Return to Dashboard
+          <Link to="/library" className="mt-4 text-blue-600 hover:text-blue-800">
+            Return to Library
           </Link>
         </div>
       </div>

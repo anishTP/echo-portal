@@ -53,7 +53,7 @@ export function BranchDetail({ branch, onEdit }: BranchDetailProps) {
   const handleDelete = async () => {
     try {
       await deleteBranch.mutateAsync(branch.id);
-      navigate('/dashboard');
+      navigate('/library');
     } catch {
       // Error handled by mutation hook
     }

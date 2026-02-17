@@ -103,10 +103,10 @@ export default function BranchWorkspace() {
                 {error instanceof Error ? error.message : 'The requested branch could not be found.'}
               </p>
               <Link
-                to="/dashboard"
+                to="/library"
                 className="mt-2 inline-block text-sm font-medium underline"
               >
-                Return to Dashboard
+                Return to Library
               </Link>
             </Callout.Text>
           </Callout.Root>
@@ -186,8 +186,8 @@ export default function BranchWorkspace() {
       <header className="border-b border-gray-200 bg-white">
         <div className={`mx-auto ${containerMaxWidth} px-4 py-4`}>
           <nav className="flex items-center gap-2 text-sm text-gray-500">
-            <Link to="/dashboard" className="hover:text-gray-700">
-              Dashboard
+            <Link to="/library" className="hover:text-gray-700">
+              Library
             </Link>
             <span>/</span>
             <span className="text-gray-900">{branch.name}</span>

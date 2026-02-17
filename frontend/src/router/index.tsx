@@ -70,7 +70,7 @@ const router = createBrowserRouter([
       // Redirects from old routes to unified profile
       {
         path: 'dashboard',
-        element: <Navigate to="/profile?tab=dashboard" replace />,
+        element: <Navigate to="/library" replace />,
       },
       {
         path: 'notifications',

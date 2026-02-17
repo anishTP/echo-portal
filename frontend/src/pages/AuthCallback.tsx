@@ -54,8 +54,8 @@ export function AuthCallback() {
             await refreshSession();
             console.log('[AUTH] Session refresh successful');
 
-            // Redirect to dashboard
-            navigate('/dashboard', { replace: true });
+            // Redirect to library
+            navigate('/library', { replace: true });
             return;
           } catch (err) {
             console.error(`[AUTH] Session refresh attempt ${attempt} failed:`, err);
