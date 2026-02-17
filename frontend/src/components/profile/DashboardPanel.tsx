@@ -123,12 +123,14 @@ export function DashboardPanel() {
         </TextField.Slot>
       </TextField.Root>
 
-      <BranchTable
-        branches={paginatedBranches}
-        isLoading={isLoading}
-        currentUserId={user?.id}
-        onDelete={handleDelete}
-      />
+      <div style={{ minHeight: PAGE_LIMIT * 45 + 40 }}>
+        <BranchTable
+          branches={paginatedBranches}
+          isLoading={isLoading}
+          currentUserId={user?.id}
+          onDelete={handleDelete}
+        />
+      </div>
 
       <ProfilePagination
         page={page}

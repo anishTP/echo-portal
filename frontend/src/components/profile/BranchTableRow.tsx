@@ -25,6 +25,7 @@ export const BranchTableRow = memo(function BranchTableRow({
   currentUserId,
   onDelete,
 }: BranchTableRowProps) {
+  const displayName = branch.ownerName || branch.ownerId.slice(0, 8);
   const canDelete = branch.state === 'draft' && branch.ownerId === currentUserId;
   const showChangesRequested = hasChangesRequested(branch);
 
@@ -67,10 +68,10 @@ export const BranchTableRow = memo(function BranchTableRow({
               flexShrink: 0,
             }}
           >
-            {branch.ownerId.slice(0, 2).toUpperCase()}
+            {displayName.charAt(0).toUpperCase()}
           </div>
           <Text size="1" color="gray">
-            {branch.ownerId.slice(0, 8)}
+            {displayName}
           </Text>
         </Flex>
       </Table.Cell>

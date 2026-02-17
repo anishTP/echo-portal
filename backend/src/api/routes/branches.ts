@@ -1,5 +1,8 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
+import { eq, inArray } from 'drizzle-orm';
+import { db } from '../../db/index.js';
+import { users } from '../../db/schema/index.js';
 import { branchService } from '../../services/branch/branch-service.js';
 import { visibilityService, type AccessContext } from '../../services/branch/visibility.js';
 import { teamService } from '../../services/branch/team.js';
@@ -54,6 +57,29 @@ function getAccessContext(c: any): AccessContext {
 function getBranchUserContext(c: any): { userId: string | null; roles: string[] } {
   const user = c.get('user');
   return { userId: user?.id ?? null, roles: user?.roles ?? [] };
+}
+
+/**
+ * Resolve owner IDs to display names via a single batch query
+ */
+async function resolveOwnerNames(ownerIds: string[]): Promise<Map<string, string>> {
+  const unique = [...new Set(ownerIds)];
+  if (unique.length === 0) return new Map();
+  const rows = await db
+    .select({ id: users.id, displayName: users.displayName })
+    .from(users)
+    .where(inArray(users.id, unique));
+  return new Map(rows.map((r) => [r.id, r.displayName]));
+}
+
+/**
+ * Enrich branch response objects with ownerName
+ */
+function addOwnerNames(branches: Record<string, unknown>[], nameMap: Map<string, string>): Record<string, unknown>[] {
+  return branches.map((b) => ({
+    ...b,
+    ownerName: nameMap.get(b.ownerId as string) ?? null,
+  }));
 }
 
 /**
@@ -156,9 +182,12 @@ branchRoutes.get('/', zValidator('query', listBranchesQuerySchema), async (c) =>
     visibilityService.checkAccess(branch.toJSON(), context).canAccess
   );
 
+  const responses = accessibleBranches.map((b) => b.toResponseForUser(getBranchUserContext(c)));
+  const nameMap = await resolveOwnerNames(responses.map((b) => b.ownerId as string));
+
   return paginated(
     c,
-    accessibleBranches.map((b) => b.toResponseForUser(getBranchUserContext(c))),
+    addOwnerNames(responses, nameMap),
     {
       page: result.page,
       limit: result.limit,
@@ -176,10 +205,9 @@ branchRoutes.get('/me', requireAuth, async (c) => {
   const includeArchived = c.req.query('includeArchived') === 'true';
 
   const branches = await branchService.getByOwner(user.id, includeArchived);
-  return success(
-    c,
-    branches.map((b) => b.toResponseForUser(getBranchUserContext(c)))
-  );
+  const responses = branches.map((b) => b.toResponseForUser(getBranchUserContext(c)));
+  const nameMap = await resolveOwnerNames(responses.map((b) => b.ownerId as string));
+  return success(c, addOwnerNames(responses, nameMap));
 });
 
 /**
@@ -189,10 +217,9 @@ branchRoutes.get('/reviews', requireAuth, async (c) => {
   const user = c.get('user')!;
 
   const branches = await branchService.getByReviewer(user.id);
-  return success(
-    c,
-    branches.map((b) => b.toResponseForUser(getBranchUserContext(c)))
-  );
+  const responses = branches.map((b) => b.toResponseForUser(getBranchUserContext(c)));
+  const nameMap = await resolveOwnerNames(responses.map((b) => b.ownerId as string));
+  return success(c, addOwnerNames(responses, nameMap));
 });
 
 /**

@@ -13,6 +13,8 @@ export interface BranchResponse extends Branch {
   };
   /** Review records from the reviews table, embedded in the branch response */
   reviews?: ReviewResponse[];
+  /** Owner display name resolved by the backend */
+  ownerName?: string | null;
 }
 
 export interface BranchListParams {

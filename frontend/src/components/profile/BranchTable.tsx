@@ -37,14 +37,21 @@ function TableSkeleton() {
 
 export function BranchTable({ branches, isLoading, currentUserId, onDelete }: BranchTableProps) {
   return (
-    <Table.Root variant="surface">
+    <Table.Root variant="surface" style={{ tableLayout: 'fixed', width: '100%' }}>
+      <colgroup>
+        <col style={{ width: '35%' }} />
+        <col style={{ width: '20%' }} />
+        <col style={{ width: '15%' }} />
+        <col style={{ width: '20%' }} />
+        <col style={{ width: '10%' }} />
+      </colgroup>
       <Table.Header>
         <Table.Row>
           <Table.ColumnHeaderCell>BRANCH</Table.ColumnHeaderCell>
           <Table.ColumnHeaderCell>AUTHOR</Table.ColumnHeaderCell>
           <Table.ColumnHeaderCell>STATUS</Table.ColumnHeaderCell>
           <Table.ColumnHeaderCell>LAST UPDATE</Table.ColumnHeaderCell>
-          <Table.ColumnHeaderCell style={{ width: 48 }}>ACTIONS</Table.ColumnHeaderCell>
+          <Table.ColumnHeaderCell>ACTIONS</Table.ColumnHeaderCell>
         </Table.Row>
       </Table.Header>
       <Table.Body>
