@@ -9,7 +9,7 @@ function getNotificationUrl(notification: Notification): string | null {
   const { resourceType, resourceId } = notification;
   if (!resourceId) return null;
   if (resourceType === 'branch') {
-    return `/branches/${resourceId}`;
+    return `/library?section=brands&mode=review&branchId=${resourceId}`;
   }
   // 'review' type requires async resolution — handled in handleNavigate
   if (resourceType === 'review') return 'resolve';
@@ -81,7 +81,7 @@ export function NotificationList({
             const commentParam = targetComment ? `&commentId=${targetComment.id}` : '';
             navigate(`/library?mode=review&branchId=${review.branchId}${commentParam}`);
           } else {
-            navigate(`/branches/${review.branchId}`);
+            navigate(`/library?section=brands&mode=review&branchId=${review.branchId}`);
           }
         } catch {
           // Review may have been deleted — silently ignore

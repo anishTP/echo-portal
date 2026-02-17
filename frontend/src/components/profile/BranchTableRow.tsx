@@ -35,7 +35,7 @@ export const BranchTableRow = memo(function BranchTableRow({
       <Table.Cell>
         <Flex direction="column" gap="1">
           <Link
-            to={`/branches/${branch.id}`}
+            to={`/library?section=brands&mode=review&branchId=${branch.id}`}
             style={{ textDecoration: 'none', color: 'var(--gray-12)' }}
           >
             <Text size="2" weight="bold">

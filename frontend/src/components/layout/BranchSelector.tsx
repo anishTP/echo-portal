@@ -96,17 +96,17 @@ export function BranchSelector() {
   const handleSelectBranch = (branch: typeof myBranches extends (infer T)[] | undefined ? T : never) => {
     if (branch) {
       setCurrentBranch(branch);
-      navigate(`/branches/${branch.id}`);
+      navigate(`/library?section=brands&mode=review&branchId=${branch.id}`);
     }
   };
 
   const handleViewAllBranches = () => {
-    navigate('/dashboard');
+    navigate('/profile?tab=dashboard');
   };
 
   const handleNewBranch = () => {
     setIsCreating(true);
-    navigate('/dashboard');
+    navigate('/profile?tab=dashboard');
   };
 
   // Determine if we're on a branch or viewing published content
