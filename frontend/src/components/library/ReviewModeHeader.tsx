@@ -1,5 +1,6 @@
-import { Button, Text, Badge, SegmentedControl } from '@radix-ui/themes';
-import { Cross2Icon, CommitIcon } from '@radix-ui/react-icons';
+import { useState } from 'react';
+import { Button, Text, Badge, SegmentedControl, Dialog, Callout, Flex } from '@radix-ui/themes';
+import { Cross2Icon, CommitIcon, ExclamationTriangleIcon } from '@radix-ui/react-icons';
 import type { DiffStats } from '@echo-portal/shared';
 import type { ReviewResponse } from '../../services/reviewService';
 import { ReviewDecisionPanel } from '../review/ReviewDecisionPanel';
@@ -19,6 +20,14 @@ export interface ReviewModeHeaderProps {
   isSubmitting?: boolean;
   /** When true, user is viewing feedback from a completed review (read-only) */
   feedbackMode?: boolean;
+  /** Branch workflow state */
+  branchState?: string;
+  /** Whether the current user can publish this branch */
+  canPublish?: boolean;
+  /** Callback to publish the branch */
+  onPublish?: () => Promise<void>;
+  /** Whether a publish operation is in progress */
+  isPublishing?: boolean;
 }
 
 export function ReviewModeHeader({
@@ -33,7 +42,29 @@ export function ReviewModeHeader({
   onRequestChanges,
   isSubmitting = false,
   feedbackMode = false,
+  branchState,
+  canPublish = false,
+  onPublish,
+  isPublishing = false,
 }: ReviewModeHeaderProps) {
+  const [showPublishDialog, setShowPublishDialog] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
+
+  const isApproved = branchState === 'approved';
+
+  const handleConfirmPublish = async () => {
+    setPublishError(null);
+    try {
+      await onPublish?.();
+      setShowPublishDialog(false);
+    } catch (err) {
+      setPublishError(err instanceof Error ? err.message : 'Failed to publish');
+    }
+  };
+
+  const badgeColor = isApproved ? 'green' : feedbackMode ? 'orange' : 'amber';
+  const badgeLabel = isApproved ? 'Approved' : feedbackMode ? 'Changes Requested' : 'Pending Review';
+
   return (
     <div className={styles.header}>
       <div className={styles.content}>
@@ -54,8 +85,8 @@ export function ReviewModeHeader({
             </Text>
           </div>
 
-          <Badge color={feedbackMode ? 'orange' : 'amber'} variant="soft" size="1">
-            {feedbackMode ? 'Changes Requested' : 'Pending Review'}
+          <Badge color={badgeColor} variant="soft" size="1">
+            {badgeLabel}
           </Badge>
 
           {stats && (
@@ -89,6 +120,53 @@ export function ReviewModeHeader({
                 isSubmitting={isSubmitting}
               />
             </div>
+          )}
+
+          {isApproved && canPublish && !feedbackMode && (
+            <Dialog.Root open={showPublishDialog} onOpenChange={setShowPublishDialog}>
+              <Dialog.Trigger>
+                <Button color="green" disabled={isPublishing}>
+                  {isPublishing ? 'Publishing...' : 'Publish'}
+                </Button>
+              </Dialog.Trigger>
+
+              <Dialog.Content maxWidth="450px">
+                <Dialog.Title>Publish Branch</Dialog.Title>
+                <Dialog.Description size="2" color="gray">
+                  You are about to publish <Text weight="bold">{branchName}</Text> to main.
+                  This action will merge all changes and make them live.
+                </Dialog.Description>
+
+                <Flex direction="column" gap="4" mt="4">
+                  <Callout.Root color="yellow">
+                    <Callout.Icon>
+                      <ExclamationTriangleIcon />
+                    </Callout.Icon>
+                    <Callout.Text>
+                      This action cannot be undone. Make sure all changes have
+                      been reviewed and approved.
+                    </Callout.Text>
+                  </Callout.Root>
+
+                  {publishError && (
+                    <Callout.Root color="red">
+                      <Callout.Text>{publishError}</Callout.Text>
+                    </Callout.Root>
+                  )}
+                </Flex>
+
+                <Flex gap="3" mt="5" justify="end">
+                  <Dialog.Close>
+                    <Button variant="outline" disabled={isPublishing}>
+                      Cancel
+                    </Button>
+                  </Dialog.Close>
+                  <Button color="green" onClick={handleConfirmPublish} disabled={isPublishing}>
+                    {isPublishing ? 'Publishing...' : 'Confirm Publish'}
+                  </Button>
+                </Flex>
+              </Dialog.Content>
+            </Dialog.Root>
           )}
         </div>
       </div>

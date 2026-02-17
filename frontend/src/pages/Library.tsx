@@ -17,7 +17,7 @@ import { BranchCreateDialog } from '../components/editor/BranchCreateDialog';
 import { CreateContentDialog } from '../components/library/CreateContentDialog';
 import { usePublishedContent, useContentBySlug, useCreateCategory, useRenameCategory, useDeleteCategory, useReorderCategories, usePersistentCategories } from '../hooks/usePublishedContent';
 import { useEditBranch } from '../hooks/useEditBranch';
-import { useBranch } from '../hooks/useBranch';
+import { useBranch, usePublishBranch } from '../hooks/useBranch';
 import { useContent, useContentList, useCreateContent, useDeleteContent, contentKeys } from '../hooks/useContent';
 import { contentApi } from '../services/content-api';
 import { useAutoSave } from '../hooks/useAutoSave';
@@ -193,6 +193,7 @@ export default function Library() {
   const { data: branchReviews } = useBranchReviews(effectiveBranchId);
   const approveReview = useApproveReview();
   const requestChanges = useRequestChanges();
+  const publishBranch = usePublishBranch();
 
   // Find the active review (current user's pending/in_progress review)
   const activeReview = branchReviews?.find(
@@ -1000,6 +1001,15 @@ export default function Library() {
             }}
             isSubmitting={approveReview.isPending || requestChanges.isPending}
             feedbackMode={isFeedbackMode}
+            branchState={activeBranch?.state}
+            canPublish={activeBranch?.permissions?.canPublish ?? false}
+            onPublish={async () => {
+              if (activeBranch) {
+                await publishBranch.mutateAsync(activeBranch.id);
+                exitReviewMode();
+              }
+            }}
+            isPublishing={publishBranch.isPending}
           />
         ) : undefined
       }
