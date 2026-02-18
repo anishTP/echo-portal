@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarIcon, LayersIcon } from '@radix-ui/react-icons';
 import styles from './ContentMetadataSidebar.module.css';
@@ -25,6 +25,8 @@ export interface ContentMetadataSidebarProps {
   markdown?: string;
   /** Pre-computed TOC headings (alternative to markdown) */
   headings?: TocHeading[];
+  /** Slot rendered right after the Author section */
+  afterAuthor?: ReactNode;
 }
 
 /**
@@ -74,6 +76,7 @@ export function ContentMetadataSidebar({
   tags,
   markdown,
   headings: providedHeadings,
+  afterAuthor,
 }: ContentMetadataSidebarProps) {
   const [activeHeadingId, setActiveHeadingId] = useState<string>('');
 
@@ -109,7 +112,7 @@ export function ContentMetadataSidebar({
 
   const hasMetadata = author || publishedDate || category || (tags && tags.length > 0);
 
-  if (!hasMetadata && headings.length === 0) {
+  if (!hasMetadata && headings.length === 0 && !afterAuthor) {
     return null;
   }
 
@@ -131,6 +134,9 @@ export function ContentMetadataSidebar({
           </div>
         </div>
       )}
+
+      {/* Reviewers (or other content injected after author) */}
+      {afterAuthor}
 
       {/* Metadata */}
       {(publishedDate || category) && (

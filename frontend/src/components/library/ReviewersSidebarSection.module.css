@@ -1,0 +1,87 @@
+/* ReviewersSidebarSection.module.css */
+/* Reviewer info section for right sidebar */
+
+.reviewerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-1) 0;
+}
+
+.reviewerInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  background: var(--accent-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-1);
+  font-weight: var(--font-weight-bold);
+  color: var(--accent-11);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.reviewerName {
+  font-size: var(--font-size-2);
+  color: var(--gray-12);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.editButton {
+  padding: var(--space-1);
+  border-radius: var(--radius-2);
+  border: none;
+  background: transparent;
+  color: var(--gray-9);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.editButton:hover {
+  background: var(--gray-3);
+  color: var(--gray-12);
+}
+
+.doneButton {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-2);
+  border: 1px solid var(--gray-6);
+  background: var(--gray-3);
+  color: var(--gray-12);
+  font-size: var(--font-size-2);
+  font-weight: var(--font-weight-medium);
+  font-family: var(--default-font-family);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.doneButton:hover {
+  background: var(--gray-4);
+}

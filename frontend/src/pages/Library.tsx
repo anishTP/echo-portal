@@ -13,12 +13,13 @@ import { InlineEditView, type DraftContent, type InlineEditViewHandle } from '..
 import { EditModeHeader } from '../components/library/EditModeHeader';
 import { ReviewModeHeader } from '../components/library/ReviewModeHeader';
 import { BranchStatusBar } from '../components/library/BranchStatusBar';
+import { ReviewersSidebarSection } from '../components/library/ReviewersSidebarSection';
 import { ReviewDiffView } from '../components/library/ReviewDiffView';
 import { BranchCreateDialog } from '../components/editor/BranchCreateDialog';
 import { CreateContentDialog } from '../components/library/CreateContentDialog';
 import { usePublishedContent, useContentBySlug, useCreateCategory, useRenameCategory, useDeleteCategory, useReorderCategories, usePersistentCategories, useSubcategoriesForCategories, useCreateSubcategory, useRenameSubcategory, useDeleteSubcategory, useReorderSubcategories, useMoveContent } from '../hooks/usePublishedContent';
 import { useEditBranch } from '../hooks/useEditBranch';
-import { useBranch, usePublishBranch } from '../hooks/useBranch';
+import { useBranch, usePublishBranch, branchKeys } from '../hooks/useBranch';
 import { useContent, useContentList, useCreateContent, useDeleteContent, contentKeys } from '../hooks/useContent';
 import { contentApi } from '../services/content-api';
 import { useAutoSave } from '../hooks/useAutoSave';
@@ -549,10 +550,11 @@ export default function Library() {
           body: content.currentVersion?.body || '',
           changeDescription: `Renamed to "${newTitle}"`,
         });
-        // Invalidate to refresh sidebar
+        // Invalidate to refresh sidebar and branch status
         const targetBranchId = currentBranch?.id || branchId;
         if (targetBranchId) {
           queryClient.invalidateQueries({ queryKey: [...contentKeys.lists(), targetBranchId] });
+          queryClient.invalidateQueries({ queryKey: branchKeys.detail(targetBranchId) });
         }
         queryClient.invalidateQueries({ queryKey: contentKeys.detail(contentId) });
       } catch {
@@ -702,6 +704,7 @@ export default function Library() {
         }
         if (currentBranchId) {
           await queryClient.invalidateQueries({ queryKey: [...contentKeys.lists(), currentBranchId] });
+          await queryClient.invalidateQueries({ queryKey: branchKeys.detail(currentBranchId) });
         }
       })();
     }
@@ -947,6 +950,15 @@ export default function Library() {
             category={contentForView.category}
             tags={contentForView.tags}
             markdown={markdownBody}
+            afterAuthor={
+              isInBranchMode && activeBranch && branchReviews && branchReviews.length > 0 ? (
+                <ReviewersSidebarSection
+                  branchId={activeBranch.id}
+                  reviews={branchReviews}
+                  isOwner={!!user && activeBranch.ownerId === user.id}
+                />
+              ) : undefined
+            }
           />
         ) : undefined
       }
