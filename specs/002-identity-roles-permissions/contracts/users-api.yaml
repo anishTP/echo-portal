@@ -1,0 +1,333 @@
+openapi: 3.1.0
+info:
+  title: Echo Portal User Management API
+  description: User administration and role management endpoints
+  version: 1.0.0
+
+servers:
+  - url: /api/v1
+    description: API v1
+
+paths:
+  /users:
+    get:
+      operationId: listUsers
+      summary: List all users
+      description: Returns paginated list of users (admin only)
+      tags:
+        - User Management
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: role
+          in: query
+          schema:
+            $ref: '#/components/schemas/Role'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/UserStatus'
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by email or display name
+      responses:
+        '200':
+          description: Paginated list of users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+        '403':
+          description: Not authorized (requires administrator role)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionDeniedError'
+
+  /users/{userId}:
+    get:
+      operationId: getUser
+      summary: Get user details
+      description: Returns detailed user information
+      tags:
+        - User Management
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetail'
+        '403':
+          description: Not authorized
+        '404':
+          description: User not found
+
+  /users/{userId}/role:
+    put:
+      operationId: updateUserRole
+      summary: Update user role
+      description: Changes a user's role (admin only)
+      tags:
+        - User Management
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - role
+              properties:
+                role:
+                  $ref: '#/components/schemas/Role'
+                reason:
+                  type: string
+                  description: Audit trail reason for role change
+      responses:
+        '200':
+          description: Role updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetail'
+        '400':
+          description: Invalid role or cannot change own role
+        '403':
+          description: Not authorized (requires administrator role)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionDeniedError'
+        '404':
+          description: User not found
+
+  /users/{userId}/status:
+    put:
+      operationId: updateUserStatus
+      summary: Update user status
+      description: Activate or deactivate a user account (admin only)
+      tags:
+        - User Management
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  $ref: '#/components/schemas/UserStatus'
+                reason:
+                  type: string
+                  description: Audit trail reason for status change
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetail'
+        '400':
+          description: Cannot deactivate own account
+        '403':
+          description: Not authorized
+
+  /users/{userId}/unlock:
+    post:
+      operationId: unlockUser
+      summary: Unlock a locked user account
+      description: Removes login lockout from a user account (admin only)
+      tags:
+        - User Management
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Account unlocked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetail'
+        '400':
+          description: Account not locked
+        '403':
+          description: Not authorized
+        '404':
+          description: User not found
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: echo_session
+
+  schemas:
+    UserListResponse:
+      type: object
+      required:
+        - users
+        - pagination
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserSummary'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    UserSummary:
+      type: object
+      required:
+        - id
+        - email
+        - displayName
+        - roles
+        - status
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        avatarUrl:
+          type: string
+          format: uri
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+        status:
+          $ref: '#/components/schemas/UserStatus'
+        createdAt:
+          type: string
+          format: date-time
+        lastActivityAt:
+          type: string
+          format: date-time
+
+    UserDetail:
+      allOf:
+        - $ref: '#/components/schemas/UserSummary'
+        - type: object
+          properties:
+            lockedUntil:
+              type: string
+              format: date-time
+            failedLoginCount:
+              type: integer
+            authProvider:
+              type: string
+              enum: [github, google]
+            branchCount:
+              type: integer
+              description: Number of branches owned by user
+            reviewCount:
+              type: integer
+              description: Number of reviews performed
+
+    Role:
+      type: string
+      enum:
+        - contributor
+        - reviewer
+        - administrator
+
+    UserStatus:
+      type: string
+      enum:
+        - active
+        - deactivated
+
+    Pagination:
+      type: object
+      required:
+        - page
+        - limit
+        - total
+        - totalPages
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+
+    PermissionDeniedError:
+      type: object
+      required:
+        - error
+        - message
+        - requiredPermission
+        - currentRole
+        - guidance
+      properties:
+        error:
+          type: string
+          enum: [permission_denied]
+        message:
+          type: string
+        requiredPermission:
+          type: string
+        currentRole:
+          $ref: '#/components/schemas/Role'
+        guidance:
+          type: string
+          description: Actionable guidance for the user

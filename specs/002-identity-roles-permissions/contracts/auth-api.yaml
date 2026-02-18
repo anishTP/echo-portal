@@ -1,0 +1,283 @@
+openapi: 3.1.0
+info:
+  title: Echo Portal Authentication API
+  description: Authentication and session management endpoints
+  version: 1.0.0
+
+servers:
+  - url: /api/v1
+    description: API v1
+
+paths:
+  /auth/login/{provider}:
+    get:
+      operationId: initiateOAuthLogin
+      summary: Initiate OAuth login flow
+      description: Redirects user to OAuth provider for authentication
+      tags:
+        - Authentication
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [github, google]
+          description: OAuth provider to use
+        - name: redirect_uri
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uri
+          description: URL to redirect after successful auth
+      responses:
+        '302':
+          description: Redirect to OAuth provider
+        '400':
+          description: Invalid provider
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/callback/{provider}:
+    get:
+      operationId: handleOAuthCallback
+      summary: Handle OAuth callback
+      description: Processes OAuth callback and creates session
+      tags:
+        - Authentication
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [github, google]
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+          description: OAuth authorization code
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+          description: CSRF state token
+      responses:
+        '302':
+          description: Redirect to application with session cookie set
+        '400':
+          description: Invalid callback parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '423':
+          description: Account locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountLockedError'
+
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      summary: Get current authenticated user
+      description: Returns the currently authenticated user's profile and permissions
+      tags:
+        - Authentication
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticatedUser'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: End current session
+      description: Invalidates the current session and clears session cookie
+      tags:
+        - Authentication
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Successfully logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logged out successfully
+        '401':
+          description: Not authenticated
+
+  /auth/sessions:
+    get:
+      operationId: listSessions
+      summary: List user's active sessions
+      description: Returns all active sessions for the current user
+      tags:
+        - Authentication
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: List of active sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Session'
+
+  /auth/sessions/{sessionId}:
+    delete:
+      operationId: revokeSession
+      summary: Revoke a specific session
+      description: Invalidates a specific session (for "log out everywhere" functionality)
+      tags:
+        - Authentication
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Session revoked
+        '404':
+          description: Session not found
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: echo_session
+
+  schemas:
+    AuthenticatedUser:
+      type: object
+      required:
+        - id
+        - email
+        - displayName
+        - roles
+        - permissions
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        avatarUrl:
+          type: string
+          format: uri
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+        permissions:
+          type: array
+          items:
+            type: string
+          description: Computed permissions based on roles
+        createdAt:
+          type: string
+          format: date-time
+
+    Session:
+      type: object
+      required:
+        - id
+        - createdAt
+        - lastActivityAt
+        - expiresAt
+        - current
+      properties:
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        lastActivityAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        ipAddress:
+          type: string
+        userAgent:
+          type: string
+        current:
+          type: boolean
+          description: Whether this is the current session
+
+    Role:
+      type: string
+      enum:
+        - contributor
+        - reviewer
+        - administrator
+
+    AccountLockedError:
+      type: object
+      required:
+        - error
+        - message
+        - lockedUntil
+        - retryAfterSeconds
+      properties:
+        error:
+          type: string
+          enum: [account_locked]
+        message:
+          type: string
+        lockedUntil:
+          type: string
+          format: date-time
+        retryAfterSeconds:
+          type: integer
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object

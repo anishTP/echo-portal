@@ -1,0 +1,780 @@
+openapi: 3.1.0
+info:
+  title: Content Authoring and Versioning - Contents API
+  version: 1.0.0
+  description: API for managing content items within branches in the Echo Portal governed contribution workflow
+
+servers:
+  - url: /api/v1
+    description: API v1
+
+tags:
+  - name: Contents
+    description: Content CRUD operations
+  - name: Versions
+    description: Version history and comparison operations
+  - name: References
+    description: Cross-content reference tracking
+
+paths:
+  /contents:
+    post:
+      operationId: createContent
+      summary: Create content within a branch
+      description: Creates a new content item with its initial version. Requires a valid branch in draft state.
+      tags: [Contents]
+      security:
+        - CookieAuth: []
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateContentRequest'
+      responses:
+        '201':
+          description: Content created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentResponse'
+        '400':
+          description: Validation error (missing branchId, invalid content type, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Not authenticated
+        '403':
+          description: Insufficient permissions
+        '413':
+          description: Content body exceeds 50 MB size limit
+
+    get:
+      operationId: listContents
+      summary: List contents in a branch
+      description: Returns content items in a branch filtered by type, category, or search query
+      tags: [Contents]
+      security:
+        - CookieAuth: []
+        - BearerAuth: []
+      parameters:
+        - name: branchId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: contentType
+          in: query
+          schema:
+            $ref: '#/components/schemas/ContentType'
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Content list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentListResponse'
+
+  /contents/published:
+    get:
+      operationId: listPublishedContent
+      summary: List published content
+      description: Returns published public content. No authentication required for public content.
+      tags: [Contents]
+      security:
+        - {}
+        - CookieAuth: []
+      parameters:
+        - name: contentType
+          in: query
+          schema:
+            $ref: '#/components/schemas/ContentType'
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Published content list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentListResponse'
+
+  /contents/search:
+    get:
+      operationId: searchContent
+      summary: Search content by metadata
+      description: Full-text search across title, description, tags, and category
+      tags: [Contents]
+      security:
+        - CookieAuth: []
+        - BearerAuth: []
+        - {}
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - name: contentType
+          in: query
+          schema:
+            $ref: '#/components/schemas/ContentType'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentListResponse'
+
+  /contents/{contentId}:
+    get:
+      operationId: getContent
+      summary: Get content with current version
+      description: Returns content metadata and its current version body. Access filtered by visibility.
+      tags: [Contents]
+      security:
+        - CookieAuth: []
+        - BearerAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/ContentId'
+      responses:
+        '200':
+          description: Content with current version
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentResponse'
+        '404':
+          description: Content not found or not accessible
+
+    put:
+      operationId: updateContent
+      summary: Update content (creates new version)
+      description: Modifies content by creating a new immutable version. Branch must be in draft state.
+      tags: [Contents]
+      security:
+        - CookieAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ContentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateContentRequest'
+      responses:
+        '200':
+          description: Content updated (new version created)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentResponse'
+        '403':
+          description: Branch not in draft state or insufficient permissions
+        '409':
+          description: Version conflict (concurrent edit detected)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictResponse'
+        '413':
+          description: Content body exceeds 50 MB
+
+  /contents/{contentId}/versions:
+    get:
+      operationId: listVersions
+      summary: List version history
+      description: Returns all versions ordered by timestamp descending with author attribution
+      tags: [Versions]
+      security:
+        - CookieAuth: []
+        - BearerAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/ContentId'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Version history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionListResponse'
+
+  /contents/{contentId}/versions/{versionId}:
+    get:
+      operationId: getVersion
+      summary: Get specific version (read-only)
+      description: Returns a specific historical version by its UUID
+      tags: [Versions]
+      security:
+        - CookieAuth: []
+        - BearerAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/ContentId'
+        - name: versionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Version details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionResponse'
+        '404':
+          description: Version not found
+
+  /contents/{contentId}/diff:
+    get:
+      operationId: diffVersions
+      summary: Compare two versions
+      description: Returns structured diff between two versions identified by ISO 8601 timestamps
+      tags: [Versions]
+      security:
+        - CookieAuth: []
+        - BearerAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/ContentId'
+        - name: from
+          in: query
+          required: true
+          description: ISO 8601 timestamp of the base version
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: true
+          description: ISO 8601 timestamp of the target version
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Version diff
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiffResponse'
+        '404':
+          description: One or both versions not found
+
+  /contents/{contentId}/revert:
+    post:
+      operationId: revertContent
+      summary: Revert to a previous version
+      description: Creates a new version based on a historical version's content. Does not delete any history.
+      tags: [Versions]
+      security:
+        - CookieAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ContentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevertRequest'
+      responses:
+        '200':
+          description: Revert successful (new version created)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentResponse'
+        '403':
+          description: Branch not in draft state
+
+  /contents/{contentId}/lineage:
+    get:
+      operationId: getLineage
+      summary: Get content lineage
+      description: Returns the full lineage chain from current version back to original source
+      tags: [Versions]
+      security:
+        - CookieAuth: []
+        - BearerAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/ContentId'
+      responses:
+        '200':
+          description: Content lineage
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LineageResponse'
+
+  /contents/{contentId}/references:
+    get:
+      operationId: getReferences
+      summary: Get outgoing content references
+      description: Returns all content items referenced by this content
+      tags: [References]
+      security:
+        - CookieAuth: []
+        - BearerAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/ContentId'
+      responses:
+        '200':
+          description: Content references
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferenceListResponse'
+
+  /contents/{contentId}/referenced-by:
+    get:
+      operationId: getReferencedBy
+      summary: Get incoming content references
+      description: Returns all content items that reference this content
+      tags: [References]
+      security:
+        - CookieAuth: []
+        - BearerAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/ContentId'
+      responses:
+        '200':
+          description: Reverse references
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferenceListResponse'
+
+components:
+  securitySchemes:
+    CookieAuth:
+      type: apiKey
+      in: cookie
+      name: echo_session
+    BearerAuth:
+      type: http
+      scheme: bearer
+
+  parameters:
+    ContentId:
+      name: contentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    ContentType:
+      type: string
+      enum: [guideline, asset, opinion]
+
+    CreateContentRequest:
+      type: object
+      required: [branchId, title, contentType, body, changeDescription]
+      properties:
+        branchId:
+          type: string
+          format: uuid
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+        contentType:
+          $ref: '#/components/schemas/ContentType'
+        category:
+          type: string
+          maxLength: 200
+        tags:
+          type: array
+          items:
+            type: string
+            maxLength: 100
+          maxItems: 20
+        description:
+          type: string
+          maxLength: 5000
+        body:
+          type: string
+          description: Content body (max 50 MB)
+        bodyFormat:
+          type: string
+          enum: [markdown, structured, rich_text]
+          default: markdown
+        changeDescription:
+          type: string
+          minLength: 1
+          maxLength: 2000
+
+    UpdateContentRequest:
+      type: object
+      required: [body, changeDescription]
+      properties:
+        title:
+          type: string
+          maxLength: 500
+        category:
+          type: string
+          maxLength: 200
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 20
+        description:
+          type: string
+          maxLength: 5000
+        body:
+          type: string
+        bodyFormat:
+          type: string
+          enum: [markdown, structured, rich_text]
+        changeDescription:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        currentVersionTimestamp:
+          type: string
+          format: date-time
+          description: Expected current version timestamp for optimistic concurrency
+
+    RevertRequest:
+      type: object
+      required: [targetVersionTimestamp, changeDescription]
+      properties:
+        targetVersionTimestamp:
+          type: string
+          format: date-time
+        changeDescription:
+          type: string
+          minLength: 1
+          maxLength: 2000
+
+    ContentResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Content'
+
+    Content:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        branchId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        slug:
+          type: string
+        contentType:
+          $ref: '#/components/schemas/ContentType'
+        category:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        description:
+          type: string
+        visibility:
+          type: string
+          enum: [private, team, public]
+        isPublished:
+          type: boolean
+        publishedAt:
+          type: string
+          format: date-time
+        sourceContentId:
+          type: string
+          format: uuid
+        currentVersion:
+          $ref: '#/components/schemas/Version'
+        createdBy:
+          $ref: '#/components/schemas/UserSummary'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Version:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        versionTimestamp:
+          type: string
+          format: date-time
+        body:
+          type: string
+        bodyFormat:
+          type: string
+        metadataSnapshot:
+          type: object
+        changeDescription:
+          type: string
+        author:
+          $ref: '#/components/schemas/UserSummary'
+        authorType:
+          type: string
+          enum: [user, system]
+        byteSize:
+          type: integer
+        checksum:
+          type: string
+        isRevert:
+          type: boolean
+        revertedFromId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+
+    UserSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        avatarUrl:
+          type: string
+
+    ContentListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Content'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    VersionListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Version'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    VersionResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Version'
+
+    DiffResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            contentId:
+              type: string
+              format: uuid
+            from:
+              type: object
+              properties:
+                versionTimestamp:
+                  type: string
+                  format: date-time
+                author:
+                  $ref: '#/components/schemas/UserSummary'
+                changeDescription:
+                  type: string
+            to:
+              type: object
+              properties:
+                versionTimestamp:
+                  type: string
+                  format: date-time
+                author:
+                  $ref: '#/components/schemas/UserSummary'
+                changeDescription:
+                  type: string
+            diff:
+              type: object
+              properties:
+                bodyChanges:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                        enum: [add, remove, unchanged]
+                      lineStart:
+                        type: integer
+                      lineEnd:
+                        type: integer
+                      content:
+                        type: string
+                metadataChanges:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      field:
+                        type: string
+                      oldValue: {}
+                      newValue: {}
+            summary:
+              type: object
+              properties:
+                additions:
+                  type: integer
+                deletions:
+                  type: integer
+                modifications:
+                  type: integer
+
+    ConflictResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              const: VERSION_CONFLICT
+            message:
+              type: string
+        currentVersion:
+          $ref: '#/components/schemas/Version'
+
+    LineageResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            contentId:
+              type: string
+              format: uuid
+            versions:
+              type: array
+              items:
+                $ref: '#/components/schemas/Version'
+            sourceContent:
+              $ref: '#/components/schemas/Content'
+
+    ReferenceListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              sourceContentId:
+                type: string
+                format: uuid
+              targetContentId:
+                type: string
+                format: uuid
+              referenceType:
+                type: string
+                enum: [link, embed, extends, replaces]
+              targetContent:
+                $ref: '#/components/schemas/Content'
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        hasMore:
+          type: boolean
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
