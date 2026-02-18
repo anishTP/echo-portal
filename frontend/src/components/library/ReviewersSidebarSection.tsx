@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useCallback, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Badge, Dialog, Flex, Text } from '@radix-ui/themes';
 import { Pencil1Icon } from '@radix-ui/react-icons';
 import { api } from '../../services/api';
 import { TeamMemberPicker, type TeamMember } from '../branch/TeamMemberPicker';
 import type { ReviewResponse } from '../../services/reviewService';
+import { reviewKeys } from '../../hooks/queryKeys';
 import sidebarStyles from './ContentMetadataSidebar.module.css';
 import styles from './ReviewersSidebarSection.module.css';
 
@@ -61,6 +62,12 @@ export function ReviewersSidebarSection({
   isOwner,
 }: ReviewersSidebarSectionProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Invalidate branch reviews when reviewers are added/removed
+  const handleReviewersChange = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: reviewKeys.branchReviews(branchId) });
+  }, [queryClient, branchId]);
 
   // Fetch reviewer details (shares cache with TeamMemberPicker)
   const { data: reviewerDetails = [] } = useQuery<TeamMember[]>({
@@ -124,7 +131,7 @@ export function ReviewersSidebarSection({
             <Dialog.Description size="2" color="gray" mb="4">
               Add or remove reviewers for this branch.
             </Dialog.Description>
-            <TeamMemberPicker branchId={branchId} />
+            <TeamMemberPicker branchId={branchId} onReviewersChange={handleReviewersChange} />
             <Flex justify="end" mt="4">
               <Dialog.Close>
                 <button className={styles.doneButton}>Done</button>
