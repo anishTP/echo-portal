@@ -125,7 +125,7 @@ All tasks MUST comply with Echo Portal Constitution v1.0.1:
 
 ---
 
-## Phase 4: US3 — Subcategory Management in Draft Branches (P2) — ⬜ Pending
+## Phase 4: US3 — Subcategory Management in Draft Branches (P2) — ✅ COMPLETED
 
 **Beads Phase ID**: `echo-portal-e5wy`
 **Goal**: Contributors can create, rename, reorder, delete subcategories and reassign content via DnD — all gated to draft branch mode
@@ -134,67 +134,67 @@ All tasks MUST comply with Echo Portal Constitution v1.0.1:
 
 ### Context Menus & Inline Editing
 
-- [ ] T018 [US3] Add Radix UI context menus: category right-click shows Add Subcategory + Add Content (contributor+), subcategory right-click shows Rename + Delete + Add Content (contributor+), content right-click preserves existing Rename + Delete `frontend/src/components/library/LibrarySidebar.tsx`
-- [ ] T019 [US3] Implement inline text field for "Add Subcategory" — appears at top of category's children list, auto-expands category if collapsed, Enter saves via POST API, Escape/blur cancels, empty/duplicate name cancels silently `frontend/src/components/library/LibrarySidebar.tsx`
-- [ ] T020 [US3] Implement inline text field for subcategory rename — pre-filled with current name, Enter saves via PATCH API, Escape/blur/invalid input (empty, duplicate) silently reverts to original `frontend/src/components/library/LibrarySidebar.tsx`
-- [ ] T021 [US3] Implement delete subcategory confirmation dialog — shows count of content pieces that will be cascade-deleted, confirm triggers DELETE API call `frontend/src/components/library/LibrarySidebar.tsx`
+- [x] T018 [US3] Add Radix UI context menus: category right-click shows Add Subcategory + Add Content (contributor+), subcategory right-click shows Rename + Delete + Add Content (contributor+), content right-click preserves existing Rename + Delete `frontend/src/components/library/LibrarySidebar.tsx`
+- [x] T019 [US3] Implement inline text field for "Add Subcategory" — appears at top of category's children list, auto-expands category if collapsed, Enter saves via POST API, Escape/blur cancels, empty/duplicate name cancels silently `frontend/src/components/library/LibrarySidebar.tsx`
+- [x] T020 [US3] Implement inline text field for subcategory rename — pre-filled with current name, Enter saves via PATCH API, Escape/blur/invalid input (empty, duplicate) silently reverts to original `frontend/src/components/library/LibrarySidebar.tsx`
+- [x] T021 [US3] Implement delete subcategory confirmation dialog — shows count of content pieces that will be cascade-deleted, confirm triggers DELETE API call `frontend/src/components/library/LibrarySidebar.tsx`
 
 ### Drag-and-Drop
 
-- [ ] T022 [US3] Implement DnD reordering for subcategories and loose content within a category using @dnd-kit/sortable — drag to reorder interleaved items, calls PUT /reorder API on drop `frontend/src/components/library/LibrarySidebar.tsx`
-- [ ] T023 [US3] Implement DnD content reassignment between subcategories using @dnd-kit cross-container drag — drop content on different subcategory or parent category (to unassign), constrained to same section, calls PATCH /contents/:id/move API `frontend/src/components/library/LibrarySidebar.tsx`
+- [x] T022 [US3] Implement DnD reordering for subcategories and loose content within a category using @dnd-kit/sortable — drag to reorder interleaved items, calls PUT /reorder API on drop `frontend/src/components/library/LibrarySidebar.tsx`
+- [x] T023 [US3] Implement DnD content reassignment between subcategories using @dnd-kit cross-container drag — drop content on different subcategory or parent category (to unassign), constrained to same section, calls PATCH /contents/:id/move API `frontend/src/components/library/LibrarySidebar.tsx`
 
 ### Draft Branch Gating
 
-- [ ] T024 [US3] Gate all mutation context menu items and DnD interactions to draft branch mode only — hide Add Subcategory, Add Content, Rename, Delete from menus when not in draft branch, disable DnD `frontend/src/components/library/LibrarySidebar.tsx`
+- [x] T024 [US3] Gate all mutation context menu items and DnD interactions to draft branch mode only — hide Add Subcategory, Add Content, Rename, Delete from menus when not in draft branch, disable DnD `frontend/src/components/library/LibrarySidebar.tsx`
 
 ### Tests
 
-- [ ] T025 [P] [US3] Write backend integration tests for mutation endpoints — POST /subcategories (auth, permissions, draft guard, duplicate name conflict), PATCH /subcategories/:id (rename, 404, conflict), DELETE /subcategories/:id (cascade count, 404), PUT /reorder (validate order items), PATCH /contents/:id/move (reassignment) `backend/tests/integration/subcategories.test.ts`
-- [ ] T026 [P] [US3] Write frontend component tests for context menu visibility, inline create/rename, delete confirmation dialog, DnD reorder, DnD reassignment, draft-branch gating `frontend/tests/unit/sidebar-tree.test.tsx`
+- [x] T025 [P] [US3] Write backend integration tests for mutation endpoints — POST /subcategories (auth, permissions, draft guard, duplicate name conflict), PATCH /subcategories/:id (rename, 404, conflict), DELETE /subcategories/:id (cascade count, 404), PUT /reorder (validate order items), PATCH /contents/:id/move (reassignment) `backend/tests/integration/subcategories.test.ts`
+- [x] T026 [P] [US3] Write frontend component tests for context menu visibility, inline create/rename, delete confirmation dialog, DnD reorder, DnD reassignment, draft-branch gating `frontend/tests/unit/sidebar-tree.test.tsx`
 
 **✓ Checkpoint**: All subcategory CRUD operations work in draft mode. DnD reorders and reassigns content. No mutations possible on published branch. All US3 acceptance scenarios pass.
 
 ---
 
-## Phase 5: US4 — Migration Verification (P2) — ⬜ Pending
+## Phase 5: US4 — Migration Verification (P2) — ✅ COMPLETED
 
 **Beads Phase ID**: `echo-portal-ldo7`
 **Goal**: Verify that the SQL migration correctly creates subcategories from free-text category values and links content
 **Acceptance**: Migration test confirms: subcategory records created from distinct category values, content pieces linked to correct subcategories, content without category assigned to first category in section, old category text retained
 **Dependencies**: Phase 2 complete (migration SQL written in T006)
 
-- [ ] T027 [US4] Write migration verification tests: confirm subcategories created from distinct contents.category values per section, content.subcategoryId populated correctly, content.categoryId populated (first category by displayOrder in section), content without category gets categoryId but no subcategoryId, old category text column retained unchanged `backend/tests/integration/migration.test.ts`
+- [x] T027 [US4] Write migration verification tests: confirm subcategories created from distinct contents.category values per section, content.subcategoryId populated correctly, content.categoryId populated (first category by displayOrder in section), content without category gets categoryId but no subcategoryId, old category text column retained unchanged `backend/tests/integration/migration.test.ts`
 
 **✓ Checkpoint**: Migration tests pass against test data. All US4 acceptance scenarios verified.
 
 ---
 
-## Phase 6: US5 — Admin Category Management (P3) — ⬜ Pending
+## Phase 6: US5 — Admin Category Management (P3) — ✅ COMPLETED
 
 **Beads Phase ID**: `echo-portal-o5lm`
 **Goal**: Admin-only category management (create, rename, reorder, delete) works correctly in the new three-level tree
 **Acceptance**: Admin right-click on category shows Rename/Delete/Reorder + Add Subcategory + Add Content. Non-admin contributor sees only Add Subcategory + Add Content. Published branch shows no mutation actions.
 **Dependencies**: Phase 4 complete (context menus must exist)
 
-- [ ] T028 [US5] Implement role-based context menu differentiation — admin sees Rename Category + Delete Category + Reorder in category context menu, contributor sees only Add Subcategory + Add Content `frontend/src/components/library/LibrarySidebar.tsx`
-- [ ] T029 [US5] Ensure admin category actions (rename, delete, reorder) integrate with new tree structure and trigger correct API calls `frontend/src/components/library/LibrarySidebar.tsx`
-- [ ] T030 [P] [US5] Write frontend tests for role-based context menu visibility — admin vs contributor vs viewer, draft vs published branch `frontend/tests/unit/sidebar-tree.test.tsx`
+- [x] T028 [US5] Implement role-based context menu differentiation — admin sees Rename Category + Delete Category + Reorder in category context menu, contributor sees only Add Subcategory + Add Content `frontend/src/components/library/LibrarySidebar.tsx`
+- [x] T029 [US5] Ensure admin category actions (rename, delete, reorder) integrate with new tree structure and trigger correct API calls `frontend/src/components/library/LibrarySidebar.tsx`
+- [x] T030 [P] [US5] Write frontend tests for role-based context menu visibility — admin vs contributor vs viewer, draft vs published branch `frontend/tests/unit/sidebar-tree.test.tsx`
 
 **✓ Checkpoint**: Admin category management preserved. Role differentiation verified. All US5 acceptance scenarios pass.
 
 ---
 
-## Phase 7: Polish & Cross-Cutting — ⬜ Pending
+## Phase 7: Polish & Cross-Cutting — ✅ COMPLETED
 
 **Beads Phase ID**: `echo-portal-qp52`
 **Purpose**: Edge case coverage, accessibility, performance, and final validation
 **Dependencies**: All user story phases complete
 
-- [ ] T031 [P] Write edge case tests: empty categories, empty subcategories, concurrent subcategory creation (unique constraint), cascade delete of category with subcategories, 500+ content pieces performance `backend/tests/integration/subcategories.test.ts` `frontend/tests/unit/sidebar-tree.test.tsx`
-- [ ] T032 [P] Accessibility review — keyboard navigation for tree expand/collapse, ARIA tree role attributes, focus management for inline editors `frontend/src/components/library/LibrarySidebar.tsx`
-- [ ] T033 Run quickstart.md validation end-to-end — verify all setup steps, migration, and test commands work
-- [ ] T034 Code cleanup — remove unused imports from old sidebar code, verify no regressions in existing test suite, bundle size review
+- [x] T031 [P] Write edge case tests: empty categories, empty subcategories, concurrent subcategory creation (unique constraint), cascade delete of category with subcategories, 500+ content pieces performance `backend/tests/integration/subcategories.test.ts` `frontend/tests/unit/sidebar-tree.test.tsx`
+- [x] T032 [P] Accessibility review — keyboard navigation for tree expand/collapse, ARIA tree role attributes, focus management for inline editors `frontend/src/components/library/LibrarySidebar.tsx`
+- [x] T033 Run quickstart.md validation end-to-end — verify all setup steps, migration, and test commands work
+- [x] T034 Code cleanup — remove unused imports from old sidebar code, verify no regressions in existing test suite, bundle size review
 
 **✓ Checkpoint**: Feature complete, all edge cases covered, accessible, production-ready
 
@@ -307,48 +307,48 @@ T025 & T026
 
 | Task ID | Beads ID | Status |
 |---------|----------|--------|
-| Epic | `echo-portal-wq97` | ⬜ |
-| Phase 1 | `echo-portal-qnj5` | ⬜ |
-| Phase 2 | `echo-portal-uvrv` | ⬜ |
-| Phase 3 | `echo-portal-invi` | ⬜ |
-| Phase 4 | `echo-portal-e5wy` | ⬜ |
-| Phase 5 | `echo-portal-ldo7` | ⬜ |
-| Phase 6 | `echo-portal-o5lm` | ⬜ |
-| Phase 7 | `echo-portal-qp52` | ⬜ |
-| T001 | `echo-portal-qnj5.1` | ⬜ |
-| T002 | `echo-portal-uvrv.1` | ⬜ |
-| T003 | `echo-portal-uvrv.2` | ⬜ |
-| T004 | `echo-portal-uvrv.3` | ⬜ |
-| T005 | `echo-portal-uvrv.4` | ⬜ |
-| T006 | `echo-portal-uvrv.5` | ⬜ |
-| T007 | `echo-portal-uvrv.6` | ⬜ |
-| T008 | `echo-portal-uvrv.7` | ⬜ |
-| T009 | `echo-portal-uvrv.8` | ⬜ |
-| T010 | `echo-portal-uvrv.9` | ⬜ |
-| T011 | `echo-portal-invi.1` | ⬜ |
-| T012 | `echo-portal-invi.2` | ⬜ |
-| T013 | `echo-portal-invi.3` | ⬜ |
-| T014 | `echo-portal-invi.4` | ⬜ |
-| T015 | `echo-portal-invi.5` | ⬜ |
-| T016 | `echo-portal-invi.6` | ⬜ |
-| T017 | `echo-portal-invi.7` | ⬜ |
-| T018 | `echo-portal-e5wy.1` | ⬜ |
-| T019 | `echo-portal-e5wy.2` | ⬜ |
-| T020 | `echo-portal-e5wy.3` | ⬜ |
-| T021 | `echo-portal-e5wy.4` | ⬜ |
-| T022 | `echo-portal-e5wy.5` | ⬜ |
-| T023 | `echo-portal-e5wy.6` | ⬜ |
-| T024 | `echo-portal-e5wy.7` | ⬜ |
-| T025 | `echo-portal-e5wy.8` | ⬜ |
-| T026 | `echo-portal-e5wy.9` | ⬜ |
-| T027 | `echo-portal-ldo7.1` | ⬜ |
-| T028 | `echo-portal-o5lm.1` | ⬜ |
-| T029 | `echo-portal-o5lm.2` | ⬜ |
-| T030 | `echo-portal-o5lm.3` | ⬜ |
-| T031 | `echo-portal-qp52.1` | ⬜ |
-| T032 | `echo-portal-qp52.2` | ⬜ |
-| T033 | `echo-portal-qp52.3` | ⬜ |
-| T034 | `echo-portal-qp52.4` | ⬜ |
+| Epic | `echo-portal-wq97` | ✅ |
+| Phase 1 | `echo-portal-qnj5` | ✅ |
+| Phase 2 | `echo-portal-uvrv` | ✅ |
+| Phase 3 | `echo-portal-invi` | ✅ |
+| Phase 4 | `echo-portal-e5wy` | ✅ |
+| Phase 5 | `echo-portal-ldo7` | ✅ |
+| Phase 6 | `echo-portal-o5lm` | ✅ |
+| Phase 7 | `echo-portal-qp52` | ✅ |
+| T001 | `echo-portal-qnj5.1` | ✅ |
+| T002 | `echo-portal-uvrv.1` | ✅ |
+| T003 | `echo-portal-uvrv.2` | ✅ |
+| T004 | `echo-portal-uvrv.3` | ✅ |
+| T005 | `echo-portal-uvrv.4` | ✅ |
+| T006 | `echo-portal-uvrv.5` | ✅ |
+| T007 | `echo-portal-uvrv.6` | ✅ |
+| T008 | `echo-portal-uvrv.7` | ✅ |
+| T009 | `echo-portal-uvrv.8` | ✅ |
+| T010 | `echo-portal-uvrv.9` | ✅ |
+| T011 | `echo-portal-invi.1` | ✅ |
+| T012 | `echo-portal-invi.2` | ✅ |
+| T013 | `echo-portal-invi.3` | ✅ |
+| T014 | `echo-portal-invi.4` | ✅ |
+| T015 | `echo-portal-invi.5` | ✅ |
+| T016 | `echo-portal-invi.6` | ✅ |
+| T017 | `echo-portal-invi.7` | ✅ |
+| T018 | `echo-portal-e5wy.1` | ✅ |
+| T019 | `echo-portal-e5wy.2` | ✅ |
+| T020 | `echo-portal-e5wy.3` | ✅ |
+| T021 | `echo-portal-e5wy.4` | ✅ |
+| T022 | `echo-portal-e5wy.5` | ✅ |
+| T023 | `echo-portal-e5wy.6` | ✅ |
+| T024 | `echo-portal-e5wy.7` | ✅ |
+| T025 | `echo-portal-e5wy.8` | ✅ |
+| T026 | `echo-portal-e5wy.9` | ✅ |
+| T027 | `echo-portal-ldo7.1` | ✅ |
+| T028 | `echo-portal-o5lm.1` | ✅ |
+| T029 | `echo-portal-o5lm.2` | ✅ |
+| T030 | `echo-portal-o5lm.3` | ✅ |
+| T031 | `echo-portal-qp52.1` | ✅ |
+| T032 | `echo-portal-qp52.2` | ✅ |
+| T033 | `echo-portal-qp52.3` | ✅ |
+| T034 | `echo-portal-qp52.4` | ✅ |
 
 ---
 

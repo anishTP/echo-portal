@@ -139,22 +139,6 @@ export function useCreateCategory() {
 }
 
 /**
- * Mutation to update (rename) a persistent category by ID
- */
-export function useUpdateCategory() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ id, name }: { id: string; name: string }) =>
-      categoryApi.update(id, { name }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: categoryKeys.all });
-      queryClient.invalidateQueries({ queryKey: contentKeys.all });
-    },
-  });
-}
-
-/**
  * Mutation to rename a category by name (works for both persistent and content-derived categories)
  */
 export function useRenameCategory() {
@@ -216,5 +200,84 @@ export function useSubcategoriesForCategories(categoryIds: string[]) {
     },
     enabled: categoryIds.length > 0,
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * Mutation to create a subcategory
+ */
+export function useCreateSubcategory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: { name: string; categoryId: string; branchId: string }) =>
+      subcategoryApi.create(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: subcategoryKeys.all });
+      queryClient.invalidateQueries({ queryKey: contentKeys.all });
+    },
+  });
+}
+
+/**
+ * Mutation to rename a subcategory
+ */
+export function useRenameSubcategory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, name, branchId }: { id: string; name: string; branchId: string }) =>
+      subcategoryApi.rename(id, { name, branchId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: subcategoryKeys.all });
+    },
+  });
+}
+
+/**
+ * Mutation to delete a subcategory (cascade-deletes content)
+ */
+export function useDeleteSubcategory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, branchId }: { id: string; branchId: string }) =>
+      subcategoryApi.delete(id, branchId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: subcategoryKeys.all });
+      queryClient.invalidateQueries({ queryKey: contentKeys.all });
+    },
+  });
+}
+
+/**
+ * Mutation to reorder subcategories and loose content within a category
+ */
+export function useReorderSubcategories() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: { categoryId: string; branchId: string; order: { type: 'subcategory' | 'content'; id: string }[] }) =>
+      subcategoryApi.reorder(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: subcategoryKeys.all });
+      queryClient.invalidateQueries({ queryKey: contentKeys.all });
+    },
+  });
+}
+
+/**
+ * Mutation to move content between subcategories (DnD reassignment)
+ */
+export function useMoveContent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ contentId, ...input }: { contentId: string; branchId: string; subcategoryId: string | null; displayOrder: number }) =>
+      subcategoryApi.moveContent(contentId, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: subcategoryKeys.all });
+      queryClient.invalidateQueries({ queryKey: contentKeys.all });
+    },
   });
 }

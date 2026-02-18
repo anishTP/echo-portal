@@ -15,7 +15,7 @@ import { ReviewModeHeader } from '../components/library/ReviewModeHeader';
 import { ReviewDiffView } from '../components/library/ReviewDiffView';
 import { BranchCreateDialog } from '../components/editor/BranchCreateDialog';
 import { CreateContentDialog } from '../components/library/CreateContentDialog';
-import { usePublishedContent, useContentBySlug, useCreateCategory, useRenameCategory, useDeleteCategory, useReorderCategories, usePersistentCategories, useSubcategoriesForCategories } from '../hooks/usePublishedContent';
+import { usePublishedContent, useContentBySlug, useCreateCategory, useRenameCategory, useDeleteCategory, useReorderCategories, usePersistentCategories, useSubcategoriesForCategories, useCreateSubcategory, useRenameSubcategory, useDeleteSubcategory, useReorderSubcategories, useMoveContent } from '../hooks/usePublishedContent';
 import { useEditBranch } from '../hooks/useEditBranch';
 import { useBranch, usePublishBranch } from '../hooks/useBranch';
 import { useContent, useContentList, useCreateContent, useDeleteContent, contentKeys } from '../hooks/useContent';
@@ -87,6 +87,11 @@ export default function Library() {
   const renameCategoryMutation = useRenameCategory();
   const deleteCategoryMutation = useDeleteCategory();
   const reorderCategoriesMutation = useReorderCategories();
+  const createSubcategoryMutation = useCreateSubcategory();
+  const renameSubcategoryMutation = useRenameSubcategory();
+  const deleteSubcategoryMutation = useDeleteSubcategory();
+  const reorderSubcategoriesMutation = useReorderSubcategories();
+  const moveContentMutation = useMoveContent();
 
   // Delete confirmation dialog state
   const [deleteCategoryTarget, setDeleteCategoryTarget] = useState<string | null>(null);
@@ -462,6 +467,76 @@ export default function Library() {
     }
     setDeleteCategoryTarget(null);
   }, [deleteCategoryTarget, persistentCategoryList, deleteCategoryMutation]);
+
+  // Handle subcategory creation from sidebar context menu
+  const handleAddSubcategory = useCallback(
+    (categoryId: string, name: string) => {
+      const effectiveBranch = currentBranch?.id || branchId;
+      if (!effectiveBranch) return;
+      createSubcategoryMutation.mutate({
+        name,
+        categoryId,
+        branchId: effectiveBranch,
+      });
+    },
+    [currentBranch?.id, branchId, createSubcategoryMutation]
+  );
+
+  // Handle subcategory rename from sidebar context menu
+  const handleRenameSubcategory = useCallback(
+    (subcategoryId: string, newName: string) => {
+      const effectiveBranch = currentBranch?.id || branchId;
+      if (!effectiveBranch) return;
+      renameSubcategoryMutation.mutate({
+        id: subcategoryId,
+        name: newName,
+        branchId: effectiveBranch,
+      });
+    },
+    [currentBranch?.id, branchId, renameSubcategoryMutation]
+  );
+
+  // Handle subcategory delete from sidebar confirmation dialog
+  const handleDeleteSubcategory = useCallback(
+    (subcategoryId: string) => {
+      const effectiveBranch = currentBranch?.id || branchId;
+      if (!effectiveBranch) return;
+      deleteSubcategoryMutation.mutate({
+        id: subcategoryId,
+        branchId: effectiveBranch,
+      });
+    },
+    [currentBranch?.id, branchId, deleteSubcategoryMutation]
+  );
+
+  // Handle reorder of interleaved items within a category
+  const handleReorderItems = useCallback(
+    (categoryId: string, order: { type: 'subcategory' | 'content'; id: string }[]) => {
+      const effectiveBranch = currentBranch?.id || branchId;
+      if (!effectiveBranch) return;
+      reorderSubcategoriesMutation.mutate({
+        categoryId,
+        branchId: effectiveBranch,
+        order,
+      });
+    },
+    [currentBranch?.id, branchId, reorderSubcategoriesMutation]
+  );
+
+  // Handle content move between subcategories (DnD reassignment)
+  const handleMoveContent = useCallback(
+    (contentId: string, subcategoryId: string | null, displayOrder: number) => {
+      const effectiveBranch = currentBranch?.id || branchId;
+      if (!effectiveBranch) return;
+      moveContentMutation.mutate({
+        contentId,
+        branchId: effectiveBranch,
+        subcategoryId,
+        displayOrder,
+      });
+    },
+    [currentBranch?.id, branchId, moveContentMutation]
+  );
 
   // Handle content rename from sidebar context menu
   const handleRenameContent = useCallback(
@@ -853,6 +928,11 @@ export default function Library() {
           onRenameContent={handleRenameContent}
           onDeleteContent={handleDeleteContentFromSidebar}
           canManageContent={hasRole('administrator') || hasRole('contributor')}
+          onAddSubcategory={handleAddSubcategory}
+          onRenameSubcategory={handleRenameSubcategory}
+          onDeleteSubcategory={handleDeleteSubcategory}
+          onReorderItems={handleReorderItems}
+          onMoveContent={handleMoveContent}
         />
       }
       rightSidebar={
