@@ -171,24 +171,24 @@ export function DocumentationLayout({
         <div className={styles.sidebarInner}>{sidebar}</div>
       </aside>
 
-      {/* Center area: header spans full width, main + right sidebar sit below */}
+      {/* Center area: main + right sidebar sit side by side */}
       <div
         ref={centerWrapperRef}
         className={styles.centerWrapper}
         style={contentRightOffset ? { marginRight: contentRightOffset } : undefined}
       >
-        {headerToRender && (
-          <div
-            ref={contentHeaderRef}
-            className={styles.contentHeader}
-            data-exiting={isHeaderExiting || undefined}
-            onTransitionEnd={isHeaderExiting ? handleHeaderTransitionEnd : undefined}
-          >
-            {headerToRender}
-          </div>
-        )}
         <div className={styles.centerBody}>
           <main className={styles.main}>
+            {headerToRender && (
+              <div
+                ref={contentHeaderRef}
+                className={styles.contentHeader}
+                data-exiting={isHeaderExiting || undefined}
+                onTransitionEnd={isHeaderExiting ? handleHeaderTransitionEnd : undefined}
+              >
+                {headerToRender}
+              </div>
+            )}
             <div className={fullWidth ? styles.mainContentFullWidth : styles.mainContent}>{children}</div>
           </main>
 

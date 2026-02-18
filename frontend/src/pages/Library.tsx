@@ -12,6 +12,7 @@ import {
 import { InlineEditView, type DraftContent, type InlineEditViewHandle } from '../components/library/InlineEditView';
 import { EditModeHeader } from '../components/library/EditModeHeader';
 import { ReviewModeHeader } from '../components/library/ReviewModeHeader';
+import { BranchStatusBar } from '../components/library/BranchStatusBar';
 import { ReviewDiffView } from '../components/library/ReviewDiffView';
 import { BranchCreateDialog } from '../components/editor/BranchCreateDialog';
 import { CreateContentDialog } from '../components/library/CreateContentDialog';
@@ -1001,6 +1002,14 @@ export default function Library() {
               }
             }}
             isPublishing={publishBranch.isPending}
+          />
+        ) : isInBranchMode && activeBranch ? (
+          <BranchStatusBar
+            branchName={activeBranch.name}
+            branchState={activeBranch.state}
+            branchId={activeBranch.id}
+            isOwner={!!user && activeBranch.ownerId === user?.id}
+            canSubmitForReview={activeBranch.permissions?.canSubmitForReview ?? false}
           />
         ) : undefined
       }
