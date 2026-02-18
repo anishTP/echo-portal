@@ -10,6 +10,7 @@ import {
   useSensors,
   type DragEndEvent,
   type DragStartEvent,
+  type DragOverEvent,
   DragOverlay,
 } from '@dnd-kit/core';
 import {
@@ -551,6 +552,7 @@ export function LibrarySidebar({
   );
 
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [dragOverSubcategoryId, setDragOverSubcategoryId] = useState<string | null>(null);
 
   // Parse drag IDs: "reorder:{categoryId}:{type}:{itemId}" for interleaved reorder
   const parseDragId = useCallback((id: string) => {
@@ -565,9 +567,23 @@ export function LibrarySidebar({
     setActiveDragId(String(event.active.id));
   }, []);
 
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) { setDragOverSubcategoryId(null); return; }
+    const activeInfo = parseDragId(String(active.id));
+    const overInfo = parseDragId(String(over.id));
+    if (activeInfo?.type === 'content' && overInfo?.type === 'subcategory'
+        && activeInfo.categoryId === overInfo.categoryId) {
+      setDragOverSubcategoryId(overInfo.itemId);
+    } else {
+      setDragOverSubcategoryId(null);
+    }
+  }, [parseDragId]);
+
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       setActiveDragId(null);
+      setDragOverSubcategoryId(null);
       const { active, over } = event;
       if (!over || active.id === over.id) return;
 
@@ -575,6 +591,52 @@ export function LibrarySidebar({
       const overInfo = parseDragId(String(over.id));
 
       if (!activeInfo || !overInfo) return;
+
+      // Move content into subcategory
+      if (activeInfo.type === 'content' && overInfo.type === 'subcategory'
+          && activeInfo.categoryId === overInfo.categoryId && onMoveContent) {
+        const cat = displayCategories.find((c) => c.id === activeInfo.categoryId);
+        if (!cat) return;
+
+        const targetSubcat = cat.children.find(
+          (child) => child.type === 'subcategory' && child.subcategory.id === overInfo.itemId
+        ) as TreeSubcategory | undefined;
+        if (!targetSubcat) return;
+
+        // Compute displayOrder: append after existing items
+        const maxOrder = targetSubcat.contentItems.reduce(
+          (max, item) => Math.max(max, item.displayOrder ?? 0), 0
+        );
+        const displayOrder = targetSubcat.contentItems.length > 0 ? maxOrder + 1 : 0;
+
+        // Optimistic update: move content from loose children into subcategory
+        const movedItem = items.find((i) => i.id === activeInfo.itemId);
+        if (movedItem) {
+          const updatedChildren = cat.children.map((child) => {
+            if (child.type === 'subcategory' && child.subcategory.id === overInfo.itemId) {
+              return { ...child, contentItems: [...child.contentItems, movedItem] };
+            }
+            return child;
+          }).filter((child) => !(child.type === 'content' && child.item.id === activeInfo.itemId));
+
+          setOptimisticChildren((prev) => {
+            const next = new Map(prev);
+            next.set(activeInfo.categoryId, updatedChildren);
+            return next;
+          });
+        }
+
+        // Auto-expand the subcategory
+        setExpandedIds((prev) => {
+          if (prev.has(overInfo.itemId)) return prev;
+          const next = new Set(prev);
+          next.add(overInfo.itemId);
+          return next;
+        });
+
+        onMoveContent(activeInfo.itemId, overInfo.itemId, displayOrder);
+        return;
+      }
 
       // Interleaved reorder within the same category
       if (activeInfo.kind === 'reorder' && overInfo.kind === 'reorder' && activeInfo.categoryId === overInfo.categoryId) {
@@ -620,7 +682,7 @@ export function LibrarySidebar({
         onReorderItems(activeInfo.categoryId, order);
       }
     },
-    [parseDragId, displayCategories, onReorderItems]
+    [parseDragId, displayCategories, onReorderItems, onMoveContent, items]
   );
 
   // Determine if DnD is enabled
@@ -794,10 +856,12 @@ export function LibrarySidebar({
       subcategoryHeader
     );
 
+    const isDropTarget = dragOverSubcategoryId === child.subcategory.id;
+
     return (
       <div
         key={child.subcategory.id}
-        className={styles.treeNode}
+        className={`${styles.treeNode}${isDropTarget ? ` ${styles.subcategoryRowDropTarget}` : ''}`}
         role="treeitem"
         aria-expanded={isSubExpanded}
         aria-level={2}
@@ -1073,7 +1137,9 @@ export function LibrarySidebar({
           collisionDetection={closestCenter}
           modifiers={[restrictToVerticalAxis]}
           onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
+          onDragCancel={() => { setActiveDragId(null); setDragOverSubcategoryId(null); }}
         >
           <div className={styles.treeContainer}>
             {displayCategories.map((cat) => renderCategoryRow(cat))}
