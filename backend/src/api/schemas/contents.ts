@@ -21,7 +21,9 @@ export const createContentBodySchema = z.object({
   title: z.string().min(1, 'Title is required').max(500, 'Title must be 500 characters or less'),
   contentType: contentTypeSchema,
   section: contentSectionSchema.optional(),
-  category: z.string().max(200).optional(),
+  category: z.string().max(200).optional(), // Deprecated: use categoryId/subcategoryId
+  categoryId: uuidSchema.optional(),
+  subcategoryId: uuidSchema.optional().nullable(),
   tags: z.array(z.string().max(100)).max(20).default([]),
   description: z.string().max(5000).optional(),
   body: z.string().min(1, 'Body is required'),
@@ -40,7 +42,9 @@ export type CreateContentBody = z.infer<typeof createContentBodySchema>;
 export const updateContentBodySchema = z.object({
   title: z.string().min(1).max(500).optional(),
   section: contentSectionSchema.optional().nullable(),
-  category: z.string().max(200).optional().nullable(),
+  category: z.string().max(200).optional().nullable(), // Deprecated: use categoryId/subcategoryId
+  categoryId: uuidSchema.optional().nullable(),
+  subcategoryId: uuidSchema.optional().nullable(),
   tags: z.array(z.string().max(100)).max(20).optional(),
   description: z.string().max(5000).optional().nullable(),
   body: z.string().min(1, 'Body is required'),
@@ -174,3 +178,14 @@ export const draftSyncInputSchema = z.object({
 });
 
 export type DraftSyncInput = z.infer<typeof draftSyncInputSchema>;
+
+/**
+ * Schema for moving content between subcategories (drag-and-drop reassignment)
+ */
+export const moveContentBodySchema = z.object({
+  branchId: uuidSchema,
+  subcategoryId: uuidSchema.nullable(),
+  displayOrder: z.number().int().min(0),
+});
+
+export type MoveContentBody = z.infer<typeof moveContentBodySchema>;

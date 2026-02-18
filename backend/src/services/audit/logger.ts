@@ -8,7 +8,7 @@ export interface AuditLogInput {
   actorType: ActorTypeValue;
   actorIp?: string;
   actorUserAgent?: string;
-  resourceType: 'branch' | 'review' | 'convergence' | 'user' | 'permission' | 'auth' | 'session' | 'content';
+  resourceType: 'branch' | 'review' | 'convergence' | 'user' | 'permission' | 'auth' | 'session' | 'content' | 'subcategory';
   resourceId: string;
   metadata?: Record<string, unknown>;
   requestId?: string;

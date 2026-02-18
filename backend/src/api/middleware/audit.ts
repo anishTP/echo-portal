@@ -59,7 +59,7 @@ export function getAuditContext(c: Context): {
 export async function logAuditEvent(
   c: Context,
   action: string,
-  resourceType: 'branch' | 'review' | 'convergence' | 'user',
+  resourceType: 'branch' | 'review' | 'convergence' | 'user' | 'subcategory' | 'content',
   resourceId: string,
   metadata?: Record<string, unknown>
 ): Promise<string> {

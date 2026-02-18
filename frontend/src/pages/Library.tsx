@@ -15,7 +15,7 @@ import { ReviewModeHeader } from '../components/library/ReviewModeHeader';
 import { ReviewDiffView } from '../components/library/ReviewDiffView';
 import { BranchCreateDialog } from '../components/editor/BranchCreateDialog';
 import { CreateContentDialog } from '../components/library/CreateContentDialog';
-import { usePublishedContent, useContentBySlug, useCreateCategory, useRenameCategory, useDeleteCategory, useReorderCategories, usePersistentCategories } from '../hooks/usePublishedContent';
+import { usePublishedContent, useContentBySlug, useCreateCategory, useRenameCategory, useDeleteCategory, useReorderCategories, usePersistentCategories, useSubcategoriesForCategories } from '../hooks/usePublishedContent';
 import { useEditBranch } from '../hooks/useEditBranch';
 import { useBranch, usePublishBranch } from '../hooks/useBranch';
 import { useContent, useContentList, useCreateContent, useDeleteContent, contentKeys } from '../hooks/useContent';
@@ -132,6 +132,17 @@ export default function Library() {
     [persistentCategoryData]
   );
 
+  // Fetch subcategories for all categories in the current section
+  const categoryIds = useMemo(
+    () => persistentCategoryList.map((c) => c.id),
+    [persistentCategoryList]
+  );
+  const { data: subcategoryData } = useSubcategoriesForCategories(categoryIds);
+  const subcategoryList = useMemo(
+    () => subcategoryData ?? [],
+    [subcategoryData]
+  );
+
   // Fetch published content for sidebar (when NOT in branch mode)
   const {
     data: publishedContent,
@@ -184,7 +195,7 @@ export default function Library() {
   const { data: contentComparison, isLoading: isComparisonLoading } = useContentComparison(
     isReviewMode ? branchId : undefined
   );
-  const { data: comparisonStats } = useContentComparisonStats(
+  useContentComparisonStats(
     isReviewMode ? effectiveBranchId : undefined
   );
 
@@ -210,7 +221,6 @@ export default function Library() {
   // Check if there's feedback to view (for drafts after changes_requested)
   // Only show when branch is in DRAFT state (not after resubmission when it goes to REVIEW)
   const branchInDraftState = activeBranch?.state === 'draft' || currentBranch?.state === 'draft';
-  const hasFeedbackToView = !!reviewWithFeedback && branchInDraftState;
 
   // Check if we're in feedback viewing mode (viewing comments from completed review, no active review)
   // Only valid when branch is in DRAFT state - after resubmission it should exit feedback mode
@@ -332,24 +342,6 @@ export default function Library() {
     }
   }, [mode, editModeContent]);
 
-  // Update params helper
-  const updateParams = useCallback(
-    (updates: Record<string, string | null>) => {
-      setSearchParams((prev) => {
-        const next = new URLSearchParams(prev);
-        Object.entries(updates).forEach(([key, value]) => {
-          if (value === null || value === '' || value === 'all') {
-            next.delete(key);
-          } else {
-            next.set(key, value);
-          }
-        });
-        return next;
-      });
-    },
-    [setSearchParams]
-  );
-
   // Enter edit mode with branch
   const enterEditMode = useCallback(
     (newBranchId: string, newContentId: string) => {
@@ -388,16 +380,6 @@ export default function Library() {
   }, [setSearchParams]);
 
   // Enter feedback viewing mode (view comments from completed review)
-  const enterFeedbackMode = useCallback(() => {
-    if (effectiveBranchId) {
-      setSearchParams((prev) => {
-        const next = new URLSearchParams(prev);
-        next.set('mode', 'review');
-        next.set('branchId', effectiveBranchId);
-        return next;
-      });
-    }
-  }, [effectiveBranchId, setSearchParams]);
 
   // Handle edit request from ContentRenderer
   const handleEditRequest = useCallback(() => {
@@ -690,22 +672,6 @@ export default function Library() {
     }
   }, [contentIdParam, deleteMutation, exitEditMode, navigate]);
 
-  // Filter handlers
-  const handleTypeChange = useCallback(
-    (value: ContentType) => {
-      updateParams({ type: value });
-    },
-    [updateParams]
-  );
-
-  const handleSearchChange = useCallback(
-    (value: string) => {
-      updateParams({ q: value });
-    },
-    [updateParams]
-  );
-
-
   // Navigation blocker for unsaved changes
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
@@ -740,8 +706,6 @@ export default function Library() {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isDirty, autoSave.state.isDirty, mode]);
-
-  const hasActiveFilters = type !== 'all' || search !== '' || !!sectionParam || !!categoryParam;
 
   // Get markdown body for TOC
   const markdownBody = selectedContent?.currentVersion?.body || '';
@@ -868,49 +832,21 @@ export default function Library() {
       contentRightOffset={isEditMode && aiStore.panelOpen ? 'var(--side-panel-width, 408px)' : undefined}
       sidebar={
         <LibrarySidebar
-          search={search}
-          onSearchChange={handleSearchChange}
-          contentType={type}
-          onContentTypeChange={handleTypeChange}
           items={items}
           selectedSlug={showBranchContent ? undefined : slug}
           selectedContentId={showBranchContent ? (contentIdParam || selectedBranchContentId) ?? undefined : undefined}
           onSelectContent={showBranchContent ? handleSelectBranchContent : undefined}
-          hasActiveFilters={hasActiveFilters}
           branchMode={showBranchContent}
-          branchName={currentBranch?.name || activeBranch?.name}
           branchState={activeBranch?.state || currentBranch?.state}
           branchId={currentBranch?.id || activeBranch?.id}
           isOwner={!!user && (currentBranch?.ownerId === user.id || activeBranch?.ownerId === user.id)}
-          canSubmitForReview={activeBranch?.permissions?.canSubmitForReview}
-          onSubmitForReviewSuccess={() => {
-            // Branch query is already invalidated by SubmitForReviewButton via invalidateWorkflowQueries
-            // If we were in feedback mode, exit review mode since branch is now in review state
-            if (isFeedbackMode) {
-              exitReviewMode();
-            }
-          }}
-          onOpenReview={
-            (activeBranch?.state || currentBranch?.state) === 'review' && effectiveBranchId
-              ? () => {
-                  setSearchParams((prev) => {
-                    const next = new URLSearchParams(prev);
-                    next.set('mode', 'review');
-                    next.set('branchId', effectiveBranchId);
-                    return next;
-                  });
-                }
-              : undefined
-          }
-          reviewStats={isReviewMode ? comparisonStats : undefined}
-          hasFeedbackToView={hasFeedbackToView}
-          onViewFeedback={hasFeedbackToView ? enterFeedbackMode : undefined}
+          persistentCategories={persistentCategoryList}
+          subcategories={subcategoryList}
           onAddContent={handleAddContent}
           isAdmin={hasRole('administrator')}
           currentSection={sectionFilter}
           onAddCategory={handleAddCategory}
           onAddCategoryNeedsBranch={handleAddCategoryNeedsBranch}
-          persistentCategories={persistentCategoryList}
           onRenameCategory={handleRenameCategory}
           onDeleteCategory={handleDeleteCategory}
           onReorderCategory={handleReorderCategory}

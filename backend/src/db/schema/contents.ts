@@ -12,6 +12,8 @@ import {
 import { contentTypeEnum, contentSectionEnum, visibilityEnum, actorTypeEnum, mergeStateEnum, contentOperationTypeEnum, conflictResolutionEnum } from './enums.js';
 import { users } from './users.js';
 import { branches } from './branches.js';
+import { categories } from './categories.js';
+import { subcategories } from './subcategories.js';
 
 // --- Contents ---
 
@@ -25,8 +27,13 @@ export const contents = pgTable(
     slug: text('slug').notNull(),
     title: text('title').notNull(),
     contentType: contentTypeEnum('content_type').notNull(),
-    category: text('category'),
+    category: text('category'), // Deprecated: use categoryId/subcategoryId instead
     section: contentSectionEnum('section'),
+    categoryId: uuid('category_id')
+      .references(() => categories.id, { onDelete: 'set null' }),
+    subcategoryId: uuid('subcategory_id')
+      .references(() => subcategories.id, { onDelete: 'set null' }),
+    displayOrder: integer('display_order').notNull().default(0),
     tags: text('tags').array().default([]),
     description: text('description'),
     currentVersionId: uuid('current_version_id'),
@@ -56,6 +63,8 @@ export const contents = pgTable(
     index('contents_source_content_id_idx').on(table.sourceContentId),
     index('contents_branch_type_idx').on(table.branchId, table.contentType),
     index('contents_section_idx').on(table.section),
+    index('contents_category_id_idx').on(table.categoryId),
+    index('contents_subcategory_id_idx').on(table.subcategoryId),
   ]
 );
 

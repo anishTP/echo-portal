@@ -21,6 +21,7 @@ import { aiRoutes } from './routes/ai.js';
 import { aiConfigRoutes } from './routes/ai-config.js';
 import { aiContextDocRoutes } from './routes/ai-context-documents.js';
 import { categoryRoutes } from './routes/categories.js';
+import { subcategoryRoutes } from './routes/subcategories.js';
 import { EchoProvider } from '../services/ai/providers/echo-provider.js';
 import { AnthropicProvider } from '../services/ai/providers/anthropic-provider.js';
 import { OpenAIProvider } from '../services/ai/providers/openai-provider.js';
@@ -121,6 +122,8 @@ api.route('/ai/config', aiConfigRoutes);
 api.route('/ai/context-documents', aiContextDocRoutes);
 // Category management routes
 api.route('/categories', categoryRoutes);
+// Subcategory management routes (011-sidebar-content-hierarchy)
+api.route('/subcategories', subcategoryRoutes);
 
 app.route('/api/v1', api);
 

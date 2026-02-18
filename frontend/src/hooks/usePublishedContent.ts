@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { contentApi } from '../services/content-api';
 import { categoryApi, type CreateCategoryInput } from '../services/category-api';
+import { subcategoryApi } from '../services/subcategory-api';
 import { contentKeys } from './useContent';
 
 export interface PublishedContentParams {
@@ -16,6 +17,12 @@ export interface PublishedContentParams {
 export const categoryKeys = {
   all: ['categories'] as const,
   list: (section?: string) => [...categoryKeys.all, 'list', section] as const,
+};
+
+export const subcategoryKeys = {
+  all: ['subcategories'] as const,
+  byCategory: (categoryId: string) => [...subcategoryKeys.all, 'byCategory', categoryId] as const,
+  byCategories: (categoryIds: string[]) => [...subcategoryKeys.all, 'byCategories', ...categoryIds] as const,
 };
 
 /**
@@ -190,5 +197,24 @@ export function useDeleteCategory() {
       // Invalidate all category lists
       queryClient.invalidateQueries({ queryKey: categoryKeys.all });
     },
+  });
+}
+
+/**
+ * Fetch subcategories for all categories in a section.
+ * Fetches subcategories for each category and merges results.
+ */
+export function useSubcategoriesForCategories(categoryIds: string[]) {
+  return useQuery({
+    queryKey: subcategoryKeys.byCategories(categoryIds),
+    queryFn: async () => {
+      if (categoryIds.length === 0) return [];
+      const results = await Promise.all(
+        categoryIds.map((id) => subcategoryApi.list(id))
+      );
+      return results.flat();
+    },
+    enabled: categoryIds.length > 0,
+    staleTime: 5 * 60 * 1000,
   });
 }

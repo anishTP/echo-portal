@@ -20,3 +20,4 @@ export * from './ai-configurations.js';
 export * from './ai-context-documents.js';
 export * from './auth-tokens.js';
 export * from './categories.js';
+export * from './subcategories.js';

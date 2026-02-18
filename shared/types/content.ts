@@ -7,7 +7,10 @@ export interface ContentSummary {
   slug: string;
   contentType: ContentTypeValue;
   section?: ContentSectionValue;
-  category?: string;
+  category?: string; // Deprecated: use categoryId/subcategoryId
+  categoryId?: string | null;
+  subcategoryId?: string | null;
+  displayOrder?: number;
   tags: string[];
   description?: string;
   visibility: VisibilityType;

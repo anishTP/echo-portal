@@ -26,6 +26,7 @@ import {
   versionListQuerySchema,
   validateBodySize,
   draftSyncInputSchema,
+  moveContentBodySchema,
 } from '../schemas/contents.js';
 
 const contentRoutes = new Hono<AuthEnv>();
@@ -713,6 +714,40 @@ contentRoutes.post(
       }
       throw error;
     }
+  }
+);
+
+// PATCH /contents/:contentId/move — Move content between subcategories (DnD reassignment)
+contentRoutes.patch(
+  '/:contentId/move',
+  requireAuth,
+  zValidator('param', contentIdParamSchema),
+  zValidator('json', moveContentBodySchema),
+  async (c) => {
+    const user = c.get('user')!;
+    const { contentId } = c.req.valid('param');
+    const { branchId, subcategoryId, displayOrder } = c.req.valid('json');
+
+    // Authorization: must be on draft branch with edit permissions
+    await assertCanEditBranchContent(branchId, user);
+
+    const existing = await contentService.getById(contentId);
+    if (!existing) {
+      return c.json({ error: { code: 'NOT_FOUND', message: 'Content not found' } }, 404);
+    }
+
+    // Update subcategory assignment and display order
+    await db
+      .update(schema.contents)
+      .set({
+        subcategoryId: subcategoryId,
+        displayOrder: displayOrder,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.contents.id, contentId));
+
+    const updated = await contentService.getById(contentId);
+    return success(c, updated);
   }
 );
 
