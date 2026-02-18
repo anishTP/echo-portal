@@ -269,6 +269,23 @@ export function LibrarySidebar({
     return result;
   }, [persistentCategories, subcategories, items, categoryMap]);
 
+  // --- Optimistic reorder state (prevents snap-back during mutation) ---
+
+  const [optimisticChildren, setOptimisticChildren] = useState<Map<string, TreeChild[]>>(new Map());
+
+  // Clear optimistic state when source data changes (refetch completed)
+  useEffect(() => {
+    setOptimisticChildren(prev => prev.size > 0 ? new Map() : prev);
+  }, [treeCategories]);
+
+  const displayCategories = useMemo(() => {
+    if (optimisticChildren.size === 0) return treeCategories;
+    return treeCategories.map(cat => {
+      const override = optimisticChildren.get(cat.id);
+      return override ? { ...cat, children: override } : cat;
+    });
+  }, [treeCategories, optimisticChildren]);
+
   // --- Active content detection ---
 
   const activeItem = useMemo(() => {
@@ -448,6 +465,7 @@ export function LibrarySidebar({
   const [addingSubcategoryForCategoryId, setAddingSubcategoryForCategoryId] = useState<string | null>(null);
   const [newSubcategoryName, setNewSubcategoryName] = useState('');
   const addSubcategoryInputRef = useRef<HTMLInputElement>(null);
+  const addSubcategorySubmittedRef = useRef(false);
 
   useEffect(() => {
     if (addingSubcategoryForCategoryId && addSubcategoryInputRef.current) {
@@ -456,6 +474,8 @@ export function LibrarySidebar({
   }, [addingSubcategoryForCategoryId]);
 
   const handleAddSubcategorySubmit = useCallback(() => {
+    if (addSubcategorySubmittedRef.current) return;
+    addSubcategorySubmittedRef.current = true;
     const name = newSubcategoryName.trim();
     if (name && addingSubcategoryForCategoryId && onAddSubcategory) {
       onAddSubcategory(addingSubcategoryForCategoryId, name);
@@ -466,6 +486,7 @@ export function LibrarySidebar({
   }, [newSubcategoryName, addingSubcategoryForCategoryId, onAddSubcategory]);
 
   const handleStartAddSubcategory = useCallback((categoryId: string) => {
+    addSubcategorySubmittedRef.current = false;
     setAddingSubcategoryForCategoryId(categoryId);
     setNewSubcategoryName('');
     // Auto-expand the category if collapsed
@@ -557,7 +578,7 @@ export function LibrarySidebar({
 
       // Interleaved reorder within the same category
       if (activeInfo.kind === 'reorder' && overInfo.kind === 'reorder' && activeInfo.categoryId === overInfo.categoryId) {
-        const cat = treeCategories.find((c) => c.id === activeInfo.categoryId);
+        const cat = displayCategories.find((c) => c.id === activeInfo.categoryId);
         if (!cat || !onReorderItems) return;
 
         // Build current order as drag IDs
@@ -576,6 +597,20 @@ export function LibrarySidebar({
         const [moved] = reordered.splice(oldIndex, 1);
         reordered.splice(newIndex, 0, moved);
 
+        // Optimistic update: immediately reflect new order in UI
+        const reorderedChildren = reordered.map((dragId) => {
+          const info = parseDragId(dragId)!;
+          return cat.children.find((child) =>
+            child.type === info.type &&
+            (child.type === 'subcategory' ? child.subcategory.id : child.item.id) === info.itemId
+          )!;
+        });
+        setOptimisticChildren(prev => {
+          const next = new Map(prev);
+          next.set(activeInfo.categoryId, reorderedChildren);
+          return next;
+        });
+
         // Convert back to API format
         const order = reordered.map((dragId) => {
           const info = parseDragId(dragId)!;
@@ -585,7 +620,7 @@ export function LibrarySidebar({
         onReorderItems(activeInfo.categoryId, order);
       }
     },
-    [parseDragId, treeCategories, onReorderItems]
+    [parseDragId, displayCategories, onReorderItems]
   );
 
   // Determine if DnD is enabled
@@ -965,17 +1000,12 @@ export function LibrarySidebar({
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleAddSubcategorySubmit();
                     else if (e.key === 'Escape') {
+                      addSubcategorySubmittedRef.current = true;
                       setNewSubcategoryName('');
                       setAddingSubcategoryForCategoryId(null);
                     }
                   }}
-                  onBlur={() => {
-                    // Delay to allow click events to fire before cleanup
-                    setTimeout(() => {
-                      setNewSubcategoryName('');
-                      setAddingSubcategoryForCategoryId(null);
-                    }, 150);
-                  }}
+                  onBlur={handleAddSubcategorySubmit}
                 />
               </div>
             )}
@@ -1046,9 +1076,9 @@ export function LibrarySidebar({
           onDragEnd={handleDragEnd}
         >
           <div className={styles.treeContainer}>
-            {treeCategories.map((cat) => renderCategoryRow(cat))}
+            {displayCategories.map((cat) => renderCategoryRow(cat))}
 
-            {treeCategories.length === 0 && (
+            {displayCategories.length === 0 && (
               <div className={styles.emptyNav}>
                 <p>{branchMode ? 'No content in this branch yet.' : 'No published content yet.'}</p>
               </div>
