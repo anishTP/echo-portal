@@ -53,6 +53,8 @@ export function SubmitForReviewButton({
       queryClient.invalidateQueries({ queryKey: branchKeys.reviewBranches() });
       queryClient.invalidateQueries({ queryKey: reviewKeys.myReviews() });
       queryClient.invalidateQueries({ queryKey: branchKeys.lists() });
+      // Invalidate branch reviews so the sidebar picks up newly created review records
+      queryClient.invalidateQueries({ queryKey: reviewKeys.branchReviews(branchId) });
 
       setShowModal(false);
       setReason('');
