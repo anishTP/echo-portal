@@ -62,14 +62,3 @@
   font-family: var(--code-font-family);
 }
 
-.decisionButtons {
-  display: flex;
-  align-items: center;
-}
-
-/* Override ReviewDecisionPanel styling when embedded in header */
-.decisionButtons > div {
-  padding: 0;
-  background: transparent;
-  border: none;
-}
