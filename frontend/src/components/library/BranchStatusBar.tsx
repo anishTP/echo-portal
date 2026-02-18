@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { Text } from '@radix-ui/themes';
+import { Button, Text } from '@radix-ui/themes';
 import { animate as animateEl } from 'animejs';
-import { CommitIcon } from '@radix-ui/react-icons';
+import { CommitIcon, EyeOpenIcon } from '@radix-ui/react-icons';
+import { useSearchParams } from 'react-router-dom';
 import { LifecycleStatus } from '../branch/LifecycleStatus';
 import { SubmitForReviewButton } from '../branch/SubmitForReviewButton';
 import type { BranchStateType } from '@echo-portal/shared';
@@ -27,6 +28,14 @@ export function BranchStatusBar({
   canSubmitForReview,
 }: BranchStatusBarProps) {
   const headerRef = useRef<HTMLDivElement>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const handlePreviewChanges = () => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('mode', 'review');
+    newParams.set('branchId', branchId);
+    setSearchParams(newParams);
+  };
 
   // Slide-down entrance animation on mount
   useEffect(() => {
@@ -58,6 +67,12 @@ export function BranchStatusBar({
               branchId={branchId}
               inlineReviewerSelection={true}
             />
+          )}
+          {branchState !== 'draft' && (
+            <Button variant="soft" size="2" onClick={handlePreviewChanges}>
+              <EyeOpenIcon />
+              Preview Changes
+            </Button>
           )}
         </div>
       </div>
