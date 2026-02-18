@@ -12,21 +12,16 @@ export function EmailLoginForm({ onSubmit, onForgotPassword, disabled }: EmailLo
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [needsVerification, setNeedsVerification] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
-    setNeedsVerification(false);
     setIsLoading(true);
 
     try {
       await onSubmit(email, password);
     } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'needsVerification' in err) {
-        setNeedsVerification(true);
-        setError((err as { message?: string }).message || 'Please verify your email address before logging in');
-      } else if (err instanceof Error) {
+      if (err instanceof Error) {
         setError(err.message);
       } else {
         setError('An unexpected error occurred');
@@ -40,7 +35,7 @@ export function EmailLoginForm({ onSubmit, onForgotPassword, disabled }: EmailLo
     <form onSubmit={handleSubmit}>
       <Flex direction="column" gap="3">
         {error && (
-          <Callout.Root color={needsVerification ? 'amber' : 'red'} size="1">
+          <Callout.Root color="red" size="1">
             <Callout.Text>{error}</Callout.Text>
           </Callout.Root>
         )}

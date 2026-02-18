@@ -53,16 +53,12 @@ export default function SignupPage() {
       <Container size="1" py="9">
         <Card size="4">
           <Flex direction="column" gap="4" align="center">
-            <Heading size="5">Check your email</Heading>
+            <Heading size="5">Account created</Heading>
             <Text size="2" color="gray" align="center">
-              We've sent a verification link to <Text weight="medium">{email}</Text>. Please click
-              the link to verify your account before logging in.
-            </Text>
-            <Text size="2" color="gray">
-              The link expires in 24 hours.
+              Your account has been created successfully. You can now sign in.
             </Text>
             <Button variant="soft" onClick={() => navigate('/login')}>
-              Back to login
+              Go to login
             </Button>
           </Flex>
         </Card>

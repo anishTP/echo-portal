@@ -388,26 +388,11 @@ authRoutes.post(
         email,
         displayName,
         passwordHash,
-        emailVerified: false,
+        emailVerified: true,
         roles: ['contributor'],
         isActive: true,
       })
       .returning();
-
-    // Generate verification token and send email
-    const token = await generateToken(newUser.id, 'verification');
-    const emailContent = verificationEmail(token);
-    const emailService = getEmailService();
-
-    try {
-      await emailService.sendMail({
-        to: email,
-        ...emailContent,
-      });
-    } catch (error) {
-      console.error('[AUTH] Failed to send verification email:', error);
-      // Don't fail the registration — user can resend later
-    }
 
     // Audit log
     await logAudit({
@@ -421,7 +406,7 @@ authRoutes.post(
     });
 
     return c.json(
-      { success: true, data: { message: 'Account created. Please check your email to verify your account.' } },
+      { success: true, data: { message: 'Account created. You can now sign in.' } },
       201
     );
   }
@@ -480,14 +465,6 @@ authRoutes.post('/email-login', async (c) => {
     return c.json(
       { success: false, error: { message: 'Invalid email or password' } },
       401
-    );
-  }
-
-  // Check if email is verified
-  if (!user.emailVerified) {
-    return c.json(
-      { success: false, error: { message: 'Please verify your email address before logging in', needsVerification: true } },
-      403
     );
   }
 
