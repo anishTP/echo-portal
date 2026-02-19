@@ -298,7 +298,9 @@ export function AIChatPanel({ branchId, contentId, getDocumentBody, getSelection
     if (currentMode === 'replace' && capturedSelectedText && currentBody != null) {
       editedContent = currentBody.replace(capturedSelectedText, acceptedContent);
     } else if (currentMode === 'add' && currentBody != null) {
-      editedContent = currentBody + '\n\n' + acceptedContent;
+      editedContent = currentBody.trim()
+        ? currentBody + '\n\n' + acceptedContent
+        : acceptedContent;
     } else {
       editedContent = acceptedContent;
     }

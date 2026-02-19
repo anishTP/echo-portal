@@ -45,7 +45,7 @@ function getGenerateSystemPrompt(
       }
       return `You are a content reviewer for a documentation portal. Analyze the document and provide constructive feedback. You may use conversational language. Do NOT output replacement content — just your analysis.${selectedText ? ' If selected text is provided, focus your analysis on that section.' : ''}${refBlock}${contextBlock}${selectionBlock}`;
     default: // 'add'
-      return `You are a content assistant for a documentation portal. Generate NEW content based on the user's request. Output ONLY raw markdown. Do NOT wrap output in code fences. Do NOT include conversational text, explanations, or preamble — just the content itself.${refBlock}${contextBlock}${selectionBlock}`;
+      return `You are a content assistant for a documentation portal. Generate NEW content based on the user's request. Output ONLY raw markdown. Do NOT wrap output in code fences. Do NOT include conversational text, explanations, or preamble — just the content itself. Do NOT start with a top-level heading (# or ##) — the document already has a title. Start directly with the body content, using ### or lower for any sub-sections.${refBlock}${contextBlock}${selectionBlock}`;
   }
 }
 

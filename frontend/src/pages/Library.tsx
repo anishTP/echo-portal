@@ -1174,7 +1174,14 @@ export default function Library() {
                 } else if (mode === 'replace') {
                   inlineEditViewRef.current.setBody(aiContent);
                 } else {
-                  inlineEditViewRef.current.insertAtCursor(aiContent);
+                  // 'add' mode: if body is empty, replace entirely to avoid
+                  // leaving the empty initial paragraph as a leading blank line
+                  const currentBody = inlineEditViewRef.current.getContent().body;
+                  if (!currentBody.trim()) {
+                    inlineEditViewRef.current.setBody(aiContent);
+                  } else {
+                    inlineEditViewRef.current.insertAtCursor(aiContent);
+                  }
                 }
               }
             }}

@@ -28,7 +28,7 @@ export function AppHeader() {
           {isAuthenticated ? (
             <BranchSelector />
           ) : (
-            <span className="text-xs font-medium" style={{ color: 'var(--gray-9)' }}>
+            <span className="text-xs font-medium" style={{ color: 'var(--gray-9)', lineHeight: '28px', marginTop: '4px' }}>
               v1.0.0
             </span>
           )}
