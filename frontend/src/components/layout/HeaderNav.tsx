@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DropdownMenu, Button, Text, Flex, Spinner, Dialog, TextField, AlertDialog } from '@radix-ui/themes';
 import { ChevronDownIcon, PlusIcon } from '@radix-ui/react-icons';
@@ -32,6 +32,24 @@ export function HeaderNav() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const createCategory = useCreateCategory();
 
+  // Hover-triggered dropdown state
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleMouseEnter = useCallback((menu: string) => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+    setOpenMenu(menu);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    closeTimerRef.current = setTimeout(() => {
+      setOpenMenu(null);
+    }, 150);
+  }, []);
+
   const openNewCategoryDialog = useCallback((sectionValue: string, sectionLabel: string) => {
     setDialogSection(sectionValue);
     setDialogSectionLabel(sectionLabel);
@@ -50,6 +68,7 @@ export function HeaderNav() {
   const isActive = (s: string) => section === s;
 
   const handleCategoryClick = (sectionName: string, category: string) => {
+    setOpenMenu(null);
     navigate(`/library?section=${sectionName}&category=${encodeURIComponent(category)}`);
   };
 
@@ -92,18 +111,20 @@ export function HeaderNav() {
   return (
     <nav className="flex items-center gap-6">
       {/* Brands dropdown */}
-      <DropdownMenu.Root>
-        <DropdownMenu.Trigger>
-          <Button
-            variant="ghost"
-            size="3"
-            style={{ color: isActive('brands') ? 'var(--accent-11)' : 'var(--gray-12)' }}
-          >
-            <Text size="3" weight="medium">Brands</Text>
-            <ChevronDownIcon width="16" height="16" />
-          </Button>
-        </DropdownMenu.Trigger>
-        <DropdownMenu.Content style={{ minWidth: '180px' }}>
+      <DropdownMenu.Root open={openMenu === 'brands'} onOpenChange={(open) => { if (!open) setOpenMenu(null); }}>
+        <div onMouseEnter={() => handleMouseEnter('brands')} onMouseLeave={handleMouseLeave}>
+          <DropdownMenu.Trigger>
+            <Button
+              variant="ghost"
+              size="3"
+              style={{ color: isActive('brands') ? 'var(--accent-11)' : 'var(--gray-12)' }}
+            >
+              <Text size="3" weight="medium">Brands</Text>
+              <ChevronDownIcon width="16" height="16" />
+            </Button>
+          </DropdownMenu.Trigger>
+        </div>
+        <DropdownMenu.Content style={{ minWidth: '180px' }} onMouseEnter={() => handleMouseEnter('brands')} onMouseLeave={handleMouseLeave}>
           {dropdownItems('brands', brands)}
           {isAdmin && (
             <>
@@ -120,18 +141,20 @@ export function HeaderNav() {
       </DropdownMenu.Root>
 
       {/* Products dropdown */}
-      <DropdownMenu.Root>
-        <DropdownMenu.Trigger>
-          <Button
-            variant="ghost"
-            size="3"
-            style={{ color: isActive('products') ? 'var(--accent-11)' : 'var(--gray-12)' }}
-          >
-            <Text size="3" weight="medium">Products</Text>
-            <ChevronDownIcon width="16" height="16" />
-          </Button>
-        </DropdownMenu.Trigger>
-        <DropdownMenu.Content style={{ minWidth: '180px' }}>
+      <DropdownMenu.Root open={openMenu === 'products'} onOpenChange={(open) => { if (!open) setOpenMenu(null); }}>
+        <div onMouseEnter={() => handleMouseEnter('products')} onMouseLeave={handleMouseLeave}>
+          <DropdownMenu.Trigger>
+            <Button
+              variant="ghost"
+              size="3"
+              style={{ color: isActive('products') ? 'var(--accent-11)' : 'var(--gray-12)' }}
+            >
+              <Text size="3" weight="medium">Products</Text>
+              <ChevronDownIcon width="16" height="16" />
+            </Button>
+          </DropdownMenu.Trigger>
+        </div>
+        <DropdownMenu.Content style={{ minWidth: '180px' }} onMouseEnter={() => handleMouseEnter('products')} onMouseLeave={handleMouseLeave}>
           {dropdownItems('products', products)}
           {isAdmin && (
             <>
@@ -148,18 +171,20 @@ export function HeaderNav() {
       </DropdownMenu.Root>
 
       {/* Experiences dropdown */}
-      <DropdownMenu.Root>
-        <DropdownMenu.Trigger>
-          <Button
-            variant="ghost"
-            size="3"
-            style={{ color: isActive('experiences') ? 'var(--accent-11)' : 'var(--gray-12)' }}
-          >
-            <Text size="3" weight="medium">Experiences</Text>
-            <ChevronDownIcon width="16" height="16" />
-          </Button>
-        </DropdownMenu.Trigger>
-        <DropdownMenu.Content style={{ minWidth: '180px' }}>
+      <DropdownMenu.Root open={openMenu === 'experiences'} onOpenChange={(open) => { if (!open) setOpenMenu(null); }}>
+        <div onMouseEnter={() => handleMouseEnter('experiences')} onMouseLeave={handleMouseLeave}>
+          <DropdownMenu.Trigger>
+            <Button
+              variant="ghost"
+              size="3"
+              style={{ color: isActive('experiences') ? 'var(--accent-11)' : 'var(--gray-12)' }}
+            >
+              <Text size="3" weight="medium">Experiences</Text>
+              <ChevronDownIcon width="16" height="16" />
+            </Button>
+          </DropdownMenu.Trigger>
+        </div>
+        <DropdownMenu.Content style={{ minWidth: '180px' }} onMouseEnter={() => handleMouseEnter('experiences')} onMouseLeave={handleMouseLeave}>
           {dropdownItems('experiences', experiences)}
           {isAdmin && (
             <>
