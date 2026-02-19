@@ -46,6 +46,7 @@ export default function Library() {
 
   // Get current branch from store (set by BranchSelector)
   const currentBranch = useBranchStore((s) => s.currentBranch);
+  const setCurrentBranch = useBranchStore((s) => s.setCurrentBranch);
   const isInBranchMode = currentBranch !== null;
 
   // AI store for chat panel toggle
@@ -1010,7 +1011,10 @@ export default function Library() {
             onPublish={async () => {
               if (activeBranch) {
                 await publishBranch.mutateAsync(activeBranch.id);
-                exitReviewMode();
+                // Clear branch mode and redirect to published content
+                setCurrentBranch(null);
+                queryClient.invalidateQueries({ queryKey: contentKeys.all });
+                navigate('/library');
               }
             }}
             isPublishing={publishBranch.isPending}
