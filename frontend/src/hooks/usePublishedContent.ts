@@ -4,6 +4,7 @@ import { contentApi } from '../services/content-api';
 import { categoryApi, type CreateCategoryInput } from '../services/category-api';
 import { subcategoryApi } from '../services/subcategory-api';
 import { contentKeys } from './useContent';
+import { branchKeys } from './queryKeys';
 
 export interface PublishedContentParams {
   contentType?: string;
@@ -243,9 +244,10 @@ export function useDeleteSubcategory() {
   return useMutation({
     mutationFn: ({ id, branchId }: { id: string; branchId: string }) =>
       subcategoryApi.delete(id, branchId),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: subcategoryKeys.all });
       queryClient.invalidateQueries({ queryKey: contentKeys.all });
+      queryClient.invalidateQueries({ queryKey: branchKeys.detail(variables.branchId) });
     },
   });
 }
@@ -259,9 +261,10 @@ export function useReorderSubcategories() {
   return useMutation({
     mutationFn: (input: { categoryId: string; branchId: string; order: { type: 'subcategory' | 'content'; id: string }[] }) =>
       subcategoryApi.reorder(input),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: subcategoryKeys.all });
       queryClient.invalidateQueries({ queryKey: contentKeys.all });
+      queryClient.invalidateQueries({ queryKey: branchKeys.detail(variables.branchId) });
     },
   });
 }
@@ -275,9 +278,10 @@ export function useMoveContent() {
   return useMutation({
     mutationFn: ({ contentId, ...input }: { contentId: string; branchId: string; subcategoryId: string | null; displayOrder: number }) =>
       subcategoryApi.moveContent(contentId, input),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: subcategoryKeys.all });
       queryClient.invalidateQueries({ queryKey: contentKeys.all });
+      queryClient.invalidateQueries({ queryKey: branchKeys.detail(variables.branchId) });
     },
   });
 }
