@@ -1,7 +1,8 @@
 import { db } from '../../db/index.js';
 import { contents } from '../../db/schema/contents.js';
 import { contentVersions } from '../../db/schema/contents.js';
-import { eq, and, isNull } from 'drizzle-orm';
+import { subcategories } from '../../db/schema/subcategories.js';
+import { eq, and, isNull, inArray, sql } from 'drizzle-orm';
 import { diffService } from '../git/diff.js';
 import type { DiffHunk as LocalDiffHunk } from '../git/diff.js';
 import type {
@@ -16,6 +17,7 @@ interface ContentMetadata {
   title: string;
   description: string | null;
   category: string | null;
+  subcategoryName: string | null;
   tags: string[] | null;
 }
 
@@ -33,6 +35,9 @@ function serializeMetadata(meta: ContentMetadata): string[] {
   if (meta.category) {
     lines.push(`category: ${meta.category}`);
   }
+  if (meta.subcategoryName) {
+    lines.push(`subcategory: ${meta.subcategoryName}`);
+  }
   if (meta.tags && meta.tags.length > 0) {
     lines.push(`tags: ${meta.tags.join(', ')}`);
   }
@@ -41,20 +46,40 @@ function serializeMetadata(meta: ContentMetadata): string[] {
 }
 
 /**
+ * Batch-resolve subcategory IDs to their display names.
+ * Returns a map of subcategoryId → name.
+ */
+async function resolveSubcategoryNames(ids: string[]): Promise<Map<string, string>> {
+  const nameMap = new Map<string, string>();
+  if (ids.length === 0) return nameMap;
+
+  const uniqueIds = [...new Set(ids)];
+  const rows = await db
+    .select({ id: subcategories.id, name: subcategories.name })
+    .from(subcategories)
+    .where(inArray(subcategories.id, uniqueIds));
+
+  for (const row of rows) {
+    nameMap.set(row.id, row.name);
+  }
+  return nameMap;
+}
+
+/**
  * Service for DB-backed content comparison.
  *
  * Bypasses the git/worktree layer entirely and compares content
  * stored in PostgreSQL (contents + contentVersions tables).
- * Compares both metadata (title, description, category, tags) and body.
+ * Compares both metadata (title, description, category, tags, subcategory) and body.
  */
 export class ContentComparisonService {
   /**
    * Get full content comparison for a branch.
    *
    * For each branch content item:
-   * - Items with sourceContentId + hasEdits: compare metadata + body against source
+   * - Items with sourceContentId: compare metadata + body against source
    * - Items without sourceContentId: treat as all-additions (new content)
-   * - Items with sourceContentId but no edits: skip (unchanged)
+   * - Source content not in branch: treat as deletions
    */
   async getContentComparison(branchId: string): Promise<BranchComparison> {
     const branchContents = await db
@@ -64,6 +89,7 @@ export class ContentComparisonService {
         slug: contents.slug,
         description: contents.description,
         category: contents.category,
+        subcategoryId: contents.subcategoryId,
         tags: contents.tags,
         sourceContentId: contents.sourceContentId,
         currentVersionId: contents.currentVersionId,
@@ -78,13 +104,74 @@ export class ContentComparisonService {
         )
       );
 
-    if (branchContents.length === 0) {
+    // Also query archived (deleted) branch content to discover deletions
+    const archivedContents = await db
+      .select({
+        id: contents.id,
+        sourceContentId: contents.sourceContentId,
+      })
+      .from(contents)
+      .where(
+        and(
+          eq(contents.branchId, branchId),
+          sql`${contents.archivedAt} IS NOT NULL`
+        )
+      );
+
+    if (branchContents.length === 0 && archivedContents.length === 0) {
       return this.emptyComparison(branchId);
     }
+
+    // Collect all subcategory IDs for batch resolution
+    const subcatIds: string[] = [];
+    for (const item of branchContents) {
+      if (item.subcategoryId) subcatIds.push(item.subcategoryId);
+    }
+
+    // Collect source IDs from both active and archived content
+    const activeSourceIds = branchContents
+      .filter((item) => item.sourceContentId)
+      .map((item) => item.sourceContentId!);
+    const archivedSourceIds = archivedContents
+      .filter((item) => item.sourceContentId)
+      .map((item) => item.sourceContentId!);
+    const sourceContentIds = [...new Set([...activeSourceIds, ...archivedSourceIds])];
+
+    // Batch-fetch all source content
+    const sourceContentMap = new Map<string, typeof branchContents[0] & { currentVersionId: string | null }>();
+    if (sourceContentIds.length > 0) {
+      const sourceRows = await db
+        .select({
+          id: contents.id,
+          title: contents.title,
+          slug: contents.slug,
+          description: contents.description,
+          category: contents.category,
+          subcategoryId: contents.subcategoryId,
+          tags: contents.tags,
+          sourceContentId: contents.sourceContentId,
+          currentVersionId: contents.currentVersionId,
+          createdAt: contents.createdAt,
+          updatedAt: contents.updatedAt,
+        })
+        .from(contents)
+        .where(inArray(contents.id, sourceContentIds));
+
+      for (const row of sourceRows) {
+        sourceContentMap.set(row.id, row);
+        if (row.subcategoryId) subcatIds.push(row.subcategoryId);
+      }
+    }
+
+    // Batch-resolve all subcategory names
+    const subcatNames = await resolveSubcategoryNames(subcatIds);
 
     const files: FileDiff[] = [];
     let totalAdditions = 0;
     let totalDeletions = 0;
+
+    // Track which source content IDs are referenced by branch content
+    const referencedSourceIds = new Set<string>();
 
     for (const item of branchContents) {
       const branchVersion = item.currentVersionId
@@ -96,13 +183,10 @@ export class ContentComparisonService {
       const branchBody = branchVersion?.body || '';
 
       if (item.sourceContentId) {
-        const hasEdits = item.createdAt.getTime() !== item.updatedAt.getTime();
-        if (!hasEdits) continue;
+        referencedSourceIds.add(item.sourceContentId);
 
-        // Fetch source content + version
-        const sourceContent = await db.query.contents.findFirst({
-          where: eq(contents.id, item.sourceContentId),
-        });
+        // Always fetch source and compare — no hasEdits shortcut
+        const sourceContent = sourceContentMap.get(item.sourceContentId);
 
         if (!sourceContent?.currentVersionId) continue;
 
@@ -112,17 +196,23 @@ export class ContentComparisonService {
 
         const sourceBody = sourceVersion?.body || '';
 
-        // Compare metadata
+        // Compare metadata (including subcategory name)
         const sourceMeta: ContentMetadata = {
           title: sourceContent.title,
           description: sourceContent.description,
           category: sourceContent.category,
+          subcategoryName: sourceContent.subcategoryId
+            ? subcatNames.get(sourceContent.subcategoryId) ?? null
+            : null,
           tags: sourceContent.tags,
         };
         const branchMeta: ContentMetadata = {
           title: item.title,
           description: item.description,
           category: item.category,
+          subcategoryName: item.subcategoryId
+            ? subcatNames.get(item.subcategoryId) ?? null
+            : null,
           tags: item.tags,
         };
 
@@ -206,6 +296,9 @@ export class ContentComparisonService {
           title: item.title,
           description: item.description,
           category: item.category,
+          subcategoryName: item.subcategoryId
+            ? subcatNames.get(item.subcategoryId) ?? null
+            : null,
           tags: item.tags,
         };
         const metaLines = serializeMetadata(branchMeta);
@@ -249,6 +342,73 @@ export class ContentComparisonService {
       }
     }
 
+    // Phase 5: Detect deleted content — source content not present in branch
+    for (const [sourceId, sourceContent] of sourceContentMap) {
+      if (referencedSourceIds.has(sourceId)) {
+        // Check if the branch content referencing this source is actually active (not archived)
+        const branchItem = branchContents.find((c) => c.sourceContentId === sourceId);
+        if (branchItem) continue; // Still active in branch
+      }
+
+      // This source content has no active branch counterpart — it was deleted
+      if (!sourceContent.currentVersionId) continue;
+
+      const sourceVersion = await db.query.contentVersions.findFirst({
+        where: eq(contentVersions.id, sourceContent.currentVersionId),
+      });
+
+      const sourceBody = sourceVersion?.body || '';
+
+      const sourceMeta: ContentMetadata = {
+        title: sourceContent.title,
+        description: sourceContent.description,
+        category: sourceContent.category,
+        subcategoryName: sourceContent.subcategoryId
+          ? subcatNames.get(sourceContent.subcategoryId) ?? null
+          : null,
+        tags: sourceContent.tags,
+      };
+
+      const metaLines = serializeMetadata(sourceMeta);
+      const bodyLines = sourceBody.split('\n');
+      const allLines = [...metaLines, '', ...bodyLines];
+
+      if (allLines.length === 0) continue;
+
+      const deletionHunks = diffService.createDeletionHunks(allLines);
+
+      const hunksWithIds = deletionHunks.map((hunk, index) => ({
+        ...hunk,
+        id: this.generateHunkId(sourceContent.title, index, hunk),
+      }));
+
+      const fullContent: FullContentData = {
+        oldContent: sourceBody,
+        newContent: null,
+        metadata: {
+          old: {
+            title: sourceContent.title,
+            description: sourceContent.description,
+            category: sourceContent.category,
+            tags: sourceContent.tags || [],
+          },
+          new: null,
+        },
+      };
+
+      files.push({
+        path: sourceContent.title,
+        contentId: sourceId,
+        status: 'deleted' as const,
+        additions: 0,
+        deletions: allLines.length,
+        hunks: hunksWithIds,
+        fullContent,
+      });
+
+      totalDeletions += allLines.length;
+    }
+
     return {
       branchId,
       baseCommit: branchId,
@@ -276,6 +436,7 @@ export class ContentComparisonService {
         title: contents.title,
         description: contents.description,
         category: contents.category,
+        subcategoryId: contents.subcategoryId,
         tags: contents.tags,
         sourceContentId: contents.sourceContentId,
         currentVersionId: contents.currentVersionId,
@@ -290,9 +451,67 @@ export class ContentComparisonService {
         )
       );
 
+    // Also query archived content to discover deletions
+    const archivedContents = await db
+      .select({
+        id: contents.id,
+        sourceContentId: contents.sourceContentId,
+      })
+      .from(contents)
+      .where(
+        and(
+          eq(contents.branchId, branchId),
+          sql`${contents.archivedAt} IS NOT NULL`
+        )
+      );
+
+    // Collect subcategory IDs for batch resolution
+    const subcatIds: string[] = [];
+    for (const item of branchContents) {
+      if (item.subcategoryId) subcatIds.push(item.subcategoryId);
+    }
+
+    // Collect source IDs from both active and archived content
+    const activeSourceIds = branchContents
+      .filter((item) => item.sourceContentId)
+      .map((item) => item.sourceContentId!);
+    const archivedSourceIds = archivedContents
+      .filter((item) => item.sourceContentId)
+      .map((item) => item.sourceContentId!);
+    const sourceContentIds = [...new Set([...activeSourceIds, ...archivedSourceIds])];
+
+    const sourceContentMap = new Map<string, typeof branchContents[0]>();
+    if (sourceContentIds.length > 0) {
+      const sourceRows = await db
+        .select({
+          id: contents.id,
+          title: contents.title,
+          description: contents.description,
+          category: contents.category,
+          subcategoryId: contents.subcategoryId,
+          tags: contents.tags,
+          sourceContentId: contents.sourceContentId,
+          currentVersionId: contents.currentVersionId,
+          createdAt: contents.createdAt,
+          updatedAt: contents.updatedAt,
+        })
+        .from(contents)
+        .where(inArray(contents.id, sourceContentIds));
+
+      for (const row of sourceRows) {
+        sourceContentMap.set(row.id, row);
+        if (row.subcategoryId) subcatIds.push(row.subcategoryId);
+      }
+    }
+
+    const subcatNames = await resolveSubcategoryNames(subcatIds);
+
     const items: ContentComparisonStatsItem[] = [];
     let totalAdditions = 0;
     let totalDeletions = 0;
+
+    // Track referenced source IDs for deletion detection
+    const referencedSourceIds = new Set<string>();
 
     for (const item of branchContents) {
       const branchVersion = item.currentVersionId
@@ -304,12 +523,10 @@ export class ContentComparisonService {
       const branchBody = branchVersion?.body || '';
 
       if (item.sourceContentId) {
-        const hasEdits = item.createdAt.getTime() !== item.updatedAt.getTime();
-        if (!hasEdits) continue;
+        referencedSourceIds.add(item.sourceContentId);
 
-        const sourceContent = await db.query.contents.findFirst({
-          where: eq(contents.id, item.sourceContentId),
-        });
+        // Always fetch source and compare — no hasEdits shortcut
+        const sourceContent = sourceContentMap.get(item.sourceContentId);
 
         if (!sourceContent?.currentVersionId) continue;
 
@@ -319,17 +536,23 @@ export class ContentComparisonService {
 
         const sourceBody = sourceVersion?.body || '';
 
-        // Compare metadata
+        // Compare metadata (including subcategory)
         const sourceMeta: ContentMetadata = {
           title: sourceContent.title,
           description: sourceContent.description,
           category: sourceContent.category,
+          subcategoryName: sourceContent.subcategoryId
+            ? subcatNames.get(sourceContent.subcategoryId) ?? null
+            : null,
           tags: sourceContent.tags,
         };
         const branchMeta: ContentMetadata = {
           title: item.title,
           description: item.description,
           category: item.category,
+          subcategoryName: item.subcategoryId
+            ? subcatNames.get(item.subcategoryId) ?? null
+            : null,
           tags: item.tags,
         };
 
@@ -362,6 +585,9 @@ export class ContentComparisonService {
           title: item.title,
           description: item.description,
           category: item.category,
+          subcategoryName: item.subcategoryId
+            ? subcatNames.get(item.subcategoryId) ?? null
+            : null,
           tags: item.tags,
         };
         const metaLines = serializeMetadata(branchMeta);
@@ -380,6 +606,46 @@ export class ContentComparisonService {
 
         totalAdditions += allLineCount;
       }
+    }
+
+    // Detect deleted content — source content not in active branch
+    for (const [sourceId, sourceContent] of sourceContentMap) {
+      if (referencedSourceIds.has(sourceId)) {
+        const branchItem = branchContents.find((c) => c.sourceContentId === sourceId);
+        if (branchItem) continue;
+      }
+
+      if (!sourceContent.currentVersionId) continue;
+
+      const sourceVersion = await db.query.contentVersions.findFirst({
+        where: eq(contentVersions.id, sourceContent.currentVersionId),
+      });
+
+      const sourceBody = sourceVersion?.body || '';
+
+      const sourceMeta: ContentMetadata = {
+        title: sourceContent.title,
+        description: sourceContent.description,
+        category: sourceContent.category,
+        subcategoryName: sourceContent.subcategoryId
+          ? subcatNames.get(sourceContent.subcategoryId) ?? null
+          : null,
+        tags: sourceContent.tags,
+      };
+
+      const metaLines = serializeMetadata(sourceMeta);
+      const bodyLines = sourceBody.split('\n');
+      const allLineCount = metaLines.length + 1 + bodyLines.length;
+
+      items.push({
+        contentId: sourceId,
+        title: sourceContent.title,
+        status: 'deleted',
+        additions: 0,
+        deletions: allLineCount,
+      });
+
+      totalDeletions += allLineCount;
     }
 
     return {

@@ -164,7 +164,7 @@ export class DiffService {
   /**
    * Create hunks for a fully deleted file
    */
-  private createDeletionHunks(lines: string[]): DiffHunk[] {
+  createDeletionHunks(lines: string[]): DiffHunk[] {
     if (lines.length === 0) return [];
 
     return [

@@ -306,7 +306,7 @@ subcategoryRoutes.put(
         } else {
           await tx
             .update(contents)
-            .set({ displayOrder: i })
+            .set({ displayOrder: i, updatedAt: new Date() })
             .where(
               and(
                 eq(contents.id, item.id),

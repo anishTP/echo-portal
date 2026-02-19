@@ -23,6 +23,9 @@ export interface ContentManifestEntry {
   versionId: string;
   slug: string;
   checksum: string;
+  categoryId: string | null;
+  subcategoryId: string | null;
+  displayOrder: number;
 }
 
 export type ContentManifest = Record<string, ContentManifestEntry>;
@@ -31,10 +34,10 @@ export interface BranchDiffResult {
   branchId: string;
   snapshotId: string | null;
   hasChanges: boolean;
-  summary: { added: number; modified: number; deleted: number; total: number };
+  summary: { added: number; modified: number; deleted: number; moved: number; total: number };
   changes: Array<{
     slug: string;
-    changeType: 'added' | 'modified' | 'deleted';
+    changeType: 'added' | 'modified' | 'deleted' | 'moved';
     contentId?: string;
   }>;
 }
@@ -118,6 +121,9 @@ export const contentInheritanceService = {
               contentType: content.contentType,
               section: content.section,
               category: content.category,
+              categoryId: content.categoryId,
+              subcategoryId: content.subcategoryId,
+              displayOrder: content.displayOrder,
               tags: content.tags,
               description: content.description,
               visibility: content.visibility,
@@ -185,6 +191,9 @@ export const contentInheritanceService = {
           versionId: result.newVersion.id,
           slug: content.slug,
           checksum: result.newVersion.checksum,
+          categoryId: content.categoryId,
+          subcategoryId: content.subcategoryId,
+          displayOrder: content.displayOrder,
         };
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
@@ -243,7 +252,7 @@ export const contentInheritanceService = {
         branchId,
         snapshotId: null,
         hasChanges: false,
-        summary: { added: 0, modified: 0, deleted: 0, total: 0 },
+        summary: { added: 0, modified: 0, deleted: 0, moved: 0, total: 0 },
         changes: [],
       };
     }
@@ -300,6 +309,24 @@ export const contentInheritanceService = {
       }
     }
 
+    // Moved/reordered: in both, same checksum, but structural fields differ
+    for (const [slug, content] of activeContent) {
+      const entry = snapshotManifest[slug];
+      if (!entry) continue; // already handled as added
+
+      const alreadyChanged = changes.some((c) => c.slug === slug);
+      if (alreadyChanged) continue;
+
+      const structurallyChanged =
+        content.categoryId !== entry.categoryId ||
+        content.subcategoryId !== entry.subcategoryId ||
+        content.displayOrder !== entry.displayOrder;
+
+      if (structurallyChanged) {
+        changes.push({ slug, changeType: 'moved', contentId: content.id });
+      }
+    }
+
     return {
       branchId,
       snapshotId: snapshot.id,
@@ -308,6 +335,7 @@ export const contentInheritanceService = {
         added: changes.filter((c) => c.changeType === 'added').length,
         modified: changes.filter((c) => c.changeType === 'modified').length,
         deleted: changes.filter((c) => c.changeType === 'deleted').length,
+        moved: changes.filter((c) => c.changeType === 'moved').length,
         total: changes.length,
       },
       changes,

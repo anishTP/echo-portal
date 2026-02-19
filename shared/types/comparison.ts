@@ -122,7 +122,7 @@ export interface ContentComparisonStats {
 export interface ContentComparisonStatsItem {
   contentId: string;
   title: string;
-  status: 'added' | 'modified';
+  status: 'added' | 'modified' | 'deleted';
   additions: number;
   deletions: number;
 }
