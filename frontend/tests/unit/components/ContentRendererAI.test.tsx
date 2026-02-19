@@ -13,6 +13,7 @@ vi.mock('@radix-ui/themes', () => ({
     Icon: ({ children }: any) => <div>{children}</div>,
     Text: ({ children }: any) => <div>{children}</div>,
   },
+  Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
 }));
 
 vi.mock('@radix-ui/react-icons', () => ({

@@ -905,6 +905,15 @@ export default function Library() {
   // Determine content to display
   const contentForView = selectedContent;
 
+  // Resolve category/subcategory display names from persistent lists
+  const resolvedCategoryName = contentForView?.categoryId
+    ? persistentCategoryList.find((c) => c.id === contentForView.categoryId)?.name
+    : contentForView?.category; // fallback to deprecated string field
+
+  const resolvedSubcategoryName = contentForView?.subcategoryId
+    ? subcategoryList.find((s) => s.id === contentForView.subcategoryId)?.name
+    : null;
+
   return (
   <>
     <DocumentationLayout
@@ -1073,6 +1082,8 @@ export default function Library() {
             branchState={activeBranch?.state}
             onToggleAI={user && !isEditMode && !isReviewMode ? () => aiStore.togglePanel() : undefined}
             aiPanelOpen={aiStore.panelOpen}
+            categoryName={resolvedCategoryName}
+            subcategoryName={resolvedSubcategoryName}
           />
 
           {/* Branch creation dialog (only for published content) */}

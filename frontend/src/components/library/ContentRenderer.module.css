@@ -9,16 +9,19 @@
 .breadcrumb {
   margin-bottom: var(--space-4);
   font-size: var(--font-size-2);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  color: var(--gray-11);
 }
 
-.breadcrumb a {
-  color: var(--accent-11);
-  text-decoration: none;
+.breadcrumbSegment {
   font-weight: var(--font-weight-medium);
 }
 
-.breadcrumb a:hover {
-  text-decoration: underline;
+.breadcrumbSeparator {
+  margin: 0 var(--space-2);
+  color: var(--gray-8);
 }
 
 /* Header */

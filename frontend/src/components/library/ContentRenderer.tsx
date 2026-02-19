@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
 import Markdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import { Badge, Button, Callout } from '@radix-ui/themes';
@@ -9,6 +8,7 @@ import type { JSAnimation } from 'animejs';
 import type { ContentDetail, BranchStateType } from '@echo-portal/shared';
 import styles from './ContentRenderer.module.css';
 import { useAuth } from '../../hooks/useAuth';
+import { ContentBreadcrumb } from './ContentBreadcrumb';
 import { VideoEmbed, detectVideoType } from '../editor/VideoEmbed';
 import '../editor/editor.css'; // For video embed styles
 
@@ -33,6 +33,10 @@ interface ContentRendererProps {
   onToggleAI?: () => void;
   /** Whether the AI panel is currently open */
   aiPanelOpen?: boolean;
+  /** Resolved category display name (from persistent categories) */
+  categoryName?: string | null;
+  /** Resolved subcategory display name */
+  subcategoryName?: string | null;
 }
 
 /**
@@ -151,6 +155,8 @@ export function ContentRenderer({
   branchState,
   onToggleAI,
   aiPanelOpen,
+  categoryName,
+  subcategoryName,
 }: ContentRendererProps) {
   const { isAuthenticated, user } = useAuth();
 
@@ -196,13 +202,12 @@ export function ContentRenderer({
   return (
     <article className={styles.article}>
       {/* Breadcrumb */}
-      {content.category && (
-        <div className={styles.breadcrumb}>
-          <Link to={`/?category=${encodeURIComponent(content.category)}`}>
-            {content.category}
-          </Link>
-        </div>
-      )}
+      <ContentBreadcrumb
+        section={content.section}
+        categoryName={categoryName ?? content.category}
+        subcategoryName={subcategoryName}
+        contentTitle={content.title}
+      />
 
       {/* Header with Edit button */}
       <header className={styles.header}>
