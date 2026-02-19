@@ -1,4 +1,4 @@
-import { createBrowserRouter, RouterProvider, Outlet, Navigate } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Outlet, Navigate, useLocation } from 'react-router-dom';
 import { Suspense, lazy } from 'react';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 import { AppHeader } from '../components/layout';
@@ -29,12 +29,18 @@ function LoadingFallback() {
   );
 }
 
+// Auth pages where the header should be hidden
+const AUTH_ROUTES = ['/login', '/signup', '/verify-email', '/forgot-password', '/reset-password', '/auth/callback'];
+
 // Root layout component
 function RootLayout() {
+  const { pathname } = useLocation();
+  const hideHeader = AUTH_ROUTES.includes(pathname);
+
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gray-50">
-        <AppHeader />
+        {!hideHeader && <AppHeader />}
         <Suspense fallback={<LoadingFallback />}>
           <Outlet />
         </Suspense>

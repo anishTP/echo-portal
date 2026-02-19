@@ -10,13 +10,13 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/library', { replace: true });
+      navigate('/', { replace: true });
     }
   }, [isAuthenticated, navigate]);
 
   const handleEmailLogin = async (email: string, password: string) => {
     await loginWithEmail(email, password);
-    navigate('/library');
+    navigate('/');
   };
 
   return (
