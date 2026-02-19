@@ -1,8 +1,10 @@
-import { DropdownMenu, Button, Text, Flex, Spinner } from '@radix-ui/themes';
+import { useState } from 'react';
+import { DropdownMenu, Button, Text, Flex, Spinner, Dialog } from '@radix-ui/themes';
 import { useNavigate } from 'react-router-dom';
 import { useBranchStore } from '../../stores/branchStore';
 import { useMyBranches, useReviewBranches } from '../../hooks/useBranch';
 import { LifecycleStatus } from '../branch/LifecycleStatus';
+import { BranchCreate } from '../branch/BranchCreate';
 
 // Globe icon for "Published" state
 const GlobeIcon = () => (
@@ -76,7 +78,8 @@ const CheckIcon = () => (
 
 export function BranchSelector() {
   const navigate = useNavigate();
-  const { currentBranch, setCurrentBranch, setIsCreating } = useBranchStore();
+  const { currentBranch, setCurrentBranch } = useBranchStore();
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   const { data: myBranches, isLoading: isLoadingMy } = useMyBranches();
   const { data: reviewBranches, isLoading: isLoadingReview } = useReviewBranches();
@@ -96,7 +99,7 @@ export function BranchSelector() {
   const handleSelectBranch = (branch: typeof myBranches extends (infer T)[] | undefined ? T : never) => {
     if (branch) {
       setCurrentBranch(branch);
-      navigate(`/library?section=brands&mode=review&branchId=${branch.id}`);
+      navigate(`/library?section=brands&branchId=${branch.id}`);
     }
   };
 
@@ -105,14 +108,14 @@ export function BranchSelector() {
   };
 
   const handleNewBranch = () => {
-    setIsCreating(true);
-    navigate('/profile?tab=dashboard');
+    setShowCreateDialog(true);
   };
 
   // Determine if we're on a branch or viewing published content
   const isOnBranch = currentBranch !== null;
 
   return (
+    <>
     <DropdownMenu.Root>
       <DropdownMenu.Trigger>
         <Button
@@ -259,6 +262,24 @@ export function BranchSelector() {
         )}
       </DropdownMenu.Content>
     </DropdownMenu.Root>
+
+      <Dialog.Root open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <Dialog.Content maxWidth="500px">
+          <Dialog.Title>Create New Branch</Dialog.Title>
+          <Dialog.Description size="2" mb="4">
+            Create a new branch to start making changes.
+          </Dialog.Description>
+          <BranchCreate
+            onSuccess={(_branchId, branch) => {
+              setShowCreateDialog(false);
+              setCurrentBranch(branch);
+              navigate(`/library?section=brands&branchId=${branch.id}`);
+            }}
+            onCancel={() => setShowCreateDialog(false)}
+          />
+        </Dialog.Content>
+      </Dialog.Root>
+    </>
   );
 }
 

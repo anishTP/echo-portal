@@ -4,9 +4,10 @@ import { Cross1Icon } from '@radix-ui/react-icons';
 import { useCreateBranch } from '../../hooks/useBranch';
 import { useBranchStore } from '../../stores/branchStore';
 import type { BranchCreateInput, VisibilityType } from '@echo-portal/shared';
+import type { BranchResponse } from '../../services/branchService';
 
 interface BranchCreateProps {
-  onSuccess?: (branchId: string) => void;
+  onSuccess?: (branchId: string, branch: BranchResponse) => void;
   onCancel?: () => void;
 }
 
@@ -29,7 +30,7 @@ export function BranchCreate({ onSuccess, onCancel }: BranchCreateProps) {
 
     try {
       const branch = await createBranch.mutateAsync(formData);
-      onSuccess?.(branch.id);
+      onSuccess?.(branch.id, branch);
     } catch {
       // Error handled by mutation hook
     }
