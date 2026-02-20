@@ -35,17 +35,21 @@ export function HeaderNav() {
   // Hover-triggered dropdown state
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closedAtRef = useRef(0);
 
   const handleMouseEnter = useCallback((menu: string) => {
     if (closeTimerRef.current) {
       clearTimeout(closeTimerRef.current);
       closeTimerRef.current = null;
     }
+    // Ignore phantom mouseenter caused by portal unmounting (exposes trigger div underneath)
+    if (Date.now() - closedAtRef.current < 150) return;
     setOpenMenu(menu);
   }, []);
 
   const handleMouseLeave = useCallback(() => {
     closeTimerRef.current = setTimeout(() => {
+      closedAtRef.current = Date.now();
       setOpenMenu(null);
     }, 150);
   }, []);
@@ -111,7 +115,7 @@ export function HeaderNav() {
   return (
     <nav className="flex items-center gap-6">
       {/* Brands dropdown */}
-      <DropdownMenu.Root open={openMenu === 'brands'} onOpenChange={(open) => { if (!open) setOpenMenu(null); }}>
+      <DropdownMenu.Root open={openMenu === 'brands'} onOpenChange={(open) => { if (!open) setOpenMenu(null); }} modal={false}>
         <div onMouseEnter={() => handleMouseEnter('brands')} onMouseLeave={handleMouseLeave}>
           <DropdownMenu.Trigger>
             <Button
@@ -124,7 +128,7 @@ export function HeaderNav() {
             </Button>
           </DropdownMenu.Trigger>
         </div>
-        <DropdownMenu.Content style={{ minWidth: '180px' }} onMouseEnter={() => handleMouseEnter('brands')} onMouseLeave={handleMouseLeave}>
+        <DropdownMenu.Content style={{ minWidth: '180px' }} onMouseEnter={() => handleMouseEnter('brands')} onMouseLeave={handleMouseLeave} onCloseAutoFocus={(e) => e.preventDefault()}>
           {dropdownItems('brands', brands)}
           {isAdmin && (
             <>
@@ -141,7 +145,7 @@ export function HeaderNav() {
       </DropdownMenu.Root>
 
       {/* Products dropdown */}
-      <DropdownMenu.Root open={openMenu === 'products'} onOpenChange={(open) => { if (!open) setOpenMenu(null); }}>
+      <DropdownMenu.Root open={openMenu === 'products'} onOpenChange={(open) => { if (!open) setOpenMenu(null); }} modal={false}>
         <div onMouseEnter={() => handleMouseEnter('products')} onMouseLeave={handleMouseLeave}>
           <DropdownMenu.Trigger>
             <Button
@@ -154,7 +158,7 @@ export function HeaderNav() {
             </Button>
           </DropdownMenu.Trigger>
         </div>
-        <DropdownMenu.Content style={{ minWidth: '180px' }} onMouseEnter={() => handleMouseEnter('products')} onMouseLeave={handleMouseLeave}>
+        <DropdownMenu.Content style={{ minWidth: '180px' }} onMouseEnter={() => handleMouseEnter('products')} onMouseLeave={handleMouseLeave} onCloseAutoFocus={(e) => e.preventDefault()}>
           {dropdownItems('products', products)}
           {isAdmin && (
             <>
@@ -171,7 +175,7 @@ export function HeaderNav() {
       </DropdownMenu.Root>
 
       {/* Experiences dropdown */}
-      <DropdownMenu.Root open={openMenu === 'experiences'} onOpenChange={(open) => { if (!open) setOpenMenu(null); }}>
+      <DropdownMenu.Root open={openMenu === 'experiences'} onOpenChange={(open) => { if (!open) setOpenMenu(null); }} modal={false}>
         <div onMouseEnter={() => handleMouseEnter('experiences')} onMouseLeave={handleMouseLeave}>
           <DropdownMenu.Trigger>
             <Button
@@ -184,7 +188,7 @@ export function HeaderNav() {
             </Button>
           </DropdownMenu.Trigger>
         </div>
-        <DropdownMenu.Content style={{ minWidth: '180px' }} onMouseEnter={() => handleMouseEnter('experiences')} onMouseLeave={handleMouseLeave}>
+        <DropdownMenu.Content style={{ minWidth: '180px' }} onMouseEnter={() => handleMouseEnter('experiences')} onMouseLeave={handleMouseLeave} onCloseAutoFocus={(e) => e.preventDefault()}>
           {dropdownItems('experiences', experiences)}
           {isAdmin && (
             <>
