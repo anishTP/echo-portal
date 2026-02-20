@@ -56,7 +56,6 @@ export function CategoryLandingPage({
       <nav aria-label="Breadcrumb">
         <ContentBreadcrumb
           section={section}
-          categoryName={category.name}
           contentTitle={category.name}
         />
       </nav>

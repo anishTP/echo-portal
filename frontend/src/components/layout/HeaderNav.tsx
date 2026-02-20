@@ -120,22 +120,16 @@ export function HeaderNav() {
     <nav className="flex items-center gap-6">
       {/* Brands dropdown */}
       <DropdownMenu.Root open={openMenu === 'brands'} onOpenChange={(open) => { if (!open) setOpenMenu(null); }} modal={false}>
-        <div onMouseEnter={() => handleMouseEnter('brands')} onMouseLeave={handleMouseLeave} style={{ display: 'flex', alignItems: 'center' }}>
-          <Button
-            variant="ghost"
-            size="3"
-            style={{ color: isActive('brands') ? 'var(--accent-11)' : 'var(--gray-12)', paddingRight: 0 }}
-            onClick={() => handleSectionClick('brands')}
-          >
-            <Text size="3" weight="medium">Brands</Text>
-          </Button>
+        <div onMouseEnter={() => handleMouseEnter('brands')} onMouseLeave={handleMouseLeave}>
           <DropdownMenu.Trigger>
             <Button
               variant="ghost"
-              size="1"
-              style={{ color: isActive('brands') ? 'var(--accent-11)' : 'var(--gray-12)', paddingLeft: 2 }}
+              size="3"
+              style={{ color: isActive('brands') ? 'var(--accent-11)' : 'var(--gray-12)' }}
+              onClick={() => handleSectionClick('brands')}
             >
-              <ChevronDownIcon width="16" height="16" />
+              <Text size="3" weight="medium">Brands</Text>
+              <ChevronDownIcon width="14" height="14" />
             </Button>
           </DropdownMenu.Trigger>
         </div>
@@ -157,22 +151,16 @@ export function HeaderNav() {
 
       {/* Products dropdown */}
       <DropdownMenu.Root open={openMenu === 'products'} onOpenChange={(open) => { if (!open) setOpenMenu(null); }} modal={false}>
-        <div onMouseEnter={() => handleMouseEnter('products')} onMouseLeave={handleMouseLeave} style={{ display: 'flex', alignItems: 'center' }}>
-          <Button
-            variant="ghost"
-            size="3"
-            style={{ color: isActive('products') ? 'var(--accent-11)' : 'var(--gray-12)', paddingRight: 0 }}
-            onClick={() => handleSectionClick('products')}
-          >
-            <Text size="3" weight="medium">Products</Text>
-          </Button>
+        <div onMouseEnter={() => handleMouseEnter('products')} onMouseLeave={handleMouseLeave}>
           <DropdownMenu.Trigger>
             <Button
               variant="ghost"
-              size="1"
-              style={{ color: isActive('products') ? 'var(--accent-11)' : 'var(--gray-12)', paddingLeft: 2 }}
+              size="3"
+              style={{ color: isActive('products') ? 'var(--accent-11)' : 'var(--gray-12)' }}
+              onClick={() => handleSectionClick('products')}
             >
-              <ChevronDownIcon width="16" height="16" />
+              <Text size="3" weight="medium">Products</Text>
+              <ChevronDownIcon width="14" height="14" />
             </Button>
           </DropdownMenu.Trigger>
         </div>
@@ -194,22 +182,16 @@ export function HeaderNav() {
 
       {/* Experiences dropdown */}
       <DropdownMenu.Root open={openMenu === 'experiences'} onOpenChange={(open) => { if (!open) setOpenMenu(null); }} modal={false}>
-        <div onMouseEnter={() => handleMouseEnter('experiences')} onMouseLeave={handleMouseLeave} style={{ display: 'flex', alignItems: 'center' }}>
-          <Button
-            variant="ghost"
-            size="3"
-            style={{ color: isActive('experiences') ? 'var(--accent-11)' : 'var(--gray-12)', paddingRight: 0 }}
-            onClick={() => handleSectionClick('experiences')}
-          >
-            <Text size="3" weight="medium">Experiences</Text>
-          </Button>
+        <div onMouseEnter={() => handleMouseEnter('experiences')} onMouseLeave={handleMouseLeave}>
           <DropdownMenu.Trigger>
             <Button
               variant="ghost"
-              size="1"
-              style={{ color: isActive('experiences') ? 'var(--accent-11)' : 'var(--gray-12)', paddingLeft: 2 }}
+              size="3"
+              style={{ color: isActive('experiences') ? 'var(--accent-11)' : 'var(--gray-12)' }}
+              onClick={() => handleSectionClick('experiences')}
             >
-              <ChevronDownIcon width="16" height="16" />
+              <Text size="3" weight="medium">Experiences</Text>
+              <ChevronDownIcon width="14" height="14" />
             </Button>
           </DropdownMenu.Trigger>
         </div>

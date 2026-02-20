@@ -50,7 +50,6 @@ export function SectionLandingPage({
     <article className={styles.page} aria-label={`${sectionLabel} section landing page`}>
       <nav aria-label="Breadcrumb">
         <ContentBreadcrumb
-          section={section}
           contentTitle={sectionLabel}
         />
       </nav>

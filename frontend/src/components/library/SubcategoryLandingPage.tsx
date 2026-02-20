@@ -43,7 +43,6 @@ export function SubcategoryLandingPage({
         <ContentBreadcrumb
           section={section}
           categoryName={categoryName}
-          subcategoryName={subcategory.name}
           contentTitle={subcategory.name}
         />
       </nav>

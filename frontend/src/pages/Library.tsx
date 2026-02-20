@@ -87,8 +87,8 @@ export default function Library() {
   const search = searchParams.get('q') || '';
 
   // Landing page mode detection — show landing page when we have a section param
-  // but no content slug and not in edit/review mode
-  const isLandingPageMode = !slug && !isEditMode && !isReviewMode && (!!sectionParam || (!sectionParam && !isInBranchMode));
+  // but no content slug, no selected branch content, and not in edit/review mode
+  const isLandingPageMode = !slug && !selectedBranchContentId && !isEditMode && !isReviewMode && (!!sectionParam || (!sectionParam && !isInBranchMode));
 
   // Determine landing page level
   const landingPageLevel: 'section' | 'category' | 'subcategory' | null = isLandingPageMode
@@ -201,13 +201,15 @@ export default function Library() {
   const updateCategoryPage = useUpdateCategoryPage();
 
   // Fetch published content for sidebar (when NOT in branch mode)
+  // Don't filter by category — the sidebar needs ALL content for the section
+  // so every category/subcategory tree node can show its items correctly.
+  // Landing page components filter by category themselves.
   const {
     data: publishedContent,
     isLoading: isLoadingPublished,
   } = usePublishedContent({
     contentType: type === 'all' ? undefined : type,
     section: sectionFilter,
-    category: categoryParam,
     search: search || undefined,
     limit: 100,
   });
@@ -219,7 +221,6 @@ export default function Library() {
   } = useContentList(effectiveBranchId, {
     contentType: type === 'all' ? undefined : type,
     section: sectionFilter,
-    category: categoryParam,
   });
 
   // Determine which content list to use
