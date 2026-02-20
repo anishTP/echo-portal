@@ -22,6 +22,8 @@ import { aiConfigRoutes } from './routes/ai-config.js';
 import { aiContextDocRoutes } from './routes/ai-context-documents.js';
 import { categoryRoutes } from './routes/categories.js';
 import { subcategoryRoutes } from './routes/subcategories.js';
+import { sectionPageRoutes } from './routes/section-pages.js';
+import { categoryPageRoutes } from './routes/category-pages.js';
 import { EchoProvider } from '../services/ai/providers/echo-provider.js';
 import { AnthropicProvider } from '../services/ai/providers/anthropic-provider.js';
 import { OpenAIProvider } from '../services/ai/providers/openai-provider.js';
@@ -124,6 +126,9 @@ api.route('/ai/context-documents', aiContextDocRoutes);
 api.route('/categories', categoryRoutes);
 // Subcategory management routes (011-sidebar-content-hierarchy)
 api.route('/subcategories', subcategoryRoutes);
+// Landing page routes (012-hierarchy-landing-pages)
+api.route('/section-pages', sectionPageRoutes);
+api.route('/category-pages', categoryPageRoutes);
 
 app.route('/api/v1', api);
 

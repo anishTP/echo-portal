@@ -47,6 +47,16 @@
   outline-offset: -2px;
 }
 
+/* Active state for category/subcategory nodes */
+.activeNode {
+  background: var(--accent-a3);
+  color: var(--accent-11);
+}
+
+.activeNode:hover {
+  background: var(--accent-a4);
+}
+
 /* Subcategory row — indented, with right-arrow chevron */
 .subcategoryRow {
   display: flex;

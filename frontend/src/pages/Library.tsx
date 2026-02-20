@@ -17,11 +17,18 @@ import { ReviewersSidebarSection } from '../components/library/ReviewersSidebarS
 import { ReviewDiffView } from '../components/library/ReviewDiffView';
 import { BranchCreateDialog } from '../components/editor/BranchCreateDialog';
 import { CreateContentDialog } from '../components/library/CreateContentDialog';
-import { usePublishedContent, useContentBySlug, useCreateCategory, useRenameCategory, useDeleteCategory, useReorderCategories, usePersistentCategories, useSubcategoriesForCategories, useCreateSubcategory, useRenameSubcategory, useDeleteSubcategory, useReorderSubcategories, useMoveContent } from '../hooks/usePublishedContent';
+import { usePublishedContent, useContentBySlug, useCategories, useCreateCategory, useRenameCategory, useDeleteCategory, useReorderCategories, usePersistentCategories, useSubcategoriesForCategories, useCreateSubcategory, useRenameSubcategory, useDeleteSubcategory, useReorderSubcategories, useMoveContent } from '../hooks/usePublishedContent';
+import { useSectionPage, useCategoryPage, useUpdateSectionPage, useUpdateCategoryPage } from '../hooks/useLandingPages';
+import { LandingPageEditView } from '../components/library/LandingPageEditView';
+import { SectionLandingPage } from '../components/library/SectionLandingPage';
+import { CategoryLandingPage } from '../components/library/CategoryLandingPage';
+import { SubcategoryLandingPage } from '../components/library/SubcategoryLandingPage';
+import type { CardData } from '../components/library/LandingPageCardGrid';
 import { useEditBranch } from '../hooks/useEditBranch';
 import { useBranch, usePublishBranch, branchKeys } from '../hooks/useBranch';
 import { useContent, useContentList, useCreateContent, useDeleteContent, contentKeys } from '../hooks/useContent';
 import { contentApi } from '../services/content-api';
+import { subcategoryApi } from '../services/subcategory-api';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { useDraftSync } from '../hooks/useDraftSync';
 import { useContentComparison, useContentComparisonStats } from '../hooks/useContentComparison';
@@ -73,10 +80,22 @@ export default function Library() {
   // Extract filters from URL
   const sectionParam = searchParams.get('section') || undefined;
   const categoryParam = searchParams.get('category') || undefined;
+  const subcategoryIdParam = searchParams.get('subcategoryId') || undefined;
   // Map plural URL param (brands/products/experiences) to singular DB value (brand/product/experience)
   const sectionFromParam = sectionParam ? sectionParam.replace(/s$/, '') : undefined;
   const type = (searchParams.get('type') as ContentType) || 'all';
   const search = searchParams.get('q') || '';
+
+  // Landing page mode detection — show landing page when we have a section param
+  // but no content slug and not in edit/review mode
+  const isLandingPageMode = !slug && !isEditMode && !isReviewMode && (!!sectionParam || (!sectionParam && !isInBranchMode));
+
+  // Determine landing page level
+  const landingPageLevel: 'section' | 'category' | 'subcategory' | null = isLandingPageMode
+    ? subcategoryIdParam ? 'subcategory'
+      : categoryParam ? 'category'
+      : 'section'
+    : null;
 
   // Dialog state for branch creation
   const [showBranchDialog, setShowBranchDialog] = useState(false);
@@ -107,6 +126,10 @@ export default function Library() {
   const [currentDraft, setCurrentDraft] = useState<DraftContent | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Landing page edit state
+  const [landingPageEditBody, setLandingPageEditBody] = useState<string | null>(null);
+  const isLandingPageEditMode = landingPageEditBody !== null;
 
   // Ref to access InlineEditView's content
   const inlineEditViewRef = useRef<InlineEditViewHandle>(null);
@@ -150,6 +173,32 @@ export default function Library() {
     () => subcategoryData ?? [],
     [subcategoryData]
   );
+
+  // Fetch category counts for section landing page card grid
+  const { categoryCounts } = useCategories(sectionFilter);
+
+  // Fetch landing page bodies when in landing page mode
+  const effectiveSectionForPage = sectionFilter || 'brand'; // default to brands
+  const { data: sectionPageData } = useSectionPage(
+    landingPageLevel === 'section' ? effectiveSectionForPage : '',
+    effectiveBranchId
+  );
+  // Resolve categoryId from category name param
+  const selectedCategoryDTO = categoryParam
+    ? persistentCategoryList.find((c) => c.name === categoryParam)
+    : undefined;
+  const { data: categoryPageData } = useCategoryPage(
+    landingPageLevel === 'category' && selectedCategoryDTO ? selectedCategoryDTO.id : '',
+    effectiveBranchId
+  );
+  // Subcategory body comes from subcategoryList (already fetched)
+  const selectedSubcategoryDTO = subcategoryIdParam
+    ? subcategoryList.find((s) => s.id === subcategoryIdParam)
+    : undefined;
+
+  // Landing page update mutations
+  const updateSectionPage = useUpdateSectionPage();
+  const updateCategoryPage = useUpdateCategoryPage();
 
   // Fetch published content for sidebar (when NOT in branch mode)
   const {
@@ -280,7 +329,10 @@ export default function Library() {
   });
 
   // Auto-select first item when content list loads
+  // Skip when in landing page mode — landing pages replace content view
   useEffect(() => {
+    if (isLandingPageMode) return; // Don't auto-select content when showing a landing page
+
     if (isInBranchMode || isReviewMode) {
       // Branch/review mode: auto-select first content item
       if (!selectedBranchContentId && !isLoadingBranchList) {
@@ -296,14 +348,18 @@ export default function Library() {
     } else {
       // Published mode: auto-navigate to first item by slug
       if (!slug && publishedContent?.items && publishedContent.items.length > 0 && !isLoadingPublished) {
-        const firstItem = publishedContent.items[0];
-        navigate(`/library/${firstItem.slug}`, { replace: true });
+        // Default to section landing page instead of auto-selecting first content
+        if (!sectionParam) {
+          navigate('/library?section=brands', { replace: true });
+        }
       }
     }
   }, [
     isInBranchMode,
     isReviewMode,
+    isLandingPageMode,
     slug,
+    sectionParam,
     selectedBranchContentId,
     publishedContent?.items,
     branchContentList?.items,
@@ -389,9 +445,21 @@ export default function Library() {
 
   // Enter feedback viewing mode (view comments from completed review)
 
-  // Handle edit request from ContentRenderer
+  // Handle edit request from ContentRenderer or landing page components
   const handleEditRequest = useCallback(() => {
     resetBranchError();
+
+    // Landing page edit: enter inline body editing mode
+    if (isLandingPageMode && isInBranchMode) {
+      if (landingPageLevel === 'section') {
+        setLandingPageEditBody(sectionPageData?.body ?? '');
+      } else if (landingPageLevel === 'category') {
+        setLandingPageEditBody(categoryPageData?.body ?? '');
+      } else if (landingPageLevel === 'subcategory' && selectedSubcategoryDTO) {
+        setLandingPageEditBody(selectedSubcategoryDTO.body ?? '');
+      }
+      return;
+    }
 
     // If already in branch mode, enter edit mode directly with current content
     if (isInBranchMode && currentBranch && selectedBranchContentId) {
@@ -400,7 +468,7 @@ export default function Library() {
       // Show branch creation dialog for published content
       setShowBranchDialog(true);
     }
-  }, [resetBranchError, isInBranchMode, currentBranch, selectedBranchContentId, enterEditMode]);
+  }, [resetBranchError, isLandingPageMode, isInBranchMode, landingPageLevel, sectionPageData?.body, categoryPageData?.body, selectedSubcategoryDTO, currentBranch, selectedBranchContentId, enterEditMode]);
 
   // Handle branch creation confirmation
   const handleBranchConfirm = useCallback(
@@ -415,6 +483,40 @@ export default function Library() {
     },
     [selectedContent, createEditBranch, enterEditMode]
   );
+
+  // Handle landing page body save
+  const handleSaveLandingPageBody = useCallback(async (body: string) => {
+    const targetBranchId = currentBranch?.id || branchId;
+    if (!targetBranchId) return;
+
+    if (landingPageLevel === 'section') {
+      await updateSectionPage.mutateAsync({
+        section: effectiveSectionForPage,
+        branchId: targetBranchId,
+        body,
+      });
+    } else if (landingPageLevel === 'category' && selectedCategoryDTO) {
+      await updateCategoryPage.mutateAsync({
+        categoryId: selectedCategoryDTO.id,
+        branchId: targetBranchId,
+        body,
+      });
+    } else if (landingPageLevel === 'subcategory' && selectedSubcategoryDTO) {
+      // Subcategory body is saved via the subcategory PATCH endpoint
+      await subcategoryApi.rename(selectedSubcategoryDTO.id, {
+        name: selectedSubcategoryDTO.name,
+        branchId: targetBranchId,
+        body,
+      } as any);
+    }
+
+    setLandingPageEditBody(null);
+  }, [currentBranch?.id, branchId, landingPageLevel, effectiveSectionForPage, selectedCategoryDTO, selectedSubcategoryDTO, updateSectionPage, updateCategoryPage]);
+
+  // Handle cancel landing page edit
+  const handleCancelLandingPageEdit = useCallback(() => {
+    setLandingPageEditBody(null);
+  }, []);
 
   // Handle add content button click in sidebar category
   const handleAddContent = useCallback((category: string) => {
@@ -902,6 +1004,85 @@ export default function Library() {
     return () => window.removeEventListener('resize', onResize);
   }, [showAIPanel, isEditPanel]);
 
+  // Handle landing page card clicks — navigate to appropriate level
+  const handleLandingPageCardClick = useCallback((card: CardData) => {
+    if (card.type === 'category') {
+      // Navigate to category landing page
+      const catDTO = persistentCategoryList.find((c) => c.id === card.id);
+      if (catDTO && sectionParam) {
+        setSearchParams((prev) => {
+          const next = new URLSearchParams(prev);
+          next.set('section', sectionParam);
+          next.set('category', catDTO.name);
+          next.delete('subcategoryId');
+          return next;
+        });
+      }
+    } else if (card.type === 'subcategory') {
+      // Navigate to subcategory landing page
+      if (sectionParam && categoryParam) {
+        setSearchParams((prev) => {
+          const next = new URLSearchParams(prev);
+          next.set('section', sectionParam);
+          next.set('category', categoryParam);
+          next.set('subcategoryId', card.id);
+          return next;
+        });
+      }
+    } else if (card.type === 'content') {
+      // Navigate to content view
+      const contentItem = items.find((i) => i.id === card.id);
+      if (contentItem) {
+        if (isInBranchMode) {
+          setSelectedBranchContentId(contentItem.id);
+          // Clear landing page params when viewing content in branch mode
+          setSearchParams((prev) => {
+            const next = new URLSearchParams(prev);
+            next.delete('category');
+            next.delete('subcategoryId');
+            return next;
+          });
+        } else {
+          navigate(`/library/${contentItem.slug}`);
+        }
+      }
+    }
+  }, [persistentCategoryList, sectionParam, categoryParam, items, isInBranchMode, setSearchParams, navigate, setSelectedBranchContentId]);
+
+  // Handle sidebar category click — navigate to category landing page
+  const handleSelectCategory = useCallback((categoryId: string) => {
+    const catDTO = persistentCategoryList.find((c) => c.id === categoryId);
+    if (!catDTO) return;
+    const sectionUrlParam = sectionParam || (sectionFilter ? `${sectionFilter}s` : 'brands');
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('section', sectionUrlParam);
+      next.set('category', catDTO.name);
+      next.delete('subcategoryId');
+      return next;
+    });
+    // Clear content selection
+    setSelectedBranchContentId(null);
+  }, [persistentCategoryList, sectionParam, sectionFilter, setSearchParams]);
+
+  // Handle sidebar subcategory click — navigate to subcategory landing page
+  const handleSelectSubcategory = useCallback((subcategoryId: string) => {
+    const subDTO = subcategoryList.find((s) => s.id === subcategoryId);
+    if (!subDTO) return;
+    const catDTO = persistentCategoryList.find((c) => c.id === subDTO.categoryId);
+    if (!catDTO) return;
+    const sectionUrlParam = sectionParam || (sectionFilter ? `${sectionFilter}s` : 'brands');
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('section', sectionUrlParam);
+      next.set('category', catDTO.name);
+      next.set('subcategoryId', subcategoryId);
+      return next;
+    });
+    // Clear content selection
+    setSelectedBranchContentId(null);
+  }, [subcategoryList, persistentCategoryList, sectionParam, sectionFilter, setSearchParams]);
+
   // Determine content to display
   const contentForView = selectedContent;
 
@@ -947,10 +1128,14 @@ export default function Library() {
           onDeleteSubcategory={handleDeleteSubcategory}
           onReorderItems={handleReorderItems}
           onMoveContent={handleMoveContent}
+          onSelectCategory={handleSelectCategory}
+          onSelectSubcategory={handleSelectSubcategory}
+          activeCategoryId={landingPageLevel === 'category' ? selectedCategoryDTO?.id : landingPageLevel === 'subcategory' ? selectedSubcategoryDTO?.categoryId : undefined}
+          activeSubcategoryId={landingPageLevel === 'subcategory' ? subcategoryIdParam : undefined}
         />
       }
       rightSidebar={
-        isEditMode || isReviewMode ? undefined : contentForView ? (
+        isEditMode || isReviewMode || isLandingPageMode ? undefined : contentForView ? (
           <ContentMetadataSidebar
             author={{
               name: contentForView.createdBy.displayName,
@@ -1053,6 +1238,19 @@ export default function Library() {
           onReply={(commentId, content) => replyToComment.mutateAsync({ commentId, content })}
           focusCommentId={commentIdParam}
         />
+      ) : isLandingPageEditMode ? (
+        <LandingPageEditView
+          initialBody={landingPageEditBody}
+          title={
+            landingPageLevel === 'section'
+              ? (({ brand: 'Brands', product: 'Products', experience: 'Experiences' } as Record<string, string>)[effectiveSectionForPage] || effectiveSectionForPage)
+              : landingPageLevel === 'category'
+                ? selectedCategoryDTO?.name || ''
+                : selectedSubcategoryDTO?.name || ''
+          }
+          onSave={handleSaveLandingPageBody}
+          onCancel={handleCancelLandingPageEdit}
+        />
       ) : isEditMode && editModeContent && currentDraft ? (
         <InlineEditView
           ref={inlineEditViewRef}
@@ -1069,6 +1267,40 @@ export default function Library() {
           onTagsChange={handleTagsChange}
           onExitEditMode={exitEditMode}
           onHistoryChange={(u, r) => { setCanUndo(u); setCanRedo(r); }}
+        />
+      ) : isLandingPageMode && landingPageLevel === 'section' ? (
+        <SectionLandingPage
+          section={effectiveSectionForPage}
+          categories={persistentCategoryList}
+          categoryCounts={categoryCounts}
+          body={sectionPageData?.body ?? ''}
+          onEditRequest={handleEditRequest}
+          canEdit={hasRole('administrator')}
+          branchMode={isInBranchMode}
+          onCardClick={handleLandingPageCardClick}
+        />
+      ) : isLandingPageMode && landingPageLevel === 'category' && selectedCategoryDTO ? (
+        <CategoryLandingPage
+          section={effectiveSectionForPage}
+          category={selectedCategoryDTO}
+          subcategories={subcategoryList.filter((s) => s.categoryId === selectedCategoryDTO.id)}
+          contentItems={items.filter((i) => i.categoryId === selectedCategoryDTO.id || i.category === selectedCategoryDTO.name)}
+          body={categoryPageData?.body ?? ''}
+          onEditRequest={handleEditRequest}
+          canEdit={hasRole('administrator')}
+          branchMode={isInBranchMode}
+          onCardClick={handleLandingPageCardClick}
+        />
+      ) : isLandingPageMode && landingPageLevel === 'subcategory' && selectedSubcategoryDTO && selectedCategoryDTO ? (
+        <SubcategoryLandingPage
+          section={effectiveSectionForPage}
+          categoryName={selectedCategoryDTO.name}
+          subcategory={selectedSubcategoryDTO}
+          contentItems={items.filter((i) => i.subcategoryId === selectedSubcategoryDTO.id)}
+          onEditRequest={handleEditRequest}
+          canEdit={hasRole('administrator') || hasRole('contributor')}
+          branchMode={isInBranchMode}
+          onCardClick={handleLandingPageCardClick}
         />
       ) : (
         <>

@@ -71,6 +71,10 @@ export function HeaderNav() {
 
   const isActive = (s: string) => section === s;
 
+  const handleSectionClick = useCallback((sectionName: string) => {
+    navigate(`/library?section=${sectionName}`);
+  }, [navigate]);
+
   const handleCategoryClick = (sectionName: string, category: string) => {
     setOpenMenu(null);
     navigate(`/library?section=${sectionName}&category=${encodeURIComponent(category)}`);
@@ -116,14 +120,21 @@ export function HeaderNav() {
     <nav className="flex items-center gap-6">
       {/* Brands dropdown */}
       <DropdownMenu.Root open={openMenu === 'brands'} onOpenChange={(open) => { if (!open) setOpenMenu(null); }} modal={false}>
-        <div onMouseEnter={() => handleMouseEnter('brands')} onMouseLeave={handleMouseLeave}>
+        <div onMouseEnter={() => handleMouseEnter('brands')} onMouseLeave={handleMouseLeave} style={{ display: 'flex', alignItems: 'center' }}>
+          <Button
+            variant="ghost"
+            size="3"
+            style={{ color: isActive('brands') ? 'var(--accent-11)' : 'var(--gray-12)', paddingRight: 0 }}
+            onClick={() => handleSectionClick('brands')}
+          >
+            <Text size="3" weight="medium">Brands</Text>
+          </Button>
           <DropdownMenu.Trigger>
             <Button
               variant="ghost"
-              size="3"
-              style={{ color: isActive('brands') ? 'var(--accent-11)' : 'var(--gray-12)' }}
+              size="1"
+              style={{ color: isActive('brands') ? 'var(--accent-11)' : 'var(--gray-12)', paddingLeft: 2 }}
             >
-              <Text size="3" weight="medium">Brands</Text>
               <ChevronDownIcon width="16" height="16" />
             </Button>
           </DropdownMenu.Trigger>
@@ -146,14 +157,21 @@ export function HeaderNav() {
 
       {/* Products dropdown */}
       <DropdownMenu.Root open={openMenu === 'products'} onOpenChange={(open) => { if (!open) setOpenMenu(null); }} modal={false}>
-        <div onMouseEnter={() => handleMouseEnter('products')} onMouseLeave={handleMouseLeave}>
+        <div onMouseEnter={() => handleMouseEnter('products')} onMouseLeave={handleMouseLeave} style={{ display: 'flex', alignItems: 'center' }}>
+          <Button
+            variant="ghost"
+            size="3"
+            style={{ color: isActive('products') ? 'var(--accent-11)' : 'var(--gray-12)', paddingRight: 0 }}
+            onClick={() => handleSectionClick('products')}
+          >
+            <Text size="3" weight="medium">Products</Text>
+          </Button>
           <DropdownMenu.Trigger>
             <Button
               variant="ghost"
-              size="3"
-              style={{ color: isActive('products') ? 'var(--accent-11)' : 'var(--gray-12)' }}
+              size="1"
+              style={{ color: isActive('products') ? 'var(--accent-11)' : 'var(--gray-12)', paddingLeft: 2 }}
             >
-              <Text size="3" weight="medium">Products</Text>
               <ChevronDownIcon width="16" height="16" />
             </Button>
           </DropdownMenu.Trigger>
@@ -176,14 +194,21 @@ export function HeaderNav() {
 
       {/* Experiences dropdown */}
       <DropdownMenu.Root open={openMenu === 'experiences'} onOpenChange={(open) => { if (!open) setOpenMenu(null); }} modal={false}>
-        <div onMouseEnter={() => handleMouseEnter('experiences')} onMouseLeave={handleMouseLeave}>
+        <div onMouseEnter={() => handleMouseEnter('experiences')} onMouseLeave={handleMouseLeave} style={{ display: 'flex', alignItems: 'center' }}>
+          <Button
+            variant="ghost"
+            size="3"
+            style={{ color: isActive('experiences') ? 'var(--accent-11)' : 'var(--gray-12)', paddingRight: 0 }}
+            onClick={() => handleSectionClick('experiences')}
+          >
+            <Text size="3" weight="medium">Experiences</Text>
+          </Button>
           <DropdownMenu.Trigger>
             <Button
               variant="ghost"
-              size="3"
-              style={{ color: isActive('experiences') ? 'var(--accent-11)' : 'var(--gray-12)' }}
+              size="1"
+              style={{ color: isActive('experiences') ? 'var(--accent-11)' : 'var(--gray-12)', paddingLeft: 2 }}
             >
-              <Text size="3" weight="medium">Experiences</Text>
               <ChevronDownIcon width="16" height="16" />
             </Button>
           </DropdownMenu.Trigger>

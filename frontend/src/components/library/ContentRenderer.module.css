@@ -19,6 +19,17 @@
   font-weight: var(--font-weight-medium);
 }
 
+.breadcrumbLink {
+  font-weight: var(--font-weight-medium);
+  color: var(--accent-11);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.breadcrumbLink:hover {
+  text-decoration: underline;
+}
+
 .breadcrumbSeparator {
   margin: 0 var(--space-2);
   color: var(--gray-8);

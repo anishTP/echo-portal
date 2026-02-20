@@ -80,6 +80,14 @@ export interface LibrarySidebarProps {
   onReorderItems?: (categoryId: string, order: { type: 'subcategory' | 'content'; id: string }[]) => void;
   /** Callback when contributor moves content between subcategories */
   onMoveContent?: (contentId: string, subcategoryId: string | null, displayOrder: number) => void;
+  /** Callback when user clicks a category node to navigate to its landing page */
+  onSelectCategory?: (categoryId: string) => void;
+  /** Callback when user clicks a subcategory node to navigate to its landing page */
+  onSelectSubcategory?: (subcategoryId: string) => void;
+  /** Currently active category ID for highlight */
+  activeCategoryId?: string;
+  /** Currently active subcategory ID for highlight */
+  activeSubcategoryId?: string;
 }
 
 // --- Tree data types ---
@@ -175,6 +183,10 @@ export function LibrarySidebar({
   onDeleteSubcategory,
   onReorderItems,
   onMoveContent,
+  onSelectCategory,
+  onSelectSubcategory,
+  activeCategoryId,
+  activeSubcategoryId,
 }: LibrarySidebarProps) {
   const location = useLocation();
 
@@ -801,8 +813,11 @@ export function LibrarySidebar({
     ) : (
       <button
         type="button"
-        className={styles.subcategoryRow}
-        onClick={() => toggleExpanded(child.subcategory.id)}
+        className={`${styles.subcategoryRow}${activeSubcategoryId === child.subcategory.id ? ` ${styles.activeNode}` : ''}`}
+        onClick={() => {
+          toggleExpanded(child.subcategory.id);
+          onSelectSubcategory?.(child.subcategory.id);
+        }}
         aria-label={`${isSubExpanded ? 'Collapse' : 'Expand'} ${child.subcategory.name}`}
       >
         <ChevronRightIcon
@@ -920,8 +935,13 @@ export function LibrarySidebar({
     ) : (
       <button
         type="button"
-        className={styles.categoryRow}
-        onClick={() => toggleExpanded(cat.id)}
+        className={`${styles.categoryRow}${activeCategoryId === cat.id ? ` ${styles.activeNode}` : ''}`}
+        onClick={() => {
+          toggleExpanded(cat.id);
+          if (onSelectCategory && cat.id !== '__uncategorized') {
+            onSelectCategory(cat.id);
+          }
+        }}
         aria-label={`${isCatExpanded ? 'Collapse' : 'Expand'} ${cat.name}`}
       >
         <ChevronRightIcon

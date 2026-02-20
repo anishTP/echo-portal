@@ -206,6 +206,7 @@ export function ContentRenderer({
         section={content.section}
         categoryName={categoryName ?? content.category}
         subcategoryName={subcategoryName}
+        subcategoryId={content.subcategoryId}
         contentTitle={content.title}
       />
 

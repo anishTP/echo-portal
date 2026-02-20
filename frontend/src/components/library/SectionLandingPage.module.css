@@ -1,0 +1,63 @@
+/* SectionLandingPage layout */
+
+.page {
+  max-width: 100%;
+}
+
+.header {
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--gray-4);
+}
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.title {
+  font-size: var(--font-size-8);
+  font-weight: var(--font-weight-bold);
+  color: var(--gray-12);
+  line-height: 1.2;
+  margin: 0;
+  flex: 1;
+}
+
+.editButton {
+  flex-shrink: 0;
+}
+
+.body {
+  margin-bottom: var(--space-6);
+  color: var(--gray-12);
+  line-height: 1.7;
+}
+
+.addOverview {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+  padding: var(--space-3) var(--space-4);
+  border: 2px dashed var(--gray-a5);
+  border-radius: var(--radius-3);
+  color: var(--gray-a11);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+  background: none;
+  font-size: var(--font-size-2);
+  width: 100%;
+  text-align: left;
+}
+
+.addOverview:hover {
+  border-color: var(--accent-a7);
+  color: var(--accent-11);
+}
+
+.cardSection {
+  margin-top: var(--space-4);
+}

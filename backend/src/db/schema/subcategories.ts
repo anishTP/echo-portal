@@ -21,6 +21,7 @@ export const subcategories = pgTable(
       .notNull()
       .references(() => categories.id, { onDelete: 'cascade' }),
     displayOrder: integer('display_order').notNull().default(0),
+    body: text('body').notNull().default(''),
     createdBy: uuid('created_by')
       .notNull()
       .references(() => users.id),

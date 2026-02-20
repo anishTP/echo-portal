@@ -28,6 +28,8 @@ export interface BranchComparison {
 export interface FileDiff {
   path: string;
   contentId?: string;                  // Content UUID for DB-backed comparisons
+  fileType?: 'content' | 'section_page' | 'category_page' | 'subcategory_page';
+  landingPageId?: string;              // section_pages.id or category_pages.id or subcategories.id
   status: FileStatus;
   oldPath?: string;                    // Original path for renamed files
   additions: number;

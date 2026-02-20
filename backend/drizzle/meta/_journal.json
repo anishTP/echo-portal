@@ -43,6 +43,13 @@
       "when": 1771326191684,
       "tag": "0005_greedy_jocasta",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1771579963742,
+      "tag": "0006_small_vermin",
+      "breakpoints": true
     }
   ]
 }

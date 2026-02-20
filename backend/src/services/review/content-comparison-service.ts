@@ -2,6 +2,10 @@ import { db } from '../../db/index.js';
 import { contents } from '../../db/schema/contents.js';
 import { contentVersions } from '../../db/schema/contents.js';
 import { subcategories } from '../../db/schema/subcategories.js';
+import { sectionPages } from '../../db/schema/landing-pages.js';
+import { categoryPages } from '../../db/schema/landing-pages.js';
+import { categories } from '../../db/schema/categories.js';
+import { branches } from '../../db/schema/branches.js';
 import { eq, and, isNull, inArray, sql } from 'drizzle-orm';
 import { diffService } from '../git/diff.js';
 import type { DiffHunk as LocalDiffHunk } from '../git/diff.js';
@@ -409,6 +413,14 @@ export class ContentComparisonService {
       totalDeletions += allLines.length;
     }
 
+    // --- Landing page diffs (section_pages, category_pages) ---
+    const landingPageDiffs = await this.getLandingPageDiffs(branchId);
+    for (const diff of landingPageDiffs) {
+      files.push(diff);
+      totalAdditions += diff.additions;
+      totalDeletions += diff.deletions;
+    }
+
     return {
       branchId,
       baseCommit: branchId,
@@ -657,6 +669,140 @@ export class ContentComparisonService {
         deletions: totalDeletions,
       },
     };
+  }
+
+  /**
+   * Generate FileDiff entries for landing page body changes on a branch.
+   * Compares section_pages and category_pages against their main branch counterparts.
+   */
+  private async getLandingPageDiffs(branchId: string): Promise<FileDiff[]> {
+    const diffs: FileDiff[] = [];
+
+    // Find main branch
+    const mainBranch = await db
+      .select()
+      .from(branches)
+      .where(eq(branches.slug, 'main'))
+      .limit(1);
+
+    if (mainBranch.length === 0) return diffs;
+    const mainBranchId = mainBranch[0].id;
+
+    // --- Section pages ---
+    const branchSectionPages = await db
+      .select()
+      .from(sectionPages)
+      .where(eq(sectionPages.branchId, branchId));
+
+    for (const branchPage of branchSectionPages) {
+      const mainPage = await db
+        .select()
+        .from(sectionPages)
+        .where(
+          and(
+            eq(sectionPages.section, branchPage.section),
+            eq(sectionPages.branchId, mainBranchId)
+          )
+        )
+        .limit(1);
+
+      const mainBody = mainPage.length > 0 ? mainPage[0].body : '';
+      const branchBody = branchPage.body;
+
+      if (mainBody === branchBody) continue;
+
+      const sectionLabel = branchPage.section.charAt(0).toUpperCase() + branchPage.section.slice(1);
+      const oldLines = mainBody.split('\n');
+      const newLines = branchBody.split('\n');
+      const diff = diffService.computeLineDiff(oldLines, newLines);
+
+      if (diff.additions === 0 && diff.deletions === 0) continue;
+
+      const hunksWithIds = diff.hunks
+        .filter((h) => h.lines.some((l) => l.type !== 'context'))
+        .map((hunk, index) => ({
+          ...hunk,
+          id: this.generateHunkId(`Section: ${sectionLabel}`, index, hunk),
+        }));
+
+      diffs.push({
+        path: `Section: ${sectionLabel}`,
+        fileType: 'section_page',
+        landingPageId: branchPage.id,
+        status: mainPage.length > 0 ? 'modified' : 'added',
+        additions: diff.additions,
+        deletions: diff.deletions,
+        hunks: hunksWithIds,
+        fullContent: {
+          oldContent: mainBody || null,
+          newContent: branchBody,
+          metadata: { old: null, new: null },
+        },
+      });
+    }
+
+    // --- Category pages ---
+    const branchCategoryPages = await db
+      .select()
+      .from(categoryPages)
+      .where(eq(categoryPages.branchId, branchId));
+
+    for (const branchPage of branchCategoryPages) {
+      // Resolve category name for the label
+      const cat = await db
+        .select({ name: categories.name })
+        .from(categories)
+        .where(eq(categories.id, branchPage.categoryId))
+        .limit(1);
+
+      const categoryName = cat.length > 0 ? cat[0].name : branchPage.categoryId;
+
+      const mainPage = await db
+        .select()
+        .from(categoryPages)
+        .where(
+          and(
+            eq(categoryPages.categoryId, branchPage.categoryId),
+            eq(categoryPages.branchId, mainBranchId)
+          )
+        )
+        .limit(1);
+
+      const mainBody = mainPage.length > 0 ? mainPage[0].body : '';
+      const branchBody = branchPage.body;
+
+      if (mainBody === branchBody) continue;
+
+      const oldLines = mainBody.split('\n');
+      const newLines = branchBody.split('\n');
+      const diff = diffService.computeLineDiff(oldLines, newLines);
+
+      if (diff.additions === 0 && diff.deletions === 0) continue;
+
+      const hunksWithIds = diff.hunks
+        .filter((h) => h.lines.some((l) => l.type !== 'context'))
+        .map((hunk, index) => ({
+          ...hunk,
+          id: this.generateHunkId(`Category: ${categoryName}`, index, hunk),
+        }));
+
+      diffs.push({
+        path: `Category: ${categoryName}`,
+        fileType: 'category_page',
+        landingPageId: branchPage.id,
+        status: mainPage.length > 0 ? 'modified' : 'added',
+        additions: diff.additions,
+        deletions: diff.deletions,
+        hunks: hunksWithIds,
+        fullContent: {
+          oldContent: mainBody || null,
+          newContent: branchBody,
+          metadata: { old: null, new: null },
+        },
+      });
+    }
+
+    return diffs;
   }
 
   private emptyComparison(branchId: string): BranchComparison {

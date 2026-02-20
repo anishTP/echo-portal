@@ -21,3 +21,4 @@ export * from './ai-context-documents.js';
 export * from './auth-tokens.js';
 export * from './categories.js';
 export * from './subcategories.js';
+export * from './landing-pages.js';
