@@ -5,7 +5,9 @@ import {
   type NewConvergenceOperation,
 } from '../../db/schema/convergence.js';
 import { branches } from '../../db/schema/branches.js';
-import { eq, desc } from 'drizzle-orm';
+import { sectionPages } from '../../db/schema/landing-pages.js';
+import { categoryPages } from '../../db/schema/landing-pages.js';
+import { eq, and, desc } from 'drizzle-orm';
 import {
   ConvergenceModel,
   createConvergenceModel,
@@ -374,6 +376,11 @@ export class ConvergenceService {
         }
       }
 
+      // Merge landing page bodies from branch to main
+      if (mainBranch) {
+        await this.mergeLandingPages(operation.branchId, mainBranch.id, publisherId);
+      }
+
       // Transition branch to published state
       await transitionService.executeTransition({
         branchId: operation.branchId,
@@ -392,6 +399,90 @@ export class ConvergenceService {
       // On any error, release the lock
       await lockingService.releaseLock(id, 'failed');
       throw error;
+    }
+  }
+
+  /**
+   * Merge landing page bodies from a branch into the main branch.
+   * Upserts section_pages and category_pages, then deletes branch-specific rows.
+   */
+  private async mergeLandingPages(
+    branchId: string,
+    mainBranchId: string,
+    publisherId: string
+  ): Promise<void> {
+    // Upsert section pages
+    const branchSectionPages = await db
+      .select()
+      .from(sectionPages)
+      .where(eq(sectionPages.branchId, branchId));
+
+    for (const page of branchSectionPages) {
+      const existing = await db
+        .select()
+        .from(sectionPages)
+        .where(
+          and(
+            eq(sectionPages.section, page.section),
+            eq(sectionPages.branchId, mainBranchId)
+          )
+        )
+        .limit(1);
+
+      if (existing.length > 0) {
+        await db
+          .update(sectionPages)
+          .set({ body: page.body, updatedAt: new Date() })
+          .where(eq(sectionPages.id, existing[0].id));
+      } else {
+        await db.insert(sectionPages).values({
+          section: page.section,
+          branchId: mainBranchId,
+          body: page.body,
+          createdBy: publisherId,
+        });
+      }
+    }
+
+    // Upsert category pages
+    const branchCategoryPages = await db
+      .select()
+      .from(categoryPages)
+      .where(eq(categoryPages.branchId, branchId));
+
+    for (const page of branchCategoryPages) {
+      const existing = await db
+        .select()
+        .from(categoryPages)
+        .where(
+          and(
+            eq(categoryPages.categoryId, page.categoryId),
+            eq(categoryPages.branchId, mainBranchId)
+          )
+        )
+        .limit(1);
+
+      if (existing.length > 0) {
+        await db
+          .update(categoryPages)
+          .set({ body: page.body, updatedAt: new Date() })
+          .where(eq(categoryPages.id, existing[0].id));
+      } else {
+        await db.insert(categoryPages).values({
+          categoryId: page.categoryId,
+          branchId: mainBranchId,
+          body: page.body,
+          createdBy: publisherId,
+        });
+      }
+    }
+
+    // Clean up branch-specific landing page rows
+    if (branchSectionPages.length > 0) {
+      await db.delete(sectionPages).where(eq(sectionPages.branchId, branchId));
+    }
+    if (branchCategoryPages.length > 0) {
+      await db.delete(categoryPages).where(eq(categoryPages.branchId, branchId));
     }
   }
 

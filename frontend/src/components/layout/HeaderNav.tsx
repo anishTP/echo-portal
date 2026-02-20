@@ -71,6 +71,10 @@ export function HeaderNav() {
 
   const isActive = (s: string) => section === s;
 
+  const handleSectionClick = useCallback((sectionName: string) => {
+    navigate(`/library?section=${sectionName}`);
+  }, [navigate]);
+
   const handleCategoryClick = (sectionName: string, category: string) => {
     setOpenMenu(null);
     navigate(`/library?section=${sectionName}&category=${encodeURIComponent(category)}`);
@@ -122,9 +126,10 @@ export function HeaderNav() {
               variant="ghost"
               size="3"
               style={{ color: isActive('brands') ? 'var(--accent-11)' : 'var(--gray-12)' }}
+              onClick={() => handleSectionClick('brands')}
             >
               <Text size="3" weight="medium">Brands</Text>
-              <ChevronDownIcon width="16" height="16" />
+              <ChevronDownIcon width="14" height="14" />
             </Button>
           </DropdownMenu.Trigger>
         </div>
@@ -152,9 +157,10 @@ export function HeaderNav() {
               variant="ghost"
               size="3"
               style={{ color: isActive('products') ? 'var(--accent-11)' : 'var(--gray-12)' }}
+              onClick={() => handleSectionClick('products')}
             >
               <Text size="3" weight="medium">Products</Text>
-              <ChevronDownIcon width="16" height="16" />
+              <ChevronDownIcon width="14" height="14" />
             </Button>
           </DropdownMenu.Trigger>
         </div>
@@ -182,9 +188,10 @@ export function HeaderNav() {
               variant="ghost"
               size="3"
               style={{ color: isActive('experiences') ? 'var(--accent-11)' : 'var(--gray-12)' }}
+              onClick={() => handleSectionClick('experiences')}
             >
               <Text size="3" weight="medium">Experiences</Text>
-              <ChevronDownIcon width="16" height="16" />
+              <ChevronDownIcon width="14" height="14" />
             </Button>
           </DropdownMenu.Trigger>
         </div>

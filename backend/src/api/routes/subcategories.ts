@@ -148,13 +148,14 @@ subcategoryRoutes.patch(
   zValidator(
     'json',
     z.object({
-      name: z.string().min(1).max(200).transform((s) => s.trim()),
+      name: z.string().min(1).max(200).transform((s) => s.trim()).optional(),
       branchId: uuidSchema,
+      body: z.string().optional(),
     })
   ),
   async (c) => {
     const { id } = c.req.valid('param');
-    const { name, branchId } = c.req.valid('json');
+    const { name, branchId, body } = c.req.valid('json');
 
     await assertDraftBranch(branchId);
 
@@ -171,37 +172,50 @@ subcategoryRoutes.patch(
       );
     }
 
-    // Check for duplicate name within same category
-    const duplicate = await db
-      .select()
-      .from(subcategories)
-      .where(
-        and(
-          eq(subcategories.categoryId, existing[0].categoryId),
-          eq(subcategories.name, name)
-        )
-      )
-      .limit(1);
+    // Build update set
+    const updateSet: Record<string, unknown> = { updatedAt: new Date() };
 
-    if (duplicate.length > 0 && duplicate[0].id !== id) {
-      return c.json(
-        { error: { code: 'DUPLICATE', message: `Subcategory "${name}" already exists in this category` } },
-        409
-      );
+    if (name !== undefined) {
+      // Check for duplicate name within same category
+      const duplicate = await db
+        .select()
+        .from(subcategories)
+        .where(
+          and(
+            eq(subcategories.categoryId, existing[0].categoryId),
+            eq(subcategories.name, name)
+          )
+        )
+        .limit(1);
+
+      if (duplicate.length > 0 && duplicate[0].id !== id) {
+        return c.json(
+          { error: { code: 'DUPLICATE', message: `Subcategory "${name}" already exists in this category` } },
+          409
+        );
+      }
+
+      updateSet.name = name;
+    }
+
+    if (body !== undefined) {
+      updateSet.body = body;
     }
 
     const oldName = existing[0].name;
     const [updated] = await db
       .update(subcategories)
-      .set({ name, updatedAt: new Date() })
+      .set(updateSet)
       .where(eq(subcategories.id, id))
       .returning();
 
-    await logAuditEvent(c, 'subcategory.renamed', 'subcategory', id, {
-      oldName,
-      newName: name,
-      categoryId: existing[0].categoryId,
-    });
+    if (name !== undefined) {
+      await logAuditEvent(c, 'subcategory.renamed', 'subcategory', id, {
+        oldName,
+        newName: name,
+        categoryId: existing[0].categoryId,
+      });
+    }
 
     return success(c, updated);
   }

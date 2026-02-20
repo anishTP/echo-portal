@@ -5,6 +5,7 @@ export interface SubcategoryDTO {
   name: string;
   categoryId: string;
   displayOrder: number;
+  body: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;

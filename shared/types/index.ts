@@ -10,3 +10,4 @@ export * from './content.js';
 export * from './notification.js';
 export * from './comparison.js';
 export * from './ai.js';
+export * from './landing-pages.js';

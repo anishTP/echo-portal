@@ -18,12 +18,21 @@ export interface DiffHunk {
 
 export interface FileDiff {
   path: string;
+  contentId?: string;
+  fileType?: 'content' | 'section_page' | 'category_page' | 'subcategory_page';
+  landingPageId?: string;
   status: 'added' | 'modified' | 'deleted' | 'renamed';
   oldPath?: string;
   additions: number;
   deletions: number;
   hunks: DiffHunk[];
 }
+
+const LANDING_PAGE_LABELS: Record<string, string> = {
+  section_page: 'Section Page',
+  category_page: 'Category Page',
+  subcategory_page: 'Subcategory Page',
+};
 
 interface DiffViewerProps {
   file: FileDiff;
@@ -73,7 +82,12 @@ export const DiffViewer = memo(function DiffViewer({ file, defaultExpanded = tru
           <Badge color={statusBadgeColors[file.status]} variant="soft" size="1">
             {statusLabels[file.status]}
           </Badge>
-          <span className="font-mono text-sm text-gray-900">{file.path}</span>
+          {file.fileType && file.fileType !== 'content' && (
+            <Badge color="iris" variant="soft" size="1">
+              {LANDING_PAGE_LABELS[file.fileType] || file.fileType}
+            </Badge>
+          )}
+          <span className={`text-sm text-gray-900${file.fileType && file.fileType !== 'content' ? '' : ' font-mono'}`}>{file.path}</span>
           {file.oldPath && file.status === 'renamed' && (
             <span className="text-sm text-gray-500">
               (from {file.oldPath})
